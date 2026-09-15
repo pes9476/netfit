@@ -2,7 +2,7 @@ from datetime import date
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import CardBattle, Profile, WorkoutRecord
+from .models import CardBattle, Profile, WorkoutRecord, needs_kakao_nickname
 
 class RegisterForm(UserCreationForm):
     area = forms.ChoiceField(choices=Profile._meta.get_field("area").choices)
@@ -41,6 +41,12 @@ class BattleForm(forms.ModelForm):
         }
 
 class ProfileForm(forms.ModelForm):
+    avatar_preference = forms.ChoiceField(
+        label="마스코트 선택",
+        choices=[("ACTIVE", "백호"), ("MUSCULAR", "백곰"),
+                 ("SOFT", "햄스터"), ("BALANCED", "아기공룡")],
+        widget=forms.Select(attrs={"class": "input"}),
+    )
     nickname = forms.CharField(label="닉네임", max_length=30)
     measured_on = forms.DateField(label="측정일", initial=date.today, widget=forms.DateInput(attrs={"class": "input", "type": "date"}))
 
@@ -65,21 +71,30 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        # Accept legacy submitted values while showing only four mascots.
+        if self.is_bound:
+            self.data = self.data.copy()
+            key = self.add_prefix("avatar_preference")
+            if self.data.get(key) in ("AUTO", "SLIM"):
+                self.data[key] = "ACTIVE"
+        elif self.initial.get("avatar_preference") in (None, "AUTO", "SLIM"):
+            self.initial["avatar_preference"] = "ACTIVE"
         labels = {
             "area": "활동 지역", "age": "나이", "gender": "성별",
             "height_cm": "키 (cm)", "weight_kg": "몸무게 (kg)",
             "skeletal_muscle_kg": "골격근량 (kg)",
-            "body_fat_percent": "체지방률 (%)", "avatar_preference": "캐릭터 체형 선택",
+            "body_fat_percent": "체지방률 (%)", "avatar_preference": "마스코트 선택",
             "rank_participation": "랭킹 참여",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
         if user:
-            self.fields["nickname"].initial = user.username
+            self.fields["nickname"].initial = "" if needs_kakao_nickname(user) else user.username
+            self.fields["nickname"].widget.attrs["placeholder"] = "사용할 별명을 입력하세요"
 
     def clean_nickname(self):
         nickname = self.cleaned_data["nickname"].strip()
-        exists = User.objects.filter(username=nickname).exclude(pk=self.user.pk).exists()
+        exists = User.objects.filter(username__iexact=nickname).exclude(pk=self.user.pk).exists()
         if exists:
             raise forms.ValidationError("이미 사용 중인 닉네임입니다.")
         return nickname

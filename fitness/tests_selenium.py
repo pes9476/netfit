@@ -22,4 +22,6 @@ class LoginPageTest(LiveServerTestCase):
     def test_login_page_title(self):
         self.browser.get(f"{self.live_server_url}/login/")
         self.assertIn("핏배틀", self.browser.title)
-        self.assertTrue(self.browser.find_element(By.TAG_NAME, "form"))
+        self.assertTrue(self.browser.find_element(By.NAME, "password"))
+        # 로그인 UI 계약: 일반 로그인과 카카오 인증 시작 링크가 함께 존재한다.
+        self.assertTrue(self.browser.find_element(By.CSS_SELECTOR, 'a[href="/login/kakao/"]'))

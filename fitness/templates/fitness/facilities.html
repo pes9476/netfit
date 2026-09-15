@@ -1,5 +1,5 @@
 {% extends "fitness/base.html" %}
 {% block content %}
 <section class="page-intro"><h1>내 주변 체육시설</h1><p>{{ area }}의 공공체육시설을 보여주는 페이지입니다. 다음 단계에서 제공한 전국 공공체육시설 CSV를 연결하면 실제 시설이 표시됩니다.</p></section>
-<article class="panel">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span><b>{{ facility.name }}</b><small>{{ facility.facility_type }} · {{ facility.address }}</small></span>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank">시설 보기</a>{% else %}<span class="gain">데이터 연결됨</span>{% endif %}</div>{% empty %}<h2>아직 연결된 시설 데이터가 없어요.</h2><p style="color:#7c6d5b">CSV 연결 후 이 지역의 체육관·운동장·수영장 등을 여기서 확인할 수 있습니다.</p><code>py manage.py import_facilities "CSV 파일 경로"</code>{% endfor %}</article>
+<article class="panel">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span><b>{{ facility.name }}</b><small>{{ facility.facility_type }} · {{ facility.address }}</small></span>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank">시설 보기</a>{% else %}<span class="gain">데이터 연결됨</span>{% endif %}</div>{% empty %}<h2>아직 연결된 시설 데이터가 없어요.</h2><p style="color:var(--muted)">CSV 연결 후 이 지역의 체육관·운동장·수영장 등을 여기서 확인할 수 있습니다.</p><code>py manage.py import_facilities "CSV 파일 경로"</code>{% endfor %}</article>
 {% endblock %}

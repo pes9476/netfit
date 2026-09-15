@@ -1,7 +1,10 @@
 from django.urls import path
+from .kakao import kakao_callback, kakao_login
 from .views import UserLogoutView, activity_view, add_friend, battle_arena, battle_view, create_battle, dashboard, demo_battle, demo_level, facilities_view, friends_view, login_view, profile_view, ranking_view, record_workout, region_view, register_view
 
 urlpatterns = [
+    path("login/kakao/", kakao_login, name="kakao_login"),
+    path("login/kakao/callback/", kakao_callback, name="kakao_callback"),
     path("", dashboard, name="dashboard"),
     path("register/", register_view, name="register"),
     path("login/", login_view, name="login"),

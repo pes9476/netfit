@@ -14,7 +14,7 @@
     <article class="hero"><div class="eyebrow">나의 운동 카드</div><h1>오늘의 경험치가<br>내일의 카드가 돼요.</h1><div class="xp-row"><span>레벨 {{ card.level }}</span><span>{{ card.xp }} / {{ card.next_level_xp }} 경험치</span></div><div class="xp-track"><div class="xp-fill" style="width:{% widthratio card.xp card.next_level_xp 100 %}%"></div></div><p>현재 카드 파워 <b>{{ power }}</b> · {{ card.card_tier }} 등급</p><a class="button" href="{% url 'activity' %}">운동 기록하고 경험치 받기 →</a><small>레벨 5 실버 · 레벨 15 골드 · 레벨 25 마스터 카드로 프레임과 장식이 화려해집니다.</small></article>
     <div class="stats"><article class="stat"><span>최근 운동 기록</span><b>{{ records|length }}회</b></article><article class="stat"><span>친구</span><b>{{ friend_count }}명</b></article><article class="stat"><span>활동 지역</span><b style="font-size:18px">{{ user.profile.area }}</b></article></div>
     <div class="dashboard-links">
-      <a class="dashboard-link" href="{% url 'profile' %}">👤 프로필·인바디<small>BMI와 체형을 확인해요</small></a>
+      <a class="dashboard-link" href="{% url 'profile' %}">👤 프로필·인바디<small>기록과 마스코트를 관리해요</small></a>
       <a class="dashboard-link" href="{% url 'activity' %}">🏃 운동 기록<small>운동 종류별 배경도 바뀌어요</small></a>
       <a class="dashboard-link" href="{% url 'battle' %}">⚔️ 카드 배틀<small>성장한 카드로 대결해요</small></a>
       <a class="dashboard-link" href="{% url 'ranking' %}">🏆 랭킹<small>전국·지역·친구 순위를 봐요</small></a>

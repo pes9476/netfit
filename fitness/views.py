@@ -2,14 +2,16 @@ import random
 
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.db import transaction
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LogoutView
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import BattleForm, FriendForm, ProfileForm, RegisterForm, WorkoutForm
+from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
 from .models import BodyMeasurement, CardBattle, Facility, FriendLink, WorkoutRecord
 from .services import add_xp, battle_power, calculate_workout_xp, card_stats, total_card_xp
 
@@ -41,26 +43,34 @@ SCENE_MAP = {
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
-    form = RegisterForm(request.POST or None)
+    form = RegisterForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
-        user = form.save()
+        with transaction.atomic():
+            user = form.save()
         login(request, user)
-        return redirect("dashboard")
+        messages.success(request, "회원가입이 완료되었습니다. 프로필을 설정해 주세요.")
+        return redirect("profile")
     return render(request, "fitness/register.html", {"form": form})
 
 
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
-    form = AuthenticationForm(request, data=request.POST or None)
+    form = AuthenticationForm(request, data=request.POST if request.method == "POST" else None)
+    next_url = request.POST.get("next", request.GET.get("next", ""))
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = ""
     if request.method == "POST" and form.is_valid():
         login(request, form.get_user())
-        return redirect("dashboard")
-    return render(request, "fitness/login.html", {"form": form})
+        return redirect(next_url or "dashboard")
+    return render(request, "fitness/login.html", {"form": form, "next": next_url})
 
 
-@login_required
 def dashboard(request):
+    if not request.user.is_authenticated:
+        return render(request, "fitness/home.html")
     card = request.user.charactercard
     records = WorkoutRecord.objects.filter(user=request.user)
     stats = card_stats(request.user)
@@ -89,7 +99,7 @@ def profile_view(request):
                 skeletal_muscle_kg=profile.skeletal_muscle_kg,
                 body_fat_percent=profile.body_fat_percent,
             )
-        messages.success(request, "프로필과 인바디 정보를 저장했어요. 대시보드 카드가 바뀌었습니다!")
+        messages.success(request, "프로필과 인바디 정보를 저장했어요.")
         return redirect("profile")
     return render(request, "fitness/profile.html", {
         "form": form, "profile": profile, "card": request.user.charactercard,
@@ -131,7 +141,7 @@ def ranking_view(request):
         users = users.filter(pk__in=list(friend_ids) + [current_user.pk])
 
     ranked = [{
-        "name": user.username, "area": user.profile.area,
+        "name": user.profile.display_name, "area": user.profile.area,
         "level": user.charactercard.level, "total_xp": total_card_xp(user.charactercard),
         "is_me": user == current_user, "is_demo": False,
     } for user in users]

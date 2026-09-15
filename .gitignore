@@ -11,3 +11,7 @@ env/
 staticfiles/
 media/
 *.log
+kakao.local.json
+
+# Local code backups
+docs/change_history/

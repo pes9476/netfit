@@ -13,7 +13,25 @@ REGION_CHOICES = [
     ("제주특별자치도", "제주특별자치도"),
 ]
 
+class KakaoAccount(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    kakao_id = models.CharField(max_length=64, unique=True)
+
+
+def needs_kakao_nickname(user):
+    return (
+        user.username.startswith("kakao_") and len(user.username) == 38
+        and KakaoAccount.objects.filter(user=user).exists()
+    )
+
+
 class Profile(models.Model):
+    @property
+    def display_name(self):
+        # 임시 카카오 ID는 인증용이며 공개 닉네임이 아니다.
+        # 빈 이름은 화면에서 생략하고, 프로필의 닉네임 저장 후 표시한다.
+        return "" if needs_kakao_nickname(self.user) else self.user.username
+
     GENDER_CHOICES = [("M", "남성"), ("F", "여성"), ("N", "선택 안 함")]
     AVATAR_CHOICES = [
         ("AUTO", "자동 추천"), ("SLIM", "날씬형"), ("BALANCED", "균형형"),
@@ -39,32 +57,24 @@ class Profile(models.Model):
 
     @property
     def body_style(self):
-        if self.avatar_preference != "AUTO":
-            return self.avatar_preference
-        if self.skeletal_muscle_kg and self.weight_kg:
-            muscle_ratio = float(self.skeletal_muscle_kg) / float(self.weight_kg) * 100
-            cutoff = 38 if self.gender == "M" else 31
-            if muscle_ratio >= cutoff:
-                return "MUSCULAR"
-        if not self.bmi:
-            return "BALANCED"
-        if self.bmi < 18.5:
-            return "SLIM"
-        if self.bmi < 23:
-            return "BALANCED"
-        return "SOFT"
+        # Legacy storage values are retained; appearance is now manual only.
+        # AUTO/SLIM and older unknown values resolve to the default tiger.
+        return {
+            "BALANCED": "BALANCED", "SOFT": "SOFT",
+            "MUSCULAR": "MUSCULAR", "ACTIVE": "ACTIVE",
+        }.get(self.avatar_preference, "ACTIVE")
 
     @property
     def bmi_status(self):
         if not self.bmi:
             return "키와 몸무게를 입력해주세요"
         if self.bmi < 18.5:
-            return "저체중 참고 범위 · 날씬형"
+            return "저체중 참고 범위"
         if self.bmi < 23:
-            return "정상 참고 범위 · 균형형"
+            return "정상 참고 범위"
         if self.bmi < 25:
-            return "과체중 참고 범위 · 통통형"
-        return "비만 참고 범위 · 통통형"
+            return "과체중 참고 범위"
+        return "비만 참고 범위"
 
     @property
     def age_group(self):
@@ -85,9 +95,9 @@ class Profile(models.Model):
     @property
     def character_label(self):
         labels = {
-            "SLIM": "날렵한 새싹", "BALANCED": "균형 잡힌 챌린저",
-            "SOFT": "꾸준한 챌린저", "ACTIVE": "활동적인 운동가",
-            "MUSCULAR": "파워 트레이너",
+            "SLIM": "백호", "BALANCED": "아기공룡",
+            "SOFT": "햄스터", "ACTIVE": "백호",
+            "MUSCULAR": "백곰",
         }
         return labels[self.body_style]
 
