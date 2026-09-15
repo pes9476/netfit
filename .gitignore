@@ -10,6 +10,7 @@ venv/
 env/
 staticfiles/
 media/
+!.env.example
 *.log
 kakao.local.json
 

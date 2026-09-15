@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 REGION_CHOICES = [
     ("서울특별시", "서울특별시"), ("부산광역시", "부산광역시"),
@@ -47,6 +48,13 @@ class Profile(models.Model):
     body_fat_percent = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     avatar_preference = models.CharField(max_length=10, choices=AVATAR_CHOICES, default="AUTO")
     rank_participation = models.BooleanField(default=True)
+    ACTIVITY_MODE_CHOICES = [("UNSET", "미선택"), ("SOLO", "솔로"), ("GROUP", "그룹")]
+    DISABILITY_CHOICES = [("UNSET", "응답 안 함"), ("NONE", "비장애인"), ("DISABLED", "장애인")]
+    WHEELCHAIR_CHOICES = [("UNSET", "응답 안 함"), ("NO", "이용하지 않음"), ("OPTIONAL", "상황에 따라 이용"), ("REQUIRED", "필수")]
+    onboarding_completed = models.BooleanField(default=False)
+    preferred_activity_mode = models.CharField(max_length=8, choices=ACTIVITY_MODE_CHOICES, default="UNSET")
+    disability_status = models.CharField(max_length=10, choices=DISABILITY_CHOICES, default="UNSET")
+    wheelchair_usage = models.CharField(max_length=10, choices=WHEELCHAIR_CHOICES, default="UNSET")
 
     @property
     def bmi(self):
@@ -172,6 +180,69 @@ class Party(models.Model):
     name = models.CharField(max_length=100)
     goal_km = models.PositiveIntegerField(default=100)
     members = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="parties")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_parties", null=True)
+    max_members = models.PositiveSmallIntegerField(default=4)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class Mission(models.Model):
+    MODE_CHOICES = [("SOLO", "데일리 퀘스트"), ("GROUP", "그룹 퀘스트")]
+    STATUS_CHOICES = [("DRAFT", "준비"), ("ACTIVE", "진행"), ("FINISHED", "종료")]
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_missions")
+    party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="missions", null=True, blank=True)
+    mode = models.CharField(max_length=8, choices=MODE_CHOICES)
+    title = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    target_count = models.PositiveIntegerField(default=1)
+    requires_photo = models.BooleanField(default=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, through="MissionParticipant", related_name="missions")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class MissionParticipant(models.Model):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="participations")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mission_participations")
+    progress_count = models.PositiveIntegerField(default=0)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["mission", "user"], name="unique_mission_participant")]
+
+
+class BattleRoom(models.Model):
+    SIZE_CHOICES = [(2, "1대1"), (4, "2대2")]
+    STATUS_CHOICES = [("RECRUITING", "모집"), ("ACTIVE", "진행"), ("FINISHED", "종료"), ("CANCELLED", "취소")]
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_battle_rooms")
+    mission = models.OneToOneField(Mission, on_delete=models.PROTECT, related_name="battle_room")
+    title = models.CharField(max_length=120)
+    capacity = models.PositiveSmallIntegerField(choices=SIZE_CHOICES)
+    penalty = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="RECRUITING")
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, through="BattleParticipant", related_name="battle_rooms")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BattleParticipant(models.Model):
+    battle = models.ForeignKey(BattleRoom, on_delete=models.CASCADE, related_name="entries")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="battle_entries")
+    team = models.PositiveSmallIntegerField(default=1)
+    score = models.PositiveIntegerField(default=0)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["battle", "user"], name="unique_battle_participant")]
+
+
+class ProofSubmission(models.Model):
+    STATUS_CHOICES = [("PENDING", "검토 대기"), ("APPROVED", "승인"), ("REJECTED", "반려")]
+    participant = models.ForeignKey(MissionParticipant, on_delete=models.CASCADE, related_name="proofs")
+    photo = models.ImageField(upload_to="proofs/%Y/%m/%d/")
+    captured_at = models.DateTimeField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class FriendLink(models.Model):
