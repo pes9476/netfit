@@ -1,6 +1,6 @@
 from django.urls import path
 from .kakao import kakao_callback, kakao_login
-from .views import UserLogoutView, activity_view, add_friend, battle_arena, battle_view, create_battle, dashboard, demo_battle, demo_level, facilities_view, friends_view, login_view, profile_view, ranking_view, record_workout, region_view, register_view
+from .views import UserLogoutView, activity_view, add_friend, battle_arena, battle_view, create_battle, dashboard, demo_battle, demo_level, facilities_view, friends_view, login_view, onboarding_course, onboarding_entry, onboarding_group, onboarding_group_quest, onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo, profile_view, ranking_view, record_workout, region_view, register_view
 
 urlpatterns = [
     path("login/kakao/", kakao_login, name="kakao_login"),
@@ -9,6 +9,14 @@ urlpatterns = [
     path("register/", register_view, name="register"),
     path("login/", login_view, name="login"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
+    path("onboarding/", onboarding_entry, name="onboarding"),
+    path("onboarding/intro/", onboarding_intro, name="onboarding_intro"),
+    path("onboarding/profile/", onboarding_profile, name="onboarding_profile"),
+    path("onboarding/course/", onboarding_course, name="onboarding_course"),
+    path("onboarding/mode/", onboarding_mode, name="onboarding_mode"),
+    path("onboarding/solo/", onboarding_solo, name="onboarding_solo"),
+    path("onboarding/group/", onboarding_group, name="onboarding_group"),
+    path("onboarding/group/<int:party_id>/quest/", onboarding_group_quest, name="onboarding_group_quest"),
     path("profile/", profile_view, name="profile"),
     path("activity/", activity_view, name="activity"),
     path("record/", record_workout, name="record_workout"),

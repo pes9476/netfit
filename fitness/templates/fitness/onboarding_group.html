@@ -1,0 +1,11 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell compact">
+  <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 솔로·파티</span><i></i><span class="active">4 파티 설정</span></div>
+  <header class="onboarding-heading"><span>PARTY ROOM</span><h1>파티를 만들고 친구를 초대하세요</h1><p>친구가 아직 없다면 닉네임으로 먼저 추가할 수 있어요.</p></header>
+  <div class="onboarding-group-grid">
+    <form method="post" class="panel group-friend-add">{% csrf_token %}<input type="hidden" name="action" value="add_friend"><h2>친구 추가</h2><p>초대할 친구의 닉네임을 입력하세요.</p>{{ friend_form.friend_code }}<button class="button secondary" type="submit">친구 목록에 추가</button></form>
+    <form method="post" class="panel group-room-form">{% csrf_token %}<input type="hidden" name="action" value="create_room"><h2>파티 만들기</h2><label for="roomName">파티 이름</label><input class="input" id="roomName" name="room_name" maxlength="100" required placeholder="예: 퇴근 후 러닝 파티"><fieldset class="invite-list"><legend>친구 초대 목록</legend>{% for friend in friends %}<label><input type="checkbox" name="invitees" value="{{ friend.id }}"><span>{{ friend.profile.display_name|default:friend.username }}</span><small>@{{ friend.username }}</small></label>{% empty %}<p>등록된 친구가 없습니다. 왼쪽에서 친구를 추가해 주세요.</p>{% endfor %}</fieldset><button class="button onboarding-next" type="submit">파티 만들고 일퀘 설정 →</button></form>
+  </div>
+</section>
+{% endblock %}

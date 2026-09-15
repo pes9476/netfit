@@ -97,5 +97,4 @@ def kakao_callback(request):
     login(request, account.user, backend="django.contrib.auth.backends.ModelBackend")
     if needs_kakao_nickname(account.user):
         messages.info(request, "사용할 닉네임을 정해 주세요. 프로필에서 언제든 변경할 수 있어요.")
-        return redirect("profile")
-    return redirect("dashboard")
+    return redirect("onboarding")

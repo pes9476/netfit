@@ -61,7 +61,7 @@ class KakaoLoginTests(TestCase):
         post.return_value = Mock(json=Mock(return_value={"access_token": "test-token"}))
         get.return_value = Mock(json=Mock(return_value={"id": 1234}))
         existing = User.objects.create_user(username="kakao_1234", password="existing-password")
-        self.assertRedirects(self.callback(self.start()), reverse("profile"))
+        self.assertRedirects(self.callback(self.start()), reverse("onboarding"), fetch_redirect_response=False)
         account = KakaoAccount.objects.get(kakao_id="1234")
         self.assertNotEqual(account.user_id, existing.pk)
         self.assertFalse(account.user.has_usable_password())
@@ -82,7 +82,7 @@ class KakaoLoginTests(TestCase):
         self.assertEqual(account.user.username, "달리는친구")
         self.assertContains(self.client.get(reverse("dashboard")), "달리는친구")
         self.client.logout()
-        self.assertRedirects(self.callback(self.start()), reverse("dashboard"))
+        self.assertRedirects(self.callback(self.start()), reverse("onboarding"), fetch_redirect_response=False)
         self.assertEqual(User.objects.count(), 2)
         self.client.logout()
         account.user.is_active = False

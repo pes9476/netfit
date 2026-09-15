@@ -1,5 +1,32 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>내 주변 체육시설</h1><p>{{ area }}의 공공체육시설을 보여주는 페이지입니다. 다음 단계에서 제공한 전국 공공체육시설 CSV를 연결하면 실제 시설이 표시됩니다.</p></section>
-<article class="panel">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span><b>{{ facility.name }}</b><small>{{ facility.facility_type }} · {{ facility.address }}</small></span>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank">시설 보기</a>{% else %}<span class="gain">데이터 연결됨</span>{% endif %}</div>{% empty %}<h2>아직 연결된 시설 데이터가 없어요.</h2><p style="color:var(--muted)">CSV 연결 후 이 지역의 체육관·운동장·수영장 등을 여기서 확인할 수 있습니다.</p><code>py manage.py import_facilities "CSV 파일 경로"</code>{% endfor %}</article>
+<section class="page-intro"><h1>내 주변 체육시설</h1><p>{{ area }}의 공공체육시설을 종목이나 시설명으로 찾아보세요.</p></section>
+<section class="facility-search panel">
+  <form method="get" role="search"><label for="facilitySearch">시설 검색</label><div class="search-row"><input class="input" id="facilitySearch" type="search" name="q" value="{{ keyword }}" placeholder="시설명·주소·종목 검색"><input type="hidden" name="category" value="{{ category }}"><button class="button" type="submit">검색</button></div></form>
+  <nav class="facility-categories" aria-label="시설 유형">{% for key, label, term in categories %}<a href="?category={{ key }}{% if keyword %}&amp;q={{ keyword|urlencode }}{% endif %}" {% if category == key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+</section>
+<div class="facility-result-head"><b>{{ area }} 검색 결과</b><span>{{ facilities|length }}개 표시</span></div>
+<article class="panel facility-list">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span class="facility-copy"><b>{{ facility.name }}</b><small>{{ facility.facility_type|default:"체육시설" }}{% if facility.address %} · {{ facility.address }}{% endif %}</small></span><span class="facility-actions"><a class="map-button route-popup" href="{{ facility.naver_directions_url }}" aria-label="{{ facility.name }} 길찾기 작은 창으로 열기">길찾기 ↗</a>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank" rel="noopener noreferrer">시설 홈페이지</a>{% endif %}</span></div>{% empty %}<div class="empty-state"><h2>검색 결과가 없어요.</h2><p>검색어를 줄이거나 ‘전체’를 선택해보세요.</p><a class="button" href="{% url 'facilities' %}">전체 시설 보기</a></div>{% endfor %}</article>
+<script>
+(() => {
+  document.querySelectorAll(".route-popup").forEach(link => {
+    link.addEventListener("click", event => {
+      const width = 480;
+      const height = Math.min(760, Math.max(560, window.screen.availHeight - 100));
+      const left = Math.max(0, window.screen.availWidth - width - 24);
+      const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+      const popup = window.open(
+        link.href,
+        "netfitDirections",
+        `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+      if (popup) {
+        event.preventDefault();
+        popup.opener = null;
+        popup.focus();
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

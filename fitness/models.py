@@ -38,6 +38,12 @@ class Profile(models.Model):
         ("AUTO", "자동 추천"), ("SLIM", "날씬형"), ("BALANCED", "균형형"),
         ("SOFT", "통통형"), ("ACTIVE", "활동형"), ("MUSCULAR", "강한 운동형"),
     ]
+    GOAL_CHOICES = [
+        ("HEALTH", "건강 습관"), ("DIET", "체중 관리"),
+        ("STRENGTH", "근력 향상"), ("ENDURANCE", "체력 향상"),
+    ]
+    MODE_CHOICES = [("SOLO", "혼자 운동"), ("GROUP", "그룹 운동")]
+    ACCESSIBILITY_CHOICES = [("NON_DISABLED", "비장애인"), ("DISABLED", "장애인")]
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     area = models.CharField(max_length=20, choices=REGION_CHOICES, default="서울특별시")
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="N")
@@ -55,6 +61,23 @@ class Profile(models.Model):
     preferred_activity_mode = models.CharField(max_length=8, choices=ACTIVITY_MODE_CHOICES, default="UNSET")
     disability_status = models.CharField(max_length=10, choices=DISABILITY_CHOICES, default="UNSET")
     wheelchair_usage = models.CharField(max_length=10, choices=WHEELCHAIR_CHOICES, default="UNSET")
+    workout_goal = models.CharField(max_length=12, choices=GOAL_CHOICES, blank=True)
+    workout_days = models.PositiveSmallIntegerField(default=3)
+    workout_mode = models.CharField(max_length=8, choices=MODE_CHOICES, blank=True)
+    onboarding_completed = models.BooleanField(default=False)
+    accessibility_type = models.CharField(
+        max_length=12, choices=ACCESSIBILITY_CHOICES, default="NON_DISABLED",
+    )
+
+    @property
+    def recommended_course(self):
+        courses = {
+            "HEALTH": ("꾸준한 밸런스 코스", "빠르게 걷기 30분 + 전신 스트레칭 10분"),
+            "DIET": ("활력 다이어트 코스", "인터벌 걷기·러닝 35분 + 코어 운동 15분"),
+            "STRENGTH": ("파워 업 코스", "전신 근력 운동 45분 + 가벼운 유산소 10분"),
+            "ENDURANCE": ("지구력 챌린지 코스", "러닝·자전거·수영 중 45분 + 회복 스트레칭"),
+        }
+        return courses.get(self.workout_goal, courses["HEALTH"])
 
     @property
     def bmi(self):
@@ -243,6 +266,51 @@ class ProofSubmission(models.Model):
     captured_at = models.DateTimeField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class DailyQuest(models.Model):
+    party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="daily_quests")
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="created_daily_quests",
+    )
+    title = models.CharField(max_length=100)
+    workout_type = models.CharField(max_length=10, choices=WorkoutRecord.WORKOUT_CHOICES)
+    custom_workout_name = models.CharField(max_length=50, blank=True)
+    target_minutes = models.PositiveIntegerField()
+    quest_date = models.DateField(default=timezone.localdate)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-quest_date", "-created_at"]
+
+    @property
+    def workout_label(self):
+        return self.custom_workout_name if self.workout_type == "기타" and self.custom_workout_name else self.get_workout_type_display()
+
+
+class PersonalDailyQuest(models.Model):
+    SOURCE_CHOICES = [("DIRECT", "직접 입력"), ("AI", "AI 추천")]
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="personal_daily_quests",
+    )
+    title = models.CharField(max_length=100)
+    workout_type = models.CharField(max_length=10, choices=WorkoutRecord.WORKOUT_CHOICES)
+    custom_workout_name = models.CharField(max_length=50, blank=True)
+    target_minutes = models.PositiveIntegerField()
+    source = models.CharField(max_length=8, choices=SOURCE_CHOICES, default="DIRECT")
+    quest_date = models.DateField(default=timezone.localdate)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-quest_date", "-created_at"]
+
+    @property
+    def workout_label(self):
+        return self.custom_workout_name if self.workout_type == "기타" and self.custom_workout_name else self.get_workout_type_display()
 
 
 class FriendLink(models.Model):

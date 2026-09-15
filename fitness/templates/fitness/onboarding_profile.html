@@ -1,0 +1,12 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell compact">
+  <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="active">2 프로필</span><i></i><span>3 운동 방식</span><i></i><span>4 그룹 설정</span></div>
+  <header class="onboarding-heading"><span>STEP 2</span><h1>내 프로필을 작성해 주세요</h1><p>기본 정보와 장애 여부를 선택하면 이용 방식을 안내해 드려요.</p></header>
+  <form method="post" class="panel onboarding-form">{% csrf_token %}
+    {% for error in form.non_field_errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+    <div class="form-grid">{% for field in form %}{% if field.name != 'skeletal_muscle_kg' and field.name != 'body_fat_percent' %}<div class="field {% if field.name == 'rank_participation' or field.name == 'avatar_preference' %}full{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}</div>
+    <button class="button onboarding-next" type="submit">저장하고 운동 방식 선택하기 →</button>
+  </form>
+</section>
+{% endblock %}

@@ -53,13 +53,14 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = (
-            "area", "age", "gender", "height_cm", "weight_kg",
+            "area", "age", "gender", "accessibility_type", "height_cm", "weight_kg",
             "skeletal_muscle_kg", "body_fat_percent", "avatar_preference", "rank_participation",
         )
         widgets = {
             "area": forms.Select(attrs={"class": "input"}),
             "age": forms.NumberInput(attrs={"class": "input", "min": 1, "max": 120}),
             "gender": forms.Select(attrs={"class": "input"}),
+            "accessibility_type": forms.Select(attrs={"class": "input"}),
             "height_cm": forms.NumberInput(attrs={"class": "input bmi-input", "min": 50, "step": "0.1"}),
             "weight_kg": forms.NumberInput(attrs={"class": "input bmi-input", "min": 10, "step": "0.1"}),
             "skeletal_muscle_kg": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1"}),
@@ -81,13 +82,17 @@ class ProfileForm(forms.ModelForm):
             self.initial["avatar_preference"] = "ACTIVE"
         labels = {
             "area": "활동 지역", "age": "나이", "gender": "성별",
+            "accessibility_type": "장애 여부",
             "height_cm": "키 (cm)", "weight_kg": "몸무게 (kg)",
-            "skeletal_muscle_kg": "골격근량 (kg)",
-            "body_fat_percent": "체지방률 (%)", "avatar_preference": "마스코트 선택",
+            "skeletal_muscle_kg": "골격근량 (kg) · 선택",
+            "body_fat_percent": "체지방률 (%) · 선택", "avatar_preference": "마스코트 선택",
             "rank_participation": "랭킹 참여",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
+        self.fields["skeletal_muscle_kg"].required = False
+        self.fields["body_fat_percent"].required = False
+        self.fields["accessibility_type"].required = False
         if user:
             self.fields["nickname"].initial = "" if needs_kakao_nickname(user) else user.username
             self.fields["nickname"].widget.attrs["placeholder"] = "사용할 별명을 입력하세요"
@@ -98,6 +103,9 @@ class ProfileForm(forms.ModelForm):
         if exists:
             raise forms.ValidationError("이미 사용 중인 닉네임입니다.")
         return nickname
+
+    def clean_accessibility_type(self):
+        return self.cleaned_data.get("accessibility_type") or "NON_DISABLED"
 
     def save(self, commit=True):
         profile = super().save(commit=False)

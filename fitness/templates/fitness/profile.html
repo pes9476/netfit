@@ -10,6 +10,7 @@
   </article>
   <aside class="panel preview-panel"><h2>카드 미리보기</h2><div class="mini-card background-sprite scene-walk"><div id="profileAvatar" class="avatar-roster avatar-{{ profile.sprite_gender }} age-{{ profile.age_group }} style-{{ profile.body_style|lower }}"></div><span class="scene-caption">저장 전 미리보기</span></div><p><b id="previewLabel">{{ profile.character_label }}</b><br><span style="color:var(--muted)">선택한 마스코트를 미리 확인하세요. 저장하면 대시보드와 배틀 카드에 적용됩니다.</span></p></aside>
 </section>
+{% include "fitness/workout_analytics.html" %}
 <section class="section-head"><div><h2>체성분 기록</h2><p>최근 저장한 인바디 측정 기록입니다.</p></div></section><article class="panel table-wrap"><table class="measure-table"><thead><tr><th>측정일</th><th>키</th><th>몸무게</th><th>BMI</th><th>골격근량</th><th>체지방률</th></tr></thead><tbody>{% for measurement in measurements %}<tr><td>{{ measurement.measured_on|date:"Y.m.d" }}</td><td>{{ measurement.height_cm }}cm</td><td>{{ measurement.weight_kg }}kg</td><td>{{ measurement.bmi }}</td><td>{{ measurement.skeletal_muscle_kg|default:"-" }}{% if measurement.skeletal_muscle_kg %}kg{% endif %}</td><td>{{ measurement.body_fat_percent|default:"-" }}{% if measurement.body_fat_percent %}%{% endif %}</td></tr>{% empty %}<tr><td colspan="6">아직 저장한 측정 기록이 없어요.</td></tr>{% endfor %}</tbody></table></article>
 <script>
 (() => {

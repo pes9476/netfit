@@ -1,0 +1,15 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell">
+  <div class="onboarding-progress"><span class="active">1 안내</span><i></i><span>2 프로필</span><i></i><span>3 운동 방식</span><i></i><span>4 그룹 설정</span></div>
+  <header class="onboarding-hero"><span>NETFIT 이용 안내</span><h1>운동을 기록하고 함께 성장해요</h1><p>프로필 등록부터 혼자 운동, 그룹 일일 퀘스트까지 차례대로 안내해 드릴게요.</p></header>
+  <div class="guide-grid">
+    <article><b>01</b><span>📋</span><h2>상태 체크</h2><p>나이, 키, 몸무게를 등록하면 BMI와 운동 상태를 한눈에 확인할 수 있어요.</p></article>
+    <article><b>02</b><span>🏃</span><h2>혼자 운동</h2><p>내 속도에 맞춰 운동을 기록하고 캐릭터와 카드를 성장시켜요.</p></article>
+    <article><b>03</b><span>👥</span><h2>그룹 운동</h2><p>방을 만들고 친구를 초대해 같은 일일 퀘스트에 도전할 수 있어요.</p></article>
+    <article><b>04</b><span>✅</span><h2>일일 퀘스트</h2><p>그룹에서 운동 종류와 목표 시간을 정하고 함께 달성해요.</p></article>
+  </div>
+  <aside class="privacy-note"><b>모두에게 맞는 운동 경험</b><p>프로필에서 장애인·비장애인을 선택할 수 있고, 내 상황에 맞는 운동과 시설을 찾을 수 있어요.</p></aside>
+  <a class="button onboarding-next" href="{% url 'onboarding_profile' %}">프로필 등록하기 →</a>
+</section>
+{% endblock %}

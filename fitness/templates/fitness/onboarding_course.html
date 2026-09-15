@@ -1,0 +1,26 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell compact">
+  <div class="onboarding-progress"><span class="done">✓ 안내</span><i></i><span class="done">✓ 프로필</span><i></i><span class="active">3 코스</span><i></i><span>4 운동 방식</span></div>
+  <header class="onboarding-heading"><span>STEP 3</span><h1>어떤 목표로 운동할까요?</h1><p>목표와 일주일에 가능한 횟수를 선택하면 추천 코스를 바로 보여드려요.</p></header>
+  <form method="post" class="panel onboarding-form" id="courseForm">{% csrf_token %}
+    <div class="goal-picker">{% for key, label in goals %}<label><input type="radio" name="goal" value="{{ key }}" {% if selected_goal == key %}checked{% endif %}><span><b>{% if key == "HEALTH" %}🌿{% elif key == "DIET" %}🔥{% elif key == "STRENGTH" %}🏋️{% else %}🏃{% endif %}</b><strong>{{ label }}</strong></span></label>{% endfor %}</div>
+    <div class="field days-field"><label for="days">일주일에 운동할 수 있는 횟수</label><select class="input" id="days" name="days">{% for day in "1234567" %}<option value="{{ day }}" {% if selected_days|stringformat:"s" == day %}selected{% endif %}>주 {{ day }}회</option>{% endfor %}</select></div>
+    <article class="course-preview"><span>추천 코스</span><h2 id="courseTitle">꾸준한 밸런스 코스</h2><p id="courseDescription">빠르게 걷기 30분 + 전신 스트레칭 10분</p><small id="courseSchedule">주 3회 기준으로 시작해요.</small></article>
+    <button class="button onboarding-next" type="submit">이 코스로 계속하기 →</button>
+  </form>
+</section>
+<script>
+(() => {
+  const courses = {
+    HEALTH:["꾸준한 밸런스 코스","빠르게 걷기 30분 + 전신 스트레칭 10분"],
+    DIET:["활력 다이어트 코스","인터벌 걷기·러닝 35분 + 코어 운동 15분"],
+    STRENGTH:["파워 업 코스","전신 근력 운동 45분 + 가벼운 유산소 10분"],
+    ENDURANCE:["지구력 챌린지 코스","러닝·자전거·수영 중 45분 + 회복 스트레칭"]
+  };
+  const form=document.getElementById("courseForm"), days=document.getElementById("days");
+  function update(){const goal=form.querySelector("[name=goal]:checked").value;document.getElementById("courseTitle").textContent=courses[goal][0];document.getElementById("courseDescription").textContent=courses[goal][1];document.getElementById("courseSchedule").textContent="주 "+days.value+"회 기준으로 시작해요.";}
+  form.addEventListener("change",update);update();
+})();
+</script>
+{% endblock %}

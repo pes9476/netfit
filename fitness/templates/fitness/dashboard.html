@@ -16,12 +16,14 @@
     <div class="dashboard-links">
       <a class="dashboard-link" href="{% url 'profile' %}">👤 프로필·인바디<small>기록과 마스코트를 관리해요</small></a>
       <a class="dashboard-link" href="{% url 'activity' %}">🏃 운동 기록<small>운동 종류별 배경도 바뀌어요</small></a>
-      <a class="dashboard-link" href="{% url 'battle' %}">⚔️ 카드 배틀<small>성장한 카드로 대결해요</small></a>
       <a class="dashboard-link" href="{% url 'ranking' %}">🏆 랭킹<small>전국·지역·친구 순위를 봐요</small></a>
-      <a class="dashboard-link" href="{% url 'friends' %}">🤝 친구<small>친구를 추가하고 함께 즐겨요</small></a>
       <a class="dashboard-link" href="{% url 'facilities' %}">📍 주변 시설<small>공공체육시설 데이터를 연결할 곳</small></a>
+      <a class="dashboard-link" href="{% url 'onboarding_intro' %}">📖 안내 다시보기<small>서비스 이용 순서를 다시 확인해요</small></a>
     </div>
   </div>
 </section>
+<div id="daily-quests"></div>
+{% if personal_quests %}<section class="panel dashboard-quests"><div class="section-heading"><div><span>SOLO DAILY QUEST</span><h2>나의 솔로 일퀘</h2></div><a class="button secondary" href="{% url 'onboarding_solo' %}">새 일퀘</a></div><div class="quest-cards">{% for quest in personal_quests %}<article><small>{{ quest.get_source_display }}</small><h3>{{ quest.title }}</h3><p>{{ quest.workout_label }} · {{ quest.target_minutes }}분</p></article>{% endfor %}</div></section>{% endif %}
+{% if group_quests %}<section class="panel dashboard-quests"><div class="section-heading"><div><span>PARTY DAILY QUEST</span><h2>우리 파티 일퀘</h2></div><a class="button secondary" href="{% url 'onboarding_group' %}">새 파티 만들기</a></div><div class="quest-cards">{% for quest in group_quests %}<article><small>{{ quest.party.name }}</small><h3>{{ quest.title }}</h3><p>{{ quest.workout_label }} · {{ quest.target_minutes }}분</p></article>{% endfor %}</div></section>{% else %}<section class="panel dashboard-quests empty"><div><h2>친구와 함께 운동할까요?</h2><p>파티를 만들고 오늘의 일퀘를 설정할 수 있어요.</p></div><a class="button secondary" href="{% url 'onboarding_group' %}">파티 만들기</a></section>{% endif %}
 <section class="test-panel"><div><b>🧪 카드 디자인 테스트</b><small>테스트용 버튼입니다. 마음에 드는 등급과 레벨업 변화를 확인해보세요.</small></div><form method="post" action="{% url 'demo_level' %}">{% csrf_token %}<button class="button">레벨 1 올리기</button></form><form method="post" action="{% url 'demo_level_target' 5 %}">{% csrf_token %}<button class="button test-silver">실버 보기</button></form><form method="post" action="{% url 'demo_level_target' 15 %}">{% csrf_token %}<button class="button test-gold">골드 보기</button></form><form method="post" action="{% url 'demo_level_target' 25 %}">{% csrf_token %}<button class="button test-master">마스터 보기</button></form></section>
 {% endblock %}
