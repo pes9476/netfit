@@ -96,8 +96,9 @@ def login_view(request):
     ):
         next_url = ""
     if request.method == "POST" and form.is_valid():
-        login(request, form.get_user())
-        return redirect(next_url or "onboarding")
+        user = form.get_user()
+        login(request, user)
+        return redirect(next_url or ("dashboard" if user.profile.onboarding_completed else "onboarding"))
     return render(request, "fitness/login.html", {"form": form, "next": next_url})
 
 
@@ -186,9 +187,40 @@ def profile_view(request):
 
 @login_required
 def activity_view(request):
+    try:
+        current_lat = float(request.GET.get("lat", ""))
+        current_lon = float(request.GET.get("lon", ""))
+        use_current_location = -90 <= current_lat <= 90 and -180 <= current_lon <= 180
+    except (TypeError, ValueError):
+        current_lat = current_lon = None
+        use_current_location = False
+    facilities = Facility.objects.filter(is_active=True)
+    if not use_current_location:
+        facilities = facilities.filter(region=request.user.profile.area)
+    recommendations = []
+    for facility in list(facilities[:500] if use_current_location else facilities[:3]):
+        if use_current_location:
+            if facility.latitude is None or facility.longitude is None:
+                continue
+            lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
+            dlat, dlon = lat2 - lat1, math.radians(facility.longitude - current_lon)
+            value = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+            facility.distance_km = round(6371 * 2 * math.asin(math.sqrt(value)), 1)
+        query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+        facility.kakao_map_url = (
+            f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
+            if facility.latitude is not None and facility.longitude is not None
+            else f"https://map.kakao.com/link/search/{query}"
+        )
+        recommendations.append(facility)
+    if use_current_location:
+        recommendations.sort(key=lambda item: item.distance_km)
+        recommendations = recommendations[:3]
     return render(request, "fitness/activity.html", {
         "workout_form": WorkoutForm(),
         "records": WorkoutRecord.objects.filter(user=request.user).order_by("-created_at")[:20],
+        "recommended_facilities": recommendations,
+        "use_current_location": use_current_location,
     })
 
 
@@ -383,8 +415,11 @@ def facilities_view(request):
         destination = quote(facility.name, safe="")
         if facility.longitude is not None and facility.latitude is not None:
             facility.naver_directions_url = "https://map.naver.com/p/directions/-/" + f"{facility.longitude},{facility.latitude},{destination},PLACE_POI/-/transit"
+            facility.kakao_map_url = f"https://map.kakao.com/link/to/{destination},{facility.latitude},{facility.longitude}"
         else:
-            facility.naver_directions_url = "https://map.naver.com/p/search/" + quote(f"{facility.name} {facility.address}".strip(), safe="")
+            search_query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+            facility.naver_directions_url = "https://map.naver.com/p/search/" + search_query
+            facility.kakao_map_url = "https://map.kakao.com/link/search/" + search_query
         facility_rows.append(facility)
     if use_current_location:
         facility_rows.sort(key=lambda facility: facility.distance_km)

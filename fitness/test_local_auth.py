@@ -56,6 +56,13 @@ class LocalAuthTests(TestCase):
         self.client.post(reverse("login"), {"username": user.username, "password": "test-password"})
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_completed_member_login_skips_onboarding(self):
+        user = User.objects.create_user(username="returning", password="test-password")
+        user.profile.onboarding_completed = True
+        user.profile.save(update_fields=["onboarding_completed"])
+        response = self.client.post(reverse("login"), {"username": "returning", "password": "test-password"})
+        self.assertRedirects(response, reverse("dashboard"))
+
     def test_csrf_required(self):
         client = Client(enforce_csrf_checks=True)
         for page in ("register", "login"):
@@ -74,7 +81,7 @@ class LocalAuthTests(TestCase):
         }
         self.assertRedirects(self.client.post(reverse("onboarding_profile"), profile_data), reverse("onboarding_mode"))
         profile_page = self.client.get(reverse("onboarding_profile"))
-        self.assertContains(profile_page, "장애 여부")
+        self.assertNotContains(profile_page, "장애 여부")
         self.assertNotContains(profile_page, "골격근량")
         self.assertNotContains(profile_page, "체지방률")
         self.assertRedirects(self.client.post(reverse("onboarding_mode"), {"mode": "GROUP"}), reverse("onboarding_group"))

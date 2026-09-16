@@ -120,6 +120,7 @@ class WebFlowTests(TestCase):
         self.assertContains(response, "시민 야구장")
         self.assertNotContains(response, "푸른 수영장")
         self.assertContains(response, "https://map.naver.com/p/directions/-/127.1,37.5")
+        self.assertContains(response, "https://map.kakao.com/link/to/")
         response = self.client.get(reverse("facilities"), {"q": "수영"})
         self.assertContains(response, "푸른 수영장")
         self.assertNotContains(response, "시민 야구장")
@@ -132,3 +133,12 @@ class WebFlowTests(TestCase):
         response = self.client.get(reverse("facilities"), {"lat": "37.5", "lon": "127.0"})
         self.assertContains(response, "현재 위치에서 가까운 시설")
         self.assertLess(response.content.find("가까운 체육관".encode()), response.content.find("먼 체육관".encode()))
+
+    def test_activity_recommends_nearby_public_facilities(self):
+        user = User.objects.create_user(username="activity-nearby", password=None)
+        Facility.objects.create(name="가까운 운동장", region=user.profile.area, latitude=37.5002, longitude=127.0002)
+        Facility.objects.create(name="먼 운동장", region=user.profile.area, latitude=37.9, longitude=127.8)
+        self.client.force_login(user)
+        response = self.client.get(reverse("activity"), {"lat": "37.5", "lon": "127.0"})
+        self.assertContains(response, "내 주변 공공체육시설 추천")
+        self.assertLess(response.content.find("가까운 운동장".encode()), response.content.find("먼 운동장".encode()))
