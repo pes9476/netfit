@@ -1,5 +1,6 @@
 import random
-from datetime import timedelta
+import math
+from datetime import date, timedelta
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -12,12 +13,13 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LogoutView
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
-from .models import BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, Party, PersonalDailyQuest, WorkoutRecord
-from .services import add_xp, battle_power, calculate_workout_xp, card_stats, total_card_xp
+from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, OutfitPurchase, Party, PersonalDailyQuest, WorkoutRecord
+from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, total_card_xp
 
 DEMO_OPPONENTS = [
     {"name": "민수 · 파워 트레이너", "level": 3, "power": 58, "reward": "치킨 사기 🍗"},
@@ -39,9 +41,37 @@ DEMO_RANKINGS = [
 ]
 
 SCENE_MAP = {
-    "러닝": "run", "걷기": "walk", "헬스": "gym", "수영": "swim",
+    "러닝": "run", "만보": "walk", "걷기": "walk", "헬스": "gym", "수영": "swim",
     "배드민턴": "badminton", "자전거": "bike",
 }
+
+REGION_COORDINATES = {
+    "서울": (37.5665, 126.9780), "부산": (35.1796, 129.0756), "대구": (35.8714, 128.6014),
+    "인천": (37.4563, 126.7052), "광주": (35.1595, 126.8526), "대전": (36.3504, 127.3845),
+    "울산": (35.5384, 129.3114), "세종": (36.4800, 127.2890), "경기": (37.4138, 127.5183),
+    "강원": (37.8228, 128.1555), "충청북": (36.6357, 127.4917), "충청남": (36.5184, 126.8000),
+    "전북": (35.7175, 127.1530), "전라북": (35.7175, 127.1530), "전라남": (34.8679, 126.9910),
+    "경상북": (36.4919, 128.8889), "경상남": (35.4606, 128.2132), "제주": (33.4996, 126.5312),
+}
+
+
+def weather_coordinates(area):
+    for prefix, coordinates in REGION_COORDINATES.items():
+        if area.startswith(prefix):
+            return coordinates
+    return REGION_COORDINATES["서울"]
+
+
+def badge_summary(user):
+    awards = BadgeAward.objects.filter(user=user)
+    counts = {row["badge_type"]: row["count"] for row in awards.values("badge_type").annotate(count=Count("id"))}
+    spent = OutfitPurchase.objects.filter(user=user).aggregate(total=Sum("cost"))["total"] or 0
+    total = awards.aggregate(total=Sum("points"))["total"] or 0
+    return {
+        "gold": counts.get(BadgeAward.GOLD, 0), "silver": counts.get(BadgeAward.SILVER, 0),
+        "bronze": counts.get(BadgeAward.BRONZE, 0),
+        "total_points": total, "available_points": max(0, total - spent),
+    }
 
 
 def register_view(request):
@@ -78,16 +108,36 @@ def dashboard(request):
     records = WorkoutRecord.objects.filter(user=request.user)
     stats = card_stats(request.user)
     latest_record = records.order_by("-created_at").first()
+    latitude, longitude = weather_coordinates(request.user.profile.area)
+    personal_quests = PersonalDailyQuest.objects.filter(user=request.user, is_active=True)[:3]
+    group_quests = DailyQuest.objects.filter(
+        party__members=request.user, is_active=True,
+    ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party")[:3]
+    completed_personal_ids = set(BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests).values_list("personal_quest_id", flat=True))
+    completed_group_ids = set(BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests).values_list("daily_quest_id", flat=True))
+    party_challenges = []
+    for party in request.user.parties.all():
+        if not party.challenge_start or not party.challenge_end:
+            continue
+        rows = []
+        for member in party.members.select_related("profile"):
+            points = BadgeAward.objects.filter(
+                user=member,
+                awarded_at__date__range=(party.challenge_start, party.challenge_end),
+            ).aggregate(total=Sum("points"))["total"] or 0
+            rows.append({"name": member.profile.display_name or member.username, "points": points, "is_me": member == request.user})
+        rows.sort(key=lambda row: row["points"], reverse=True)
+        party_challenges.append({"party": party, "rows": rows})
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
         "latest_record": latest_record,
         "scene_class": SCENE_MAP.get(latest_record.workout_type if latest_record else "", "run"),
         "friend_count": FriendLink.objects.filter(user=request.user).count(),
-        "group_quests": DailyQuest.objects.filter(
-            party__members=request.user, is_active=True,
-        ).select_related("party")[:3],
-        "personal_quests": PersonalDailyQuest.objects.filter(user=request.user, is_active=True)[:3],
+        "group_quests": group_quests, "personal_quests": personal_quests,
+        "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
+        "badge_summary": badge_summary(request.user),
+        "party_challenges": party_challenges, "weather_latitude": latitude, "weather_longitude": longitude,
     })
 
 
@@ -124,12 +174,13 @@ def profile_view(request):
         row = daily_rows.get(day, {})
         daily_chart.append({"label": day.strftime("%m.%d"), "minutes": row.get("minutes", 0), "workouts": row.get("workouts", 0)})
     type_chart = list(records.values("workout_type").annotate(minutes=Sum("minutes"), workouts=Count("id")).order_by("-minutes", "workout_type"))
-    totals = records.aggregate(workouts=Count("id"), minutes=Sum("minutes"), xp=Sum("earned_xp"))
+    totals = records.aggregate(workouts=Count("id"), minutes=Sum("minutes"))
+    badge_points = BadgeAward.objects.filter(user=request.user).aggregate(total=Sum("points"))["total"] or 0
     return render(request, "fitness/profile.html", {
         "form": form, "profile": profile, "card": request.user.charactercard,
         "measurements": BodyMeasurement.objects.filter(user=request.user)[:6],
         "daily_chart": daily_chart, "type_chart": type_chart,
-        "workout_totals": {"workouts": totals["workouts"] or 0, "minutes": totals["minutes"] or 0, "xp": totals["xp"] or 0},
+        "workout_totals": {"workouts": totals["workouts"] or 0, "minutes": totals["minutes"] or 0, "points": badge_points},
     })
 
 
@@ -148,43 +199,119 @@ def record_workout(request):
         if form.is_valid():
             record = form.save(commit=False)
             record.user = request.user
-            record.earned_xp = calculate_workout_xp(record.minutes, record.distance_km, record.with_party)
+            record.earned_xp = 0
             record.save()
-            add_xp(request.user.charactercard, record.earned_xp)
-            messages.success(request, f"운동 기록 완료! +{record.earned_xp} 경험치를 받았어요.")
+            badge_type = BadgeAward.badge_for_minutes(record.minutes)
+            award = BadgeAward.objects.create(
+                user=request.user, badge_type=badge_type, source="WORKOUT", workout_record=record,
+            )
+            messages.success(request, f"운동 기록 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
     return redirect(request.POST.get("next", "activity"))
 
 
 @login_required
+def complete_daily_quest(request, quest_kind, quest_id):
+    if request.method != "POST":
+        return redirect("dashboard")
+    if quest_kind == "personal":
+        quest = get_object_or_404(PersonalDailyQuest, pk=quest_id, user=request.user, is_active=True)
+        award, created = BadgeAward.objects.get_or_create(
+            user=request.user, personal_quest=quest,
+            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
+        )
+    else:
+        quest = get_object_or_404(
+            DailyQuest.objects.filter(
+                Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())
+            ),
+            pk=quest_id, party__members=request.user, is_active=True,
+        )
+        award, created = BadgeAward.objects.get_or_create(
+            user=request.user, daily_quest=quest,
+            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
+        )
+    if created:
+        messages.success(request, f"일퀘 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
+    else:
+        messages.info(request, "이미 완료하고 배지를 받은 일퀘예요.")
+    return redirect("dashboard")
+
+
+@login_required
 def ranking_view(request):
-    scope = request.GET.get("scope", "national")
+    scope = request.GET.get("scope", "region")
+    if scope not in {"region", "party", "friends"}:
+        scope = "region"
     current_user = request.user
     users = User.objects.select_related("profile", "charactercard").filter(profile__rank_participation=True)
     if scope == "region":
         users = users.filter(profile__area=current_user.profile.area)
+    elif scope == "party":
+        party_user_ids = User.objects.filter(parties__members=current_user).values_list("id", flat=True)
+        users = users.filter(pk__in=party_user_ids).distinct()
     elif scope == "friends":
         friend_ids = FriendLink.objects.filter(user=current_user).values_list("friend_id", flat=True)
         users = users.filter(pk__in=list(friend_ids) + [current_user.pk])
 
     ranked = [{
         "name": user.profile.display_name, "area": user.profile.area,
-        "level": user.charactercard.level, "total_xp": total_card_xp(user.charactercard),
+        "level": user.charactercard.level,
+        "total_score": BadgeAward.objects.filter(user=user).aggregate(total=Sum("points"))["total"] or 0,
         "is_me": user == current_user, "is_demo": False,
     } for user in users]
     if scope == "friends":
         demo_rows = DEMO_RANKINGS[:3]
+    elif scope == "party":
+        demo_rows = []
     elif scope == "region":
         demo_rows = [row for row in DEMO_RANKINGS if row["area"] == current_user.profile.area]
         if not demo_rows:
             demo_rows = [{"name": f"{current_user.profile.area} 운동친구", "area": current_user.profile.area, "level": 8, "total_xp": 2420}]
     else:
         demo_rows = DEMO_RANKINGS
-    ranked.extend({**row, "is_me": False, "is_demo": True} for row in demo_rows)
-    ranked.sort(key=lambda item: item["total_xp"], reverse=True)
+    ranked.extend({**row, "total_score": row["total_xp"], "is_me": False, "is_demo": True} for row in demo_rows)
+    ranked.sort(key=lambda item: item["total_score"], reverse=True)
     for index, item in enumerate(ranked, 1):
         item["rank"] = index
     return render(request, "fitness/ranking.html", {
         "ranked": ranked, "scope": scope, "friend_count": FriendLink.objects.filter(user=current_user).count(),
+    })
+
+
+@login_required
+def outfit_shop(request):
+    catalog = [
+        {"code": "CAP", "name": "운동 모자", "icon": "🧢", "cost": 150},
+        {"code": "SPORT", "name": "스포츠 유니폼", "icon": "👕", "cost": 250},
+        {"code": "CROWN", "name": "챔피언 왕관", "icon": "👑", "cost": 400},
+    ]
+    valid_codes = {item[0] for item in OutfitPurchase.OUTFIT_CHOICES}
+    if request.method == "POST":
+        action = request.POST.get("action")
+        code = request.POST.get("outfit", "")
+        if action == "unequip":
+            request.user.profile.equipped_outfit = "NONE"
+            request.user.profile.save(update_fields=["equipped_outfit"])
+            messages.success(request, "기본 모습으로 변경했어요.")
+        elif code in valid_codes and action == "buy":
+            summary = badge_summary(request.user)
+            cost = OutfitPurchase.COSTS[code]
+            if OutfitPurchase.objects.filter(user=request.user, outfit=code).exists():
+                messages.info(request, "이미 보유한 의상이에요.")
+            elif summary["available_points"] < cost:
+                messages.error(request, "사용 가능한 배지 포인트가 부족해요.")
+            else:
+                OutfitPurchase.objects.create(user=request.user, outfit=code, cost=cost)
+                messages.success(request, f"{dict(OutfitPurchase.OUTFIT_CHOICES)[code]}을 구매했어요!")
+        elif code in valid_codes and action == "equip":
+            if OutfitPurchase.objects.filter(user=request.user, outfit=code).exists():
+                request.user.profile.equipped_outfit = code
+                request.user.profile.save(update_fields=["equipped_outfit"])
+                messages.success(request, "캐릭터 의상을 변경했어요.")
+        return redirect("outfit_shop")
+    owned = set(OutfitPurchase.objects.filter(user=request.user).values_list("outfit", flat=True))
+    return render(request, "fitness/outfit_shop.html", {
+        "catalog": catalog, "owned_outfits": owned, "badge_summary": badge_summary(request.user),
     })
 
 
@@ -227,24 +354,51 @@ def facilities_view(request):
     category_terms = {key: term for key, _, term in categories}
     if category not in category_terms:
         category = "all"
-    facilities = Facility.objects.filter(region=profile.area, is_active=True)
+    try:
+        current_lat = float(request.GET.get("lat", ""))
+        current_lon = float(request.GET.get("lon", ""))
+        use_current_location = -90 <= current_lat <= 90 and -180 <= current_lon <= 180
+    except (TypeError, ValueError):
+        current_lat = current_lon = None
+        use_current_location = False
+    facilities = Facility.objects.filter(is_active=True)
+    if not use_current_location:
+        facilities = facilities.filter(region=profile.area)
     if keyword:
         facilities = facilities.filter(Q(name__icontains=keyword) | Q(facility_type__icontains=keyword) | Q(address__icontains=keyword))
     if category_terms[category]:
         term = category_terms[category]
         facilities = facilities.filter(Q(name__icontains=term) | Q(facility_type__icontains=term))
     facility_rows = []
-    for facility in facilities[:60]:
+    candidates = list(facilities[:500] if use_current_location else facilities[:60])
+    for facility in candidates:
+        if use_current_location and facility.latitude is not None and facility.longitude is not None:
+            lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
+            dlat = lat2 - lat1
+            dlon = math.radians(facility.longitude - current_lon)
+            a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+            facility.distance_km = round(6371 * 2 * math.asin(math.sqrt(a)), 1)
+        elif use_current_location:
+            continue
         destination = quote(facility.name, safe="")
         if facility.longitude is not None and facility.latitude is not None:
             facility.naver_directions_url = "https://map.naver.com/p/directions/-/" + f"{facility.longitude},{facility.latitude},{destination},PLACE_POI/-/transit"
         else:
             facility.naver_directions_url = "https://map.naver.com/p/search/" + quote(f"{facility.name} {facility.address}".strip(), safe="")
         facility_rows.append(facility)
+    if use_current_location:
+        facility_rows.sort(key=lambda facility: facility.distance_km)
+        facility_rows = facility_rows[:60]
     return render(request, "fitness/facilities.html", {
         "facilities": facility_rows, "area": profile.area,
         "keyword": keyword, "category": category, "categories": categories,
+        "use_current_location": use_current_location, "current_lat": current_lat, "current_lon": current_lon,
     })
+
+
+@login_required
+def sports_news_api(request):
+    return JsonResponse({"news": get_sports_news(limit=6)})
 
 
 @login_required
@@ -313,7 +467,7 @@ def onboarding_solo(request):
             return redirect("facilities")
         if action == "ai":
             title, workout_type, minutes = (
-                ("가볍게 걷기", "걷기", 20) if not profile.age or profile.age >= 60
+                ("가볍게 산책", "걷기", 20) if not profile.age or profile.age >= 60
                 else ("활력 러닝", "러닝", 30)
             )
             PersonalDailyQuest.objects.create(
@@ -370,8 +524,14 @@ def onboarding_group(request):
         return redirect("onboarding_group")
     if request.method == "POST" and request.POST.get("action") == "create_room":
         room_name = request.POST.get("room_name", "").strip()[:100]
-        if not room_name:
-            messages.error(request, "그룹 방 이름을 입력해 주세요.")
+        challenge_reward = request.POST.get("challenge_reward", "").strip()[:200]
+        try:
+            challenge_start = date.fromisoformat(request.POST.get("challenge_start", ""))
+            challenge_end = date.fromisoformat(request.POST.get("challenge_end", ""))
+        except (TypeError, ValueError):
+            challenge_start = challenge_end = None
+        if not room_name or not challenge_start or not challenge_end or challenge_end < challenge_start:
+            messages.error(request, "파티 이름과 올바른 내기 시작일·종료일을 입력해 주세요.")
         else:
             friend_ids = set(friends.values_list("id", flat=True))
             invited_ids = {
@@ -379,7 +539,11 @@ def onboarding_group(request):
                 if value.isdigit() and int(value) in friend_ids
             }
             with transaction.atomic():
-                party = Party.objects.create(name=room_name, owner=request.user)
+                party = Party.objects.create(
+                    name=room_name, owner=request.user,
+                    challenge_start=challenge_start, challenge_end=challenge_end,
+                    challenge_reward=challenge_reward,
+                )
                 party.members.add(request.user, *User.objects.filter(id__in=invited_ids))
                 profile = request.user.profile
                 profile.workout_mode = "GROUP"

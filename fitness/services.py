@@ -1,5 +1,45 @@
 import numpy as np
+import datetime
+import email.utils
+import time
+import urllib.request
+import xml.etree.ElementTree as ET
 from .models import WorkoutRecord
+
+_news_cache = {"expires": 0, "items": []}
+
+
+def get_sports_news(limit=6):
+    """Google News 스포츠 RSS를 읽고 10분간 메모리에 보관한다."""
+    now = time.time()
+    if _news_cache["items"] and _news_cache["expires"] > now:
+        return _news_cache["items"][:limit]
+    url = "https://news.google.com/rss/headlines/section/topic/SPORTS?hl=ko&gl=KR&ceid=KR:ko"
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "NETFIT/1.0"})
+        with urllib.request.urlopen(request, timeout=4) as response:
+            root = ET.fromstring(response.read())
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        items = []
+        for node in root.findall(".//channel/item")[:limit]:
+            raw_title = (node.findtext("title") or "").strip()
+            headline, source = raw_title, "스포츠 뉴스"
+            if " - " in raw_title:
+                headline, source = [part.strip() for part in raw_title.rsplit(" - ", 1)]
+            published = node.findtext("pubDate") or ""
+            time_label = "최신"
+            if published:
+                try:
+                    seconds = max(0, (now_utc - email.utils.parsedate_to_datetime(published)).total_seconds())
+                    time_label = f"{int(seconds // 60)}분 전" if seconds < 3600 else f"{int(seconds // 3600)}시간 전" if seconds < 86400 else f"{int(seconds // 86400)}일 전"
+                except (TypeError, ValueError):
+                    pass
+            items.append({"title": headline, "source": source, "time": time_label, "url": node.findtext("link") or "#"})
+        if items:
+            _news_cache.update({"expires": now + 600, "items": items})
+        return items
+    except Exception:
+        return []
 
 def calculate_workout_xp(minutes, distance_km, with_party):
     # NumPy로 운동 수치를 배열 연산하여 XP를 계산합니다.

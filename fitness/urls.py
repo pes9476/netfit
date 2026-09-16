@@ -1,6 +1,6 @@
 from django.urls import path
 from .kakao import kakao_callback, kakao_login
-from .views import UserLogoutView, activity_view, add_friend, battle_arena, battle_view, create_battle, dashboard, demo_battle, demo_level, facilities_view, friends_view, login_view, onboarding_course, onboarding_entry, onboarding_group, onboarding_group_quest, onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo, profile_view, ranking_view, record_workout, region_view, register_view
+from .views import UserLogoutView, activity_view, add_friend, battle_arena, battle_view, complete_daily_quest, create_battle, dashboard, demo_battle, demo_level, facilities_view, friends_view, login_view, onboarding_course, onboarding_entry, onboarding_group, onboarding_group_quest, onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo, outfit_shop, profile_view, ranking_view, record_workout, region_view, register_view, sports_news_api
 
 urlpatterns = [
     path("login/kakao/", kakao_login, name="kakao_login"),
@@ -20,7 +20,10 @@ urlpatterns = [
     path("profile/", profile_view, name="profile"),
     path("activity/", activity_view, name="activity"),
     path("record/", record_workout, name="record_workout"),
+    path("quests/<str:quest_kind>/<int:quest_id>/complete/", complete_daily_quest, name="complete_daily_quest"),
     path("ranking/", ranking_view, name="ranking"),
+    path("outfits/", outfit_shop, name="outfit_shop"),
+    path("api/news/", sports_news_api, name="sports_news_api"),
     path("friends/", friends_view, name="friends"),
     path("friends/add/", add_friend, name="add_friend"),
     path("facilities/", facilities_view, name="facilities"),

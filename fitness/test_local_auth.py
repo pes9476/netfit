@@ -83,6 +83,7 @@ class LocalAuthTests(TestCase):
         FriendLink.objects.create(user=friend, friend=user)
         response = self.client.post(reverse("onboarding_group"), {
             "action": "create_room", "room_name": "아침 운동방", "invitees": [friend.id],
+            "challenge_start": "2026-09-16", "challenge_end": "2026-09-30",
         })
         party = Party.objects.get(name="아침 운동방")
         self.assertRedirects(response, reverse("onboarding_group_quest", args=[party.id]))

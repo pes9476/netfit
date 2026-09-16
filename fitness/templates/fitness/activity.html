@@ -1,15 +1,15 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>운동 기록</h1><p>운동 기록이 경험치가 되고, 경험치가 카드 레벨과 능력치가 됩니다.</p></section>
+<section class="page-intro"><h1>운동 기록</h1><p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다.</p></section>
 <div class="grid2">
-  <article class="panel"><h2>오늘 한 운동 입력</h2><form method="post" action="{% url 'record_workout' %}">{% csrf_token %}<input type="hidden" name="next" value="activity"><div class="form-grid">{% for field in workout_form %}<div class="field {% if field.name == 'with_party' %}full check{% endif %}">{{ field.label_tag }}{{ field }}</div>{% endfor %}</div><button class="button">운동 기록하고 경험치 받기</button></form></article>
+  <article class="panel"><h2>오늘 한 운동 입력</h2><form method="post" action="{% url 'record_workout' %}">{% csrf_token %}<input type="hidden" name="next" value="activity"><div class="form-grid">{% for field in workout_form %}<div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div><button class="button">운동 기록하고 배지 받기</button></form></article>
   <article class="panel"><h2>운동 배경 미리보기</h2><div class="workout-preview background-sprite scene-run" id="workoutPreview"><div class="preview-copy"><b id="previewWorkoutName">러닝</b><small>선택한 운동에 맞춰 대시보드 카드 배경이 바뀝니다.</small></div></div><p style="color:var(--muted)">자전거를 선택하면 자전거 도로, 수영을 선택하면 수영장, 헬스를 선택하면 헬스장 배경으로 표시됩니다.</p><a class="button" href="{% url 'dashboard' %}">내 카드 확인하기</a></article>
 </div>
 <section class="section-head"><div><h2>최근 운동 기록</h2><p>가장 최근 20개 기록입니다.</p></div></section>
-<article class="panel">{% for record in records %}<div class="activity"><span class="icon">🏃</span><span><b>{{ record.workout_type }} · {{ record.minutes }}분{% if record.distance_km %} · {{ record.distance_km }}km{% endif %}</b><small>{{ record.created_at|date:"Y.m.d H:i" }} · {{ record.location|default:"운동 장소 미입력" }}{% if record.with_party %} · 파티원과 함께{% endif %}</small></span><span class="gain">+{{ record.earned_xp }} 경험치</span></div>{% empty %}<p style="color:var(--muted)">첫 운동을 기록해보세요.</p>{% endfor %}</article>
+<article class="panel">{% for record in records %}<div class="activity"><span class="icon">🏃</span><span><b>{{ record.workout_name }} · {{ record.minutes }}분{% if record.distance_km %} · {{ record.distance_km }}km{% endif %}</b><small>{{ record.created_at|date:"Y.m.d H:i" }} · {{ record.location|default:"운동 장소 미입력" }}{% if record.with_party %} · 파티원과 함께{% endif %}</small></span><span class="gain">{% if record.badge_award %}{% if record.badge_award.badge_type == 'GOLD' %}🥇{% elif record.badge_award.badge_type == 'SILVER' %}🥈{% else %}🥉{% endif %} +{{ record.badge_award.points }}점{% else %}기존 기록{% endif %}</span></div>{% empty %}<p style="color:var(--muted)">첫 운동을 기록해보세요.</p>{% endfor %}</article>
 <script>
-const workoutSelect=document.getElementById("id_workout_type"),preview=document.getElementById("workoutPreview"),previewName=document.getElementById("previewWorkoutName");
-const scenes={"러닝":"run","걷기":"walk","헬스":"gym","수영":"swim","배드민턴":"badminton","자전거":"bike","기타":"walk"};
-function changeWorkoutScene(){const name=workoutSelect.value||"러닝";preview.className="workout-preview background-sprite scene-"+(scenes[name]||"run");previewName.textContent=name;}workoutSelect.addEventListener("change",changeWorkoutScene);changeWorkoutScene();
+const workoutSelect=document.getElementById("id_workout_type"),customWorkout=document.getElementById("id_custom_workout_name"),customField=customWorkout.closest(".custom-workout-field"),preview=document.getElementById("workoutPreview"),previewName=document.getElementById("previewWorkoutName");
+const scenes={"러닝":"run","걷기":"walk","기타":"walk"};
+function changeWorkoutScene(){const name=workoutSelect.value||"러닝",isCustom=name==="기타";customField.hidden=!isCustom;customWorkout.required=isCustom;preview.className="workout-preview background-sprite scene-"+(scenes[name]||"run");previewName.textContent=isCustom?(customWorkout.value.trim()||"직접 입력"):name;}workoutSelect.addEventListener("change",changeWorkoutScene);customWorkout.addEventListener("input",changeWorkoutScene);changeWorkoutScene();
 </script>
 {% endblock %}

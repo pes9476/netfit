@@ -20,13 +20,49 @@ class RegisterForm(UserCreationForm):
 class WorkoutForm(forms.ModelForm):
     class Meta:
         model = WorkoutRecord
-        fields = ("workout_type", "minutes", "distance_km", "location", "with_party")
+        fields = ("workout_type", "custom_workout_name", "minutes", "distance_km", "location", "with_party")
         widgets = {
             "workout_type": forms.Select(attrs={"class": "input"}),
+            "custom_workout_name": forms.TextInput(attrs={
+                "class": "input",
+                "placeholder": "예: 필라테스, 농구, 등산",
+                "maxlength": 50,
+            }),
             "minutes": forms.NumberInput(attrs={"class": "input", "min": 1}),
             "distance_km": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1"}),
             "location": forms.TextInput(attrs={"class": "input", "placeholder": "예: OO 체육공원"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["workout_type"].choices = [
+            ("러닝", "러닝"),
+            ("걷기", "산책"),
+            ("수영", "수영"),
+            ("배드민턴", "배드민턴"),
+            ("자전거", "자전거"),
+            ("헬스", "헬스"),
+            ("등산", "등산"),
+            ("축구", "축구"),
+            ("농구", "농구"),
+            ("요가", "요가"),
+            ("기타", "직접입력"),
+        ]
+        self.fields["workout_type"].label = "운동 종류"
+        self.fields["custom_workout_name"].label = "직접 입력할 운동"
+        self.fields["custom_workout_name"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        workout_type = cleaned_data.get("workout_type")
+        custom_name = (cleaned_data.get("custom_workout_name") or "").strip()
+        if workout_type == "기타" and not custom_name:
+            self.add_error("custom_workout_name", "직접 입력할 운동 이름을 적어주세요.")
+        elif workout_type != "기타":
+            cleaned_data["custom_workout_name"] = ""
+        else:
+            cleaned_data["custom_workout_name"] = custom_name
+        return cleaned_data
 
 class BattleForm(forms.ModelForm):
     class Meta:
@@ -54,7 +90,7 @@ class ProfileForm(forms.ModelForm):
         model = Profile
         fields = (
             "area", "age", "gender", "accessibility_type", "height_cm", "weight_kg",
-            "skeletal_muscle_kg", "body_fat_percent", "avatar_preference", "rank_participation",
+            "avatar_preference", "rank_participation",
         )
         widgets = {
             "area": forms.Select(attrs={"class": "input"}),
@@ -63,8 +99,6 @@ class ProfileForm(forms.ModelForm):
             "accessibility_type": forms.Select(attrs={"class": "input"}),
             "height_cm": forms.NumberInput(attrs={"class": "input bmi-input", "min": 50, "step": "0.1"}),
             "weight_kg": forms.NumberInput(attrs={"class": "input bmi-input", "min": 10, "step": "0.1"}),
-            "skeletal_muscle_kg": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1"}),
-            "body_fat_percent": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1"}),
             "avatar_preference": forms.Select(attrs={"class": "input"}),
             "rank_participation": forms.CheckboxInput(),
         }
@@ -84,14 +118,11 @@ class ProfileForm(forms.ModelForm):
             "area": "활동 지역", "age": "나이", "gender": "성별",
             "accessibility_type": "장애 여부",
             "height_cm": "키 (cm)", "weight_kg": "몸무게 (kg)",
-            "skeletal_muscle_kg": "골격근량 (kg) · 선택",
-            "body_fat_percent": "체지방률 (%) · 선택", "avatar_preference": "마스코트 선택",
+            "avatar_preference": "마스코트 선택",
             "rank_participation": "랭킹 참여",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
-        self.fields["skeletal_muscle_kg"].required = False
-        self.fields["body_fat_percent"].required = False
         self.fields["accessibility_type"].required = False
         if user:
             self.fields["nickname"].initial = "" if needs_kakao_nickname(user) else user.username

@@ -39,6 +39,7 @@ TEMPLATES = [{
         "django.template.context_processors.request",
         "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
+        "fitness.context_processors.quest_menu",
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"

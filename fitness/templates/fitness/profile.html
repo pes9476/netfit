@@ -1,22 +1,23 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>프로필·인바디</h1><p>인바디 기록을 관리하고, 함께 운동할 마스코트를 직접 선택하세요.</p></section>
+<section class="page-intro"><h1>마이페이지</h1><p>내 정보와 비만도, 캐릭터 설정을 관리하세요.</p></section>
 <section class="profile-layout">
   <article class="panel"><h2>내 프로필</h2><form method="post">{% csrf_token %}
     <div class="form-grid profile-grid"><div class="field">{{ form.nickname.label_tag }}{{ form.nickname }}{{ form.nickname.errors }}</div><div class="field">{{ form.area.label_tag }}{{ form.area }}</div><div class="field">{{ form.age.label_tag }}{{ form.age }}</div><div class="field">{{ form.gender.label_tag }}{{ form.gender }}</div><div class="field full check">{{ form.rank_participation }}<label for="{{ form.rank_participation.id_for_label }}">랭킹 참여 — 닉네임·지역·레벨·경험치만 표시합니다.</label></div></div>
-    <hr><h2>인바디·비만도 참고 계산</h2><p style="color:var(--muted);font-size:13px">BMI는 참고용 수치이며 의료 진단이 아닙니다. 인바디 수치는 기록으로만 저장되며 캐릭터 모습에 영향을 주지 않습니다.</p>
-    <div class="form-grid profile-grid"><div class="field">{{ form.measured_on.label_tag }}{{ form.measured_on }}</div><div class="field">{{ form.height_cm.label_tag }}{{ form.height_cm }}</div><div class="field">{{ form.weight_kg.label_tag }}{{ form.weight_kg }}</div><div class="field">{{ form.skeletal_muscle_kg.label_tag }}{{ form.skeletal_muscle_kg }}</div><div class="field">{{ form.body_fat_percent.label_tag }}{{ form.body_fat_percent }}</div><div class="field">{{ form.avatar_preference.label_tag }}{{ form.avatar_preference }}</div></div>
-    <div class="bmi-result" id="bmiResult">저장된 결과: {% if profile.bmi %}BMI {{ profile.bmi }} · {{ profile.bmi_status }}{% else %}키와 몸무게를 입력해주세요.{% endif %}</div><div class="bmi-scale"><span>저체중<br>18.5 미만</span><span>정상<br>18.5~22.9</span><span>과체중<br>23~24.9</span><span>비만 참고<br>25 이상</span></div><p class="bmi-hint">마스코트는 선택한 모습으로 유지됩니다. 몸무게·근육량·성별·나이가 달라져도 자동으로 바뀌지 않습니다.</p><button class="button">프로필과 인바디 저장하기</button></form>
+    <hr><h2>비만도 참고 계산</h2><p style="color:var(--muted);font-size:13px">키와 몸무게로 계산한 BMI는 참고용 수치이며 의료 진단이 아닙니다.</p>
+    <div class="form-grid profile-grid"><div class="field">{{ form.measured_on.label_tag }}{{ form.measured_on }}</div><div class="field">{{ form.height_cm.label_tag }}{{ form.height_cm }}</div><div class="field">{{ form.weight_kg.label_tag }}{{ form.weight_kg }}</div><div class="field">{{ form.avatar_preference.label_tag }}{{ form.avatar_preference }}</div></div>
+    <div class="bmi-result" id="bmiResult">저장된 결과: {% if profile.bmi %}BMI {{ profile.bmi }} · {{ profile.bmi_status }}{% else %}키와 몸무게를 입력해주세요.{% endif %}</div><div class="bmi-scale"><span>저체중<br>18.5 미만</span><span>정상<br>18.5~22.9</span><span>과체중<br>23~24.9</span><span>비만 참고<br>25 이상</span></div><p class="bmi-hint">캐릭터는 선택한 모습으로 유지됩니다.</p><button class="button">프로필과 비만도 저장하기</button></form>
   </article>
-  <aside class="panel preview-panel"><h2>카드 미리보기</h2><div class="mini-card background-sprite scene-walk"><div id="profileAvatar" class="avatar-roster avatar-{{ profile.sprite_gender }} age-{{ profile.age_group }} style-{{ profile.body_style|lower }}"></div><span class="scene-caption">저장 전 미리보기</span></div><p><b id="previewLabel">{{ profile.character_label }}</b><br><span style="color:var(--muted)">선택한 마스코트를 미리 확인하세요. 저장하면 대시보드와 배틀 카드에 적용됩니다.</span></p></aside>
+  <aside class="panel preview-panel"><h2>내 캐릭터 미리보기</h2><div class="mini-card background-sprite scene-walk"><div id="profileAvatar" class="avatar-roster avatar-{{ profile.sprite_gender }} age-{{ profile.age_group }} style-{{ profile.body_style|lower }} outfit-{{ profile.equipped_outfit|lower }}"></div><span class="scene-caption">저장 전 미리보기</span></div><p><b id="previewLabel">{{ user.profile.display_name|default:user.username }}</b><br><span style="color:var(--muted)">선택한 캐릭터를 미리 확인하세요. 저장하면 대시보드에 적용됩니다.</span></p></aside>
 </section>
 {% include "fitness/workout_analytics.html" %}
-<section class="section-head"><div><h2>체성분 기록</h2><p>최근 저장한 인바디 측정 기록입니다.</p></div></section><article class="panel table-wrap"><table class="measure-table"><thead><tr><th>측정일</th><th>키</th><th>몸무게</th><th>BMI</th><th>골격근량</th><th>체지방률</th></tr></thead><tbody>{% for measurement in measurements %}<tr><td>{{ measurement.measured_on|date:"Y.m.d" }}</td><td>{{ measurement.height_cm }}cm</td><td>{{ measurement.weight_kg }}kg</td><td>{{ measurement.bmi }}</td><td>{{ measurement.skeletal_muscle_kg|default:"-" }}{% if measurement.skeletal_muscle_kg %}kg{% endif %}</td><td>{{ measurement.body_fat_percent|default:"-" }}{% if measurement.body_fat_percent %}%{% endif %}</td></tr>{% empty %}<tr><td colspan="6">아직 저장한 측정 기록이 없어요.</td></tr>{% endfor %}</tbody></table></article>
+<section class="section-head"><div><h2>키·몸무게 기록</h2><p>최근 저장한 비만도 계산 기록입니다.</p></div></section><article class="panel table-wrap"><table class="measure-table"><thead><tr><th>측정일</th><th>키</th><th>몸무게</th><th>BMI</th></tr></thead><tbody>{% for measurement in measurements %}<tr><td>{{ measurement.measured_on|date:"Y.m.d" }}</td><td>{{ measurement.height_cm }}cm</td><td>{{ measurement.weight_kg }}kg</td><td>{{ measurement.bmi }}</td></tr>{% empty %}<tr><td colspan="4">아직 저장한 측정 기록이 없어요.</td></tr>{% endfor %}</tbody></table></article>
 <script>
 (() => {
   const h = document.getElementById("id_height_cm");
   const w = document.getElementById("id_weight_kg");
   const pref = document.getElementById("id_avatar_preference");
+  const nickname = document.getElementById("id_nickname");
   const result = document.getElementById("bmiResult");
   const avatar = document.getElementById("profileAvatar");
   const label = document.getElementById("previewLabel");
@@ -31,13 +32,14 @@
   function updateMascot() {
     const names = {ACTIVE: "백호", MUSCULAR: "백곰", SOFT: "햄스터", BALANCED: "아기공룡"};
     const value = Object.hasOwn(names, pref.value) ? pref.value : "ACTIVE";
-    avatar.className = "avatar-roster style-" + value.toLowerCase();
+    avatar.className = "avatar-roster style-" + value.toLowerCase() + " outfit-{{ profile.equipped_outfit|lower }}";
     avatar.setAttribute("role", "img");
     avatar.setAttribute("aria-label", names[value]);
-    label.textContent = names[value];
+    label.textContent = document.getElementById("id_nickname").value || "내 캐릭터";
   }
   [h, w].forEach(el => el.addEventListener("input", updateBmi));
   pref.addEventListener("change", updateMascot);
+  nickname.addEventListener("input", updateMascot);
   updateBmi(); updateMascot();
 })();
 </script>

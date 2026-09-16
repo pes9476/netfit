@@ -1,14 +1,31 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>내 주변 체육시설</h1><p>{{ area }}의 공공체육시설을 종목이나 시설명으로 찾아보세요.</p></section>
+<section class="page-intro"><h1>내 주변 체육시설</h1><p>{% if use_current_location %}현재 위치에서 가까운 시설을 거리순으로 표시합니다.{% else %}{{ area }}의 공공체육시설을 찾아보세요.{% endif %}</p></section>
 <section class="facility-search panel">
-  <form method="get" role="search"><label for="facilitySearch">시설 검색</label><div class="search-row"><input class="input" id="facilitySearch" type="search" name="q" value="{{ keyword }}" placeholder="시설명·주소·종목 검색"><input type="hidden" name="category" value="{{ category }}"><button class="button" type="submit">검색</button></div></form>
-  <nav class="facility-categories" aria-label="시설 유형">{% for key, label, term in categories %}<a href="?category={{ key }}{% if keyword %}&amp;q={{ keyword|urlencode }}{% endif %}" {% if category == key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+  <div class="location-search-row"><button class="button" type="button" id="findNearbyFacilities">📍 내 현재 위치 주변 찾기</button><span id="locationStatus">{% if use_current_location %}현재 위치 기준 검색 중{% else %}위치 버튼을 누르면 가까운 순으로 확인할 수 있어요.{% endif %}</span></div>
+  <form method="get" role="search"><label for="facilitySearch">시설 검색</label><div class="search-row"><input class="input" id="facilitySearch" type="search" name="q" value="{{ keyword }}" placeholder="시설명·주소·종목 검색"><input type="hidden" name="category" value="{{ category }}">{% if use_current_location %}<input type="hidden" name="lat" value="{{ current_lat }}"><input type="hidden" name="lon" value="{{ current_lon }}">{% endif %}<button class="button" type="submit">검색</button></div></form>
+  <nav class="facility-categories" aria-label="시설 유형">{% for key, label, term in categories %}<a href="?category={{ key }}{% if keyword %}&amp;q={{ keyword|urlencode }}{% endif %}{% if use_current_location %}&amp;lat={{ current_lat }}&amp;lon={{ current_lon }}{% endif %}" {% if category == key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
 </section>
-<div class="facility-result-head"><b>{{ area }} 검색 결과</b><span>{{ facilities|length }}개 표시</span></div>
-<article class="panel facility-list">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span class="facility-copy"><b>{{ facility.name }}</b><small>{{ facility.facility_type|default:"체육시설" }}{% if facility.address %} · {{ facility.address }}{% endif %}</small></span><span class="facility-actions"><a class="map-button route-popup" href="{{ facility.naver_directions_url }}" aria-label="{{ facility.name }} 길찾기 작은 창으로 열기">길찾기 ↗</a>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank" rel="noopener noreferrer">시설 홈페이지</a>{% endif %}</span></div>{% empty %}<div class="empty-state"><h2>검색 결과가 없어요.</h2><p>검색어를 줄이거나 ‘전체’를 선택해보세요.</p><a class="button" href="{% url 'facilities' %}">전체 시설 보기</a></div>{% endfor %}</article>
+<div class="facility-result-head"><b>{% if use_current_location %}내 위치 주변{% else %}{{ area }}{% endif %} 검색 결과</b><span>{{ facilities|length }}개 표시</span></div>
+<article class="panel facility-list">{% for facility in facilities %}<div class="facility"><span class="icon">🏟️</span><span class="facility-copy"><b>{{ facility.name }}{% if facility.distance_km != None %} <em>{{ facility.distance_km }}km</em>{% endif %}</b><small>{{ facility.facility_type|default:"체육시설" }}{% if facility.address %} · {{ facility.address }}{% endif %}</small></span><span class="facility-actions"><a class="map-button route-popup" href="{{ facility.naver_directions_url }}" aria-label="{{ facility.name }} 길찾기 작은 창으로 열기">길찾기 ↗</a>{% if facility.homepage_url %}<a class="gain" href="{{ facility.homepage_url }}" target="_blank" rel="noopener noreferrer">시설 홈페이지</a>{% endif %}</span></div>{% empty %}<div class="empty-state"><h2>검색 결과가 없어요.</h2><p>검색어를 줄이거나 ‘전체’를 선택해보세요.</p><a class="button" href="{% url 'facilities' %}">전체 시설 보기</a></div>{% endfor %}</article>
 <script>
 (() => {
+  const locationButton = document.getElementById("findNearbyFacilities");
+  const locationStatus = document.getElementById("locationStatus");
+  locationButton.addEventListener("click", () => {
+    if (!navigator.geolocation) { locationStatus.textContent = "이 브라우저에서는 위치 기능을 사용할 수 없어요."; return; }
+    locationButton.disabled = true;
+    locationStatus.textContent = "현재 위치를 확인하는 중…";
+    navigator.geolocation.getCurrentPosition(position => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("lat", position.coords.latitude.toFixed(6));
+      url.searchParams.set("lon", position.coords.longitude.toFixed(6));
+      window.location.assign(url.toString());
+    }, error => {
+      locationButton.disabled = false;
+      locationStatus.textContent = error.code === 1 ? "브라우저에서 위치 권한을 허용해 주세요." : "현재 위치를 확인하지 못했어요. 다시 시도해 주세요.";
+    }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 300000});
+  });
   document.querySelectorAll(".route-popup").forEach(link => {
     link.addEventListener("click", event => {
       const width = 480;
@@ -29,4 +46,5 @@
   });
 })();
 </script>
+<style>.location-search-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}.location-search-row span{color:var(--muted);font-size:12px}.facility-copy em{margin-left:6px;color:var(--mint);font-size:12px;font-style:normal}@media(max-width:600px){.location-search-row{align-items:flex-start;flex-direction:column}}</style>
 {% endblock %}

@@ -1,10 +1,20 @@
 /* The atlas is ordered: tiger, bear / hamster, dinosaur. */
 body .avatar-roster{inset:8px 0 30px;display:grid;place-items:center;background-image:none;filter:none;--mascot-x:100%;--mascot-y:100%;--mascot-motion:cuteDinoWaddle;--mascot-duration:2.6s;--mascot-size:94%}
 body .avatar-roster::before{content:"";display:block;width:min(var(--mascot-size),320px);aspect-ratio:1;background-image:url('../img/netfit-mascots.png');background-size:200% 200%;background-position:var(--mascot-x) var(--mascot-y);background-repeat:no-repeat;filter:drop-shadow(0 15px 12px #0004);animation:var(--mascot-motion) var(--mascot-duration) ease-in-out infinite;transform-origin:bottom center}
+body .avatar-roster::after{position:absolute;z-index:4;display:grid;place-items:center;filter:drop-shadow(0 4px 3px #0008);pointer-events:none}
+body .avatar-roster.outfit-cap::before{background-image:url('../img/netfit-mascots-cap.png')}
+body .avatar-roster.outfit-cap::after{content:none}
+body .avatar-roster.outfit-sport::before{background-image:url('../img/netfit-mascots-sport.png')}
+body .avatar-roster.outfit-sport::after{content:none}
+body .avatar-roster.outfit-crown::before{background-image:url('../img/netfit-mascots-crown.png')}
+body .avatar-roster.outfit-crown::after{content:none}
 body .avatar-roster.style-slim,body .avatar-roster.style-active{--mascot-x:0%;--mascot-y:0%;--mascot-motion:cuteTigerJog;--mascot-duration:1.4s}
 body .avatar-roster.style-muscular{--mascot-x:100%;--mascot-y:0%;--mascot-motion:cuteBearPump;--mascot-duration:2.5s}
 body .avatar-roster.style-soft{--mascot-x:0%;--mascot-y:100%;--mascot-motion:cuteHamsterHop;--mascot-duration:1.7s}
 .card-character::before,.mini-card::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,#080c1455,#080c14bb)}
+.dashboard-character-stage{height:330px!important;background:#0d1524!important}
+.dashboard-character-stage::before{content:none!important}
+body .dashboard-character-stage .avatar-roster{inset:12px 0 24px;--mascot-size:74%}
 .mini-card .avatar-roster{inset:0 0 26px}.battle-card .avatar-roster::before{width:min(var(--mascot-size),265px)}
 .mascot-showcase .mascot-tile{position:relative;padding:0;height:185px;overflow:hidden;background:radial-gradient(at 50% 30%,#6366f129,transparent 75%),#0b1220}
 .mascot-showcase .mascot-tile .avatar-roster{inset:6px 0 32px;border:0;background:none;padding:0}

@@ -68,6 +68,11 @@ class Profile(models.Model):
     accessibility_type = models.CharField(
         max_length=12, choices=ACCESSIBILITY_CHOICES, default="NON_DISABLED",
     )
+    equipped_outfit = models.CharField(
+        max_length=10,
+        choices=[("NONE", "기본"), ("CAP", "운동 모자"), ("SPORT", "스포츠 유니폼"), ("CROWN", "챔피언 왕관")],
+        default="NONE",
+    )
 
     @property
     def recommended_course(self):
@@ -173,18 +178,95 @@ class BodyMeasurement(models.Model):
 
 class WorkoutRecord(models.Model):
     WORKOUT_CHOICES = [
-        ("러닝", "러닝"), ("걷기", "걷기"), ("헬스", "헬스"),
+        ("러닝", "러닝"), ("만보", "만보"), ("걷기", "산책"), ("헬스", "헬스"),
         ("자전거", "자전거"), ("수영", "수영"), ("배드민턴", "배드민턴"),
+        ("등산", "등산"), ("축구", "축구"), ("농구", "농구"), ("요가", "요가"),
         ("기타", "기타"),
     ]
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     workout_type = models.CharField(max_length=10, choices=WORKOUT_CHOICES)
+    custom_workout_name = models.CharField(max_length=50, blank=True)
     minutes = models.PositiveIntegerField()
     distance_km = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     location = models.CharField(max_length=120, blank=True)
     with_party = models.BooleanField(default=False)
     earned_xp = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def workout_name(self):
+        if self.workout_type == "기타" and self.custom_workout_name:
+            return self.custom_workout_name
+        if self.workout_type == "걷기":
+            return "산책"
+        return self.get_workout_type_display()
+
+
+class BadgeAward(models.Model):
+    BRONZE = "BRONZE"
+    SILVER = "SILVER"
+    GOLD = "GOLD"
+    BADGE_CHOICES = [(GOLD, "금"), (SILVER, "은"), (BRONZE, "동")]
+    POINTS = {GOLD: 100, SILVER: 50, BRONZE: 30}
+    SOURCE_CHOICES = [("WORKOUT", "운동 기록"), ("DAILY_QUEST", "일퀘 완료")]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="badge_awards")
+    badge_type = models.CharField(max_length=8, choices=BADGE_CHOICES)
+    points = models.PositiveSmallIntegerField()
+    source = models.CharField(max_length=12, choices=SOURCE_CHOICES)
+    workout_record = models.OneToOneField(
+        WorkoutRecord, null=True, blank=True, on_delete=models.CASCADE, related_name="badge_award",
+    )
+    daily_quest = models.ForeignKey(
+        "DailyQuest", null=True, blank=True, on_delete=models.CASCADE, related_name="badge_awards",
+    )
+    personal_quest = models.ForeignKey(
+        "PersonalDailyQuest", null=True, blank=True, on_delete=models.CASCADE, related_name="badge_awards",
+    )
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-awarded_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "daily_quest"],
+                condition=models.Q(daily_quest__isnull=False),
+                name="unique_group_quest_badge_per_user",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "personal_quest"],
+                condition=models.Q(personal_quest__isnull=False),
+                name="unique_personal_quest_badge_per_user",
+            ),
+        ]
+
+    @classmethod
+    def badge_for_minutes(cls, minutes):
+        if minutes >= 60:
+            return cls.GOLD
+        if minutes >= 30:
+            return cls.SILVER
+        return cls.BRONZE
+
+    def save(self, *args, **kwargs):
+        self.points = self.POINTS[self.badge_type]
+        super().save(*args, **kwargs)
+
+
+class OutfitPurchase(models.Model):
+    OUTFIT_CHOICES = [("CAP", "운동 모자"), ("SPORT", "스포츠 유니폼"), ("CROWN", "챔피언 왕관")]
+    COSTS = {"CAP": 150, "SPORT": 250, "CROWN": 400}
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="outfit_purchases")
+    outfit = models.CharField(max_length=10, choices=OUTFIT_CHOICES)
+    cost = models.PositiveIntegerField()
+    purchased_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "outfit"], name="unique_user_outfit")]
+
+    def save(self, *args, **kwargs):
+        self.cost = self.COSTS[self.outfit]
+        super().save(*args, **kwargs)
 
 class Facility(models.Model):
     name = models.CharField(max_length=200)
@@ -206,6 +288,9 @@ class Party(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_parties", null=True)
     max_members = models.PositiveSmallIntegerField(default=4)
     created_at = models.DateTimeField(default=timezone.now)
+    challenge_start = models.DateField(null=True, blank=True)
+    challenge_end = models.DateField(null=True, blank=True)
+    challenge_reward = models.CharField(max_length=200, blank=True)
 
 
 class Mission(models.Model):
@@ -267,7 +352,6 @@ class ProofSubmission(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
 
-
 class DailyQuest(models.Model):
     party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="daily_quests")
     creator = models.ForeignKey(
@@ -275,7 +359,10 @@ class DailyQuest(models.Model):
         related_name="created_daily_quests",
     )
     title = models.CharField(max_length=100)
-    workout_type = models.CharField(max_length=10, choices=WorkoutRecord.WORKOUT_CHOICES)
+    workout_type = models.CharField(
+        max_length=10,
+        choices=[choice for choice in WorkoutRecord.WORKOUT_CHOICES if choice[0] != "만보"],
+    )
     custom_workout_name = models.CharField(max_length=50, blank=True)
     target_minutes = models.PositiveIntegerField()
     quest_date = models.DateField(default=timezone.localdate)
@@ -287,7 +374,9 @@ class DailyQuest(models.Model):
 
     @property
     def workout_label(self):
-        return self.custom_workout_name if self.workout_type == "기타" and self.custom_workout_name else self.get_workout_type_display()
+        if self.workout_type == "기타" and self.custom_workout_name:
+            return self.custom_workout_name
+        return "산책" if self.workout_type == "걷기" else self.get_workout_type_display()
 
 
 class PersonalDailyQuest(models.Model):
@@ -297,7 +386,10 @@ class PersonalDailyQuest(models.Model):
         related_name="personal_daily_quests",
     )
     title = models.CharField(max_length=100)
-    workout_type = models.CharField(max_length=10, choices=WorkoutRecord.WORKOUT_CHOICES)
+    workout_type = models.CharField(
+        max_length=10,
+        choices=[choice for choice in WorkoutRecord.WORKOUT_CHOICES if choice[0] != "만보"],
+    )
     custom_workout_name = models.CharField(max_length=50, blank=True)
     target_minutes = models.PositiveIntegerField()
     source = models.CharField(max_length=8, choices=SOURCE_CHOICES, default="DIRECT")
@@ -310,7 +402,9 @@ class PersonalDailyQuest(models.Model):
 
     @property
     def workout_label(self):
-        return self.custom_workout_name if self.workout_type == "기타" and self.custom_workout_name else self.get_workout_type_display()
+        if self.workout_type == "기타" and self.custom_workout_name:
+            return self.custom_workout_name
+        return "산책" if self.workout_type == "걷기" else self.get_workout_type_display()
 
 
 class FriendLink(models.Model):

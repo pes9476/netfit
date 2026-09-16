@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 *.sqlite3-journal
+*.sqlite3.backup-*
 .env
 .env.*
 !.env.example

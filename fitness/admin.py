@@ -1,4 +1,4 @@
 from django.contrib import admin
-from .models import BodyMeasurement, CardBattle, CharacterCard, Facility, FriendLink, Party, Profile, WorkoutRecord
+from .models import BadgeAward, BodyMeasurement, CardBattle, CharacterCard, Facility, FriendLink, OutfitPurchase, Party, Profile, WorkoutRecord
 
-admin.site.register([Profile, CharacterCard, WorkoutRecord, Facility, Party, CardBattle, BodyMeasurement, FriendLink])
+admin.site.register([Profile, CharacterCard, WorkoutRecord, BadgeAward, OutfitPurchase, Facility, Party, CardBattle, BodyMeasurement, FriendLink])
