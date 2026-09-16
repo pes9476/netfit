@@ -1,6 +1,6 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>캐릭터 옷 상점</h1><p>운동과 일퀘로 모은 배지 포인트로 의상을 구매하고 캐릭터를 꾸며보세요.</p></section>
+<section class="page-intro"><h1>캐릭터 옷 상점</h1><p>운동과 일일퀘스트로 모은 배지 포인트로 의상을 구매하고 캐릭터를 꾸며보세요.</p></section>
 <section class="shop-balance panel"><div><small>누적 배지 점수</small><b>{{ badge_summary.total_points }}점</b></div><div><small>사용 가능한 포인트</small><b>{{ badge_summary.available_points }}점</b></div><a class="button" href="{% url 'dashboard' %}">← 대시보드</a></section>
 <section class="outfit-grid">{% for item in catalog %}<article class="panel outfit-item"><span>{{ item.icon }}</span><h2>{{ item.name }}</h2><p>{{ item.cost }}점</p>{% if item.code in owned_outfits %}{% if user.profile.equipped_outfit == item.code %}<b class="equipped">착용 중</b>{% else %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="equip"><input type="hidden" name="outfit" value="{{ item.code }}"><button class="button">착용하기</button></form>{% endif %}{% else %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="buy"><input type="hidden" name="outfit" value="{{ item.code }}"><button class="button">{{ item.cost }}점으로 구매</button></form>{% endif %}</article>{% endfor %}</section>
 {% if user.profile.equipped_outfit != 'NONE' %}<form method="post" class="unequip-form">{% csrf_token %}<input type="hidden" name="action" value="unequip"><button class="button secondary">기본 모습으로 변경</button></form>{% endif %}

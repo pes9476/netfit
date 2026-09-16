@@ -4,8 +4,8 @@
   <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="active">3 솔로·파티</span><i></i><span>4 세부 설정</span></div>
   <header class="onboarding-heading"><span>STEP 3</span><h1>솔로 또는 파티를 선택하세요</h1><p>나에게 맞는 방식으로 시작하고 나중에도 새 파티를 만들 수 있어요.</p></header>
   <form method="post" class="mode-picker">{% csrf_token %}
-    <button name="mode" value="SOLO" type="submit"><span class="mode-mascot mode-mascot-solo" aria-hidden="true"></span><strong>솔로</strong><small>일퀘 직접 입력·AI 추천<br>주변시설 추천을 받아요.</small><b>솔로 선택 →</b></button>
-    <button name="mode" value="GROUP" type="submit"><span class="mode-mascot mode-mascot-party" aria-hidden="true"><i class="tiger"></i><i class="bear"></i><i class="hamster"></i><i class="dino"></i></span><strong>파티</strong><small>친구를 초대하고<br>파티 일퀘를 만들어요.</small><b>파티 만들기 →</b></button>
+    <button name="mode" value="SOLO" type="submit"><span class="mode-mascot mode-mascot-solo" aria-hidden="true"></span><strong>솔로</strong><small>일일퀘스트 직접 입력·AI 추천<br>주변시설 추천을 받아요.</small><b>솔로 선택 →</b></button>
+    <button name="mode" value="GROUP" type="submit"><span class="mode-mascot mode-mascot-party" aria-hidden="true"><i class="tiger"></i><i class="bear"></i><i class="hamster"></i><i class="dino"></i></span><strong>파티</strong><small>친구를 초대하고<br>파티 일일퀘스트를 만들어요.</small><b>파티 만들기 →</b></button>
   </form>
 </section>
 {% endblock %}

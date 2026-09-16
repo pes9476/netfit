@@ -263,9 +263,9 @@ def complete_daily_quest(request, quest_kind, quest_id):
             defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
         )
     if created:
-        messages.success(request, f"일퀘 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
+        messages.success(request, f"일일퀘스트 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
     else:
-        messages.info(request, "이미 완료하고 배지를 받은 일퀘예요.")
+        messages.info(request, "이미 완료하고 배지를 받은 일일퀘스트예요.")
     return redirect("dashboard")
 
 
@@ -518,7 +518,7 @@ def onboarding_solo(request):
             except (TypeError, ValueError):
                 minutes = 0
             if not title or workout_type not in {key for key, _ in WorkoutRecord.WORKOUT_CHOICES} or (workout_type == "기타" and not custom_workout_name) or not 5 <= minutes <= 300:
-                messages.error(request, "일퀘 이름, 운동 종류, 목표 시간(5~300분)을 확인해 주세요.")
+                messages.error(request, "일일퀘스트 이름, 운동 종류, 목표 시간(5~300분)을 확인해 주세요.")
                 return render(request, "fitness/onboarding_solo.html", {"workout_choices": WorkoutRecord.WORKOUT_CHOICES})
             PersonalDailyQuest.objects.create(
                 user=request.user, title=title, workout_type=workout_type,
@@ -526,12 +526,12 @@ def onboarding_solo(request):
                 target_minutes=minutes, source="DIRECT",
             )
         else:
-            messages.error(request, "솔로 일퀘 방식을 선택해 주세요.")
+            messages.error(request, "솔로 일일퀘스트 방식을 선택해 주세요.")
             return redirect("onboarding_solo")
         profile.workout_mode = "SOLO"
         profile.onboarding_completed = True
         profile.save(update_fields=["workout_mode", "onboarding_completed"])
-        messages.success(request, "오늘의 솔로 일퀘를 만들었어요.")
+        messages.success(request, "오늘의 솔로 일일퀘스트를 만들었어요.")
         return redirect("dashboard")
     return render(request, "fitness/onboarding_solo.html", {
         "workout_choices": WorkoutRecord.WORKOUT_CHOICES,
