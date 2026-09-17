@@ -387,7 +387,7 @@ class Party(models.Model):
 
 
 class Mission(models.Model):
-    MODE_CHOICES = [("SOLO", "데일리 퀘스트"), ("GROUP", "그룹 퀘스트")]
+    MODE_CHOICES = [("SOLO", "데일리 미션"), ("GROUP", "그룹 미션")]
     STATUS_CHOICES = [("DRAFT", "준비"), ("ACTIVE", "진행"), ("FINISHED", "종료")]
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_missions")
     party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="missions", null=True, blank=True)

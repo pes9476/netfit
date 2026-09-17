@@ -26,15 +26,15 @@
         </a>
 
         <div class="user header-actions">
-          <!-- 일일퀘스트 드롭다운 -->
+          <!-- 일일미션 드롭다운 -->
           <details class="header-friends header-quests">
-            <summary title="일일퀘스트 확인">
+            <summary title="일일미션 확인">
               <i class="fa-solid fa-bell" style="color: var(--trophy-gold);"></i>
-              <span>일일퀘스트</span>
+              <span>일일미션</span>
               {% if header_quest_pending_count %}<i>{{ header_quest_pending_count }}</i>{% endif %}
             </summary>
             <div class="header-friends-links quest-menu">
-              <strong>내 일일퀘스트</strong>
+              <strong>내 일일미션</strong>
               {% for quest in header_quests %}
                 <div class="quest-menu-item {% if quest.completed %}done{% endif %}">
                   <span>{% if quest.completed %}✓{% else %}○{% endif %}</span>
@@ -45,7 +45,7 @@
                   <em>{% if quest.completed %}완료{% else %}진행 중{% endif %}</em>
                 </div>
               {% empty %}
-                <p>설정된 일일퀘스트가 없어요.</p>
+                <p>설정된 일일미션이 없어요.</p>
               {% endfor %}
               <a href="{% url 'dashboard' %}#daily-quests">대시보드에서 확인·완료하기</a>
             </div>
