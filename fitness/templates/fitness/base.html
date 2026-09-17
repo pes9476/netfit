@@ -108,9 +108,9 @@
           <span style="color: var(--text-dim); margin: 0 2px;">|</span>
 
           <!-- 로그아웃 버튼 -->
-          <form method="post" action="{% url 'logout' %}" style="display:inline; margin: 0; padding: 0;">
+          <form id="globalLogoutForm" method="post" action="{% url 'logout' %}" style="display:inline; margin: 0; padding: 0;">
             {% csrf_token %}
-            <button type="submit" class="logout-link" title="로그아웃">
+            <button type="button" id="globalLogoutBtn" onclick="openLogoutConfirmModal()" class="logout-link" title="로그아웃">
               <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 11px;"></i> 로그아웃
             </button>
           </form>
@@ -161,6 +161,7 @@
   {% if user.is_authenticated %}
     {% include "fitness/teunteun_popup.html" %}
     {% include "fitness/gps_permission_modal.html" %}
+    {% include "fitness/logout_modal.html" %}
   {% endif %}
   <script src="{% static 'fitness/js/mascot-picker.js' %}" defer></script>
 

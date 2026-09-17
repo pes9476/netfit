@@ -248,9 +248,11 @@
           <span style="font-size: 11px; font-weight: 900; padding: 4px 9px; border-radius: 8px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.35); display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;">
             <i class="fa-solid fa-bolt"></i> 실시간 스포츠
           </span>
-          <div style="flex: 1 1 0; min-width: 0; overflow: hidden; height: 20px; line-height: 20px;">
-            <a id="dashboardNewsTickerLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; height: 20px; line-height: 20px;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
+          <div id="sportsTickerTrack" style="flex: 1 1 0; min-width: 0; position: relative; overflow: hidden; height: 20px; line-height: 20px;">
+            <a id="dashboardNewsTickerSlotA" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(0); opacity: 1; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
               최신 스포츠 뉴스를 불러오는 중…
+            </a>
+            <a id="dashboardNewsTickerSlotB" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-100%); opacity: 0; pointer-events: none; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
             </a>
           </div>
         </div>
@@ -650,45 +652,86 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
 (() => {
-  const tickerLink = document.getElementById('dashboardNewsTickerLink');
+  const slotA = document.getElementById('dashboardNewsTickerSlotA');
+  const slotB = document.getElementById('dashboardNewsTickerSlotB');
+  const track = document.getElementById('sportsTickerTrack');
   const refreshBtn = document.getElementById('btnRefreshTickerNews');
   const refreshIcon = document.getElementById('btnRefreshTickerIcon');
-  if (!tickerLink) return;
+  if (!slotA || !slotB) return;
 
+  let activeSlot = slotA;
   let newsList = [];
   let currentIndex = 0;
   let tickerTimer = null;
   let currentNewsPage = 0;
+  let isHovered = false;
 
-  function renderHeadline(item, animate = true) {
+  if (track) {
+    track.addEventListener('mouseenter', () => { isHovered = true; });
+    track.addEventListener('mouseleave', () => { isHovered = false; });
+  }
+
+  // 부드러운 아래로 슬라이드(내려가는) 롤링 애니메이션
+  function rollToHeadline(item, animate = true) {
     if (!item) return;
-    if (animate) {
-      tickerLink.style.opacity = '0';
-      tickerLink.style.transform = 'translateY(6px)';
-      setTimeout(() => {
-        tickerLink.textContent = item.title;
-        tickerLink.href = item.url || '#';
-        tickerLink.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
-        tickerLink.style.opacity = '1';
-        tickerLink.style.transform = 'translateY(0)';
-      }, 250);
-    } else {
-      tickerLink.textContent = item.title;
-      tickerLink.href = item.url || '#';
-      tickerLink.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
-      tickerLink.style.opacity = '1';
-      tickerLink.style.transform = 'translateY(0)';
+
+    if (!animate) {
+      activeSlot.textContent = item.title;
+      activeSlot.href = item.url || '#';
+      activeSlot.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
+      activeSlot.style.transition = 'none';
+      activeSlot.style.transform = 'translateY(0)';
+      activeSlot.style.opacity = '1';
+      activeSlot.style.pointerEvents = 'auto';
+
+      const inactiveSlot = (activeSlot === slotA) ? slotB : slotA;
+      inactiveSlot.style.transition = 'none';
+      inactiveSlot.style.transform = 'translateY(-100%)';
+      inactiveSlot.style.opacity = '0';
+      inactiveSlot.style.pointerEvents = 'none';
+      return;
     }
+
+    const incomingSlot = (activeSlot === slotA) ? slotB : slotA;
+    const outgoingSlot = activeSlot;
+
+    // 1. 진입할 슬롯을 상단(-100%)에 세팅
+    incomingSlot.textContent = item.title;
+    incomingSlot.href = item.url || '#';
+    incomingSlot.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
+    incomingSlot.style.transition = 'none';
+    incomingSlot.style.transform = 'translateY(-100%)';
+    incomingSlot.style.opacity = '0';
+    incomingSlot.style.pointerEvents = 'none';
+
+    // 강제 리플로우 (초기 위치 확정)
+    void incomingSlot.offsetHeight;
+
+    // 2. 동시 아래로 롤링 (outgoing은 +100%로 아래로 빠져나가고, incoming은 0으로 위에서 아래로 진입)
+    const transitionVal = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.55s ease, color 0.2s';
+    outgoingSlot.style.transition = transitionVal;
+    incomingSlot.style.transition = transitionVal;
+
+    outgoingSlot.style.transform = 'translateY(100%)';
+    outgoingSlot.style.opacity = '0';
+    outgoingSlot.style.pointerEvents = 'none';
+
+    incomingSlot.style.transform = 'translateY(0)';
+    incomingSlot.style.opacity = '1';
+    incomingSlot.style.pointerEvents = 'auto';
+
+    activeSlot = incomingSlot;
   }
 
   function startCycle() {
     if (tickerTimer) clearInterval(tickerTimer);
     if (!newsList.length) return;
-    renderHeadline(newsList[currentIndex], false);
+    rollToHeadline(newsList[currentIndex], false);
     tickerTimer = setInterval(() => {
+      if (isHovered) return; // 마우스 호버 시 롤링 일시 정지
       currentIndex = (currentIndex + 1) % newsList.length;
-      renderHeadline(newsList[currentIndex], true);
-    }, 3500);
+      rollToHeadline(newsList[currentIndex], true);
+    }, 3800);
   }
 
   function fetchNews(isRefresh = false) {
@@ -709,13 +752,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.news && data.news.length) {
           newsList = data.news;
           currentIndex = 0;
+          if (isRefresh) {
+            rollToHeadline(newsList[0], true);
+          }
           startCycle();
         } else {
-          tickerLink.textContent = '현재 실시간 뉴스를 불러올 수 없습니다.';
+          activeSlot.textContent = '현재 실시간 뉴스를 불러올 수 없습니다.';
         }
       })
       .catch(() => {
-        tickerLink.textContent = '스포츠 뉴스를 잠시 후 다시 확인해 주세요.';
+        activeSlot.textContent = '스포츠 뉴스를 잠시 후 다시 확인해 주세요.';
       })
       .finally(() => {
         if (isRefresh) {

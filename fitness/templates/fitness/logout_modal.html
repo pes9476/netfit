@@ -1,0 +1,75 @@
+<!-- ==========================================================================
+     🔒 NetFit 로그아웃 확인 모달 (예 / 아니오 팝업)
+     ========================================================================== -->
+<div id="logoutConfirmModal" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(5, 10, 20, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.25s ease;" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+  <div id="logoutConfirmCard" style="background: linear-gradient(145deg, rgba(22, 32, 50, 0.98) 0%, rgba(15, 23, 38, 0.98) 100%); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 22px; width: 100%; max-width: 330px; box-shadow: 0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(0, 0, 0, 0.5); overflow: hidden; transform: scale(0.92); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); text-align: center; padding: 26px 22px 20px;">
+    
+    <!-- 아이콘 -->
+    <div style="width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; color: #F87171; font-size: 20px; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i>
+    </div>
+
+    <!-- 타이틀 -->
+    <h3 id="logoutModalTitle" style="margin: 0 0 8px; font-size: 17px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">
+      로그아웃 하시겠습니까?
+    </h3>
+    
+    <!-- 설명 문구 -->
+    <p style="margin: 0 0 22px; font-size: 12.5px; color: #94A3B8; line-height: 1.5; word-break: keep-all;">
+      현재 접속 중인 세션이 종료되며<br>언제든 다시 로그인하여 운동을 이어갈 수 있습니다.
+    </p>
+
+    <!-- 버튼 영역 (아니오 / 예) -->
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <!-- 아니오 버튼 -->
+      <button type="button" id="btnLogoutCancel" onclick="closeLogoutConfirmModal()" style="flex: 1; padding: 11px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 700; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: #E2E8F0; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'; this.style.color='#FFFFFF'" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#E2E8F0'">
+        아니오
+      </button>
+
+      <!-- 예 버튼 -->
+      <button type="button" id="btnLogoutConfirm" onclick="confirmLogoutAction()" style="flex: 1; padding: 11px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 700; background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); border: 1px solid rgba(239, 68, 68, 0.5); color: #FFFFFF; cursor: pointer; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); transition: all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.filter='none'; this.style.transform='none'">
+        예
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openLogoutConfirmModal() {
+  const modal = document.getElementById('logoutConfirmModal');
+  const card = document.getElementById('logoutConfirmCard');
+  const btnCancel = document.getElementById('btnLogoutCancel');
+  if (!modal || !card) return;
+  modal.style.display = 'flex';
+  void modal.offsetHeight;
+  modal.style.opacity = '1';
+  card.style.transform = 'scale(1)';
+  if (btnCancel) btnCancel.focus();
+}
+
+function closeLogoutConfirmModal() {
+  const modal = document.getElementById('logoutConfirmModal');
+  const card = document.getElementById('logoutConfirmCard');
+  if (!modal || !card) return;
+  modal.style.opacity = '0';
+  if (card) card.style.transform = 'scale(0.92)';
+  setTimeout(() => {
+    modal.style.display = 'none';
+  }, 250);
+}
+
+function confirmLogoutAction() {
+  const form = document.getElementById('globalLogoutForm');
+  if (form) {
+    form.dataset.confirmed = 'true';
+    form.submit();
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('logoutConfirmModal');
+  if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+    closeLogoutConfirmModal();
+  }
+});
+</script>

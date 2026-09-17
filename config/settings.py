@@ -76,5 +76,5 @@ KAKAO_CLIENT_SECRET = os.environ.get("KAKAO_CLIENT_SECRET", "").strip() or _kaka
 KAKAO_REDIRECT_URI = (
     os.environ.get("KAKAO_REDIRECT_URI", "").strip()
     or _kakao_local.get("KAKAO_REDIRECT_URI", "").strip()
-    or "http://127.0.0.1:8080/login/kakao/callback/"
+    or "http://127.0.0.1:8000/login/kakao/callback/"
 )
