@@ -12,6 +12,8 @@ class RegisterForm(UserCreationForm):
         fields = ("username", "area", "password1", "password2")
 
     def save(self, commit=True):
+        self.instance.is_staff = False
+        self.instance.is_superuser = False
         user = super().save(commit)
         user.profile.area = self.cleaned_data["area"]
         user.profile.save()
@@ -96,7 +98,6 @@ class ProfileForm(forms.ModelForm):
         if user:
             self.fields["nickname"].initial = "" if needs_kakao_nickname(user) else user.username
             self.fields["nickname"].widget.attrs["placeholder"] = "사용할 별명을 입력하세요"
-
     def clean_nickname(self):
         nickname = self.cleaned_data["nickname"].strip()
         exists = User.objects.filter(username__iexact=nickname).exclude(pk=self.user.pk).exists()

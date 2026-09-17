@@ -85,7 +85,10 @@ def kakao_callback(request):
         try:
             with transaction.atomic():
                 user = get_user_model().objects.create_user(
-                    username="kakao_" + uuid.uuid4().hex, password=None,
+                    username="kakao_" + uuid.uuid4().hex,
+                    password=None,
+                    is_staff=False,
+                    is_superuser=False,
                 )
                 account = KakaoAccount.objects.create(user=user, kakao_id=str(kakao_id))
         except IntegrityError:

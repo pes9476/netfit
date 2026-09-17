@@ -15,6 +15,8 @@ class LocalAuthTests(TestCase):
         self.assertRedirects(self.signup(), reverse("login"))
         user = User.objects.get(username="newrunner")
         self.assertTrue(user.check_password("Runner-test-934!"))
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
         self.assertEqual(user.profile.area, "부산광역시")
         self.assertEqual(user.charactercard.level, 1)
         self.assertNotIn("_auth_user_id", self.client.session)
