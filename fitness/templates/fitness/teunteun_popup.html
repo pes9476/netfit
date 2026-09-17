@@ -1,0 +1,159 @@
+<!-- ==========================================================================
+     🎁 [국민체육진흥공단 × 넷핏] 튼튼머니 스포츠 인센티브 프로모션 팝업
+     ========================================================================== -->
+<div id="teunteunPopup" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(5, 8, 15, 0.82); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s ease;">
+  <div id="teunteunPopupCard" style="background: linear-gradient(180deg, #111C2E 0%, #0B111E 100%); border: 1px solid rgba(0, 245, 155, 0.4); border-radius: 22px; width: 100%; max-width: 440px; box-shadow: 0 0 50px rgba(0, 245, 155, 0.2), 0 24px 60px rgba(0,0,0,0.85); overflow: hidden; transform: scale(0.92); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    
+    <!-- 팝업 상단 배너 헤더 -->
+    <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 18px 22px 14px; position: relative; border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--trophy-gold); display: inline-flex; align-items: center; gap: 5px;">
+          <i class="fa-solid fa-coins"></i> 스포츠활동 인센티브 지원
+        </span>
+        <button type="button" onclick="closeTeunTeunPopup()" style="background: none; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 2px 6px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px;">
+        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, rgba(0,245,155,0.2), rgba(56,189,248,0.2)); border: 1px solid rgba(0,245,155,0.4); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 0 20px rgba(0,245,155,0.25);">
+          🏃‍♂️
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 18px; font-weight: 900; color: #FFFFFF; line-height: 1.3;">
+            운동하고 <span style="color: var(--neon-mint);">튼튼머니</span> 챙기세요!
+          </h3>
+          <span style="font-size: 11px; color: #94A3B8;">국민체육진흥공단 × 넷핏 스포츠 혜택 연계</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 팝업 내용 본문 -->
+    <div style="padding: 20px 22px;">
+      
+      <!-- 강조 프로모션 박스 -->
+      <div style="background: rgba(16, 25, 42, 0.85); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 12px; color: #CBD5E1; margin-bottom: 4px;">국민체력100 스포츠활동 인센티브</div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--trophy-gold); text-shadow: 0 0 15px rgba(245,158,11,0.4);">
+          연간 최대 <span style="font-size: 26px; color: #FFFFFF;">50,000P</span> 적립
+        </div>
+        <div style="font-size: 11px; color: var(--neon-mint); margin-top: 4px; font-weight: 700;">
+          <i class="fa-solid fa-gift"></i> 제로페이 스포츠상품권 전환 & 현금처럼 사용!
+        </div>
+      </div>
+
+      <!-- 3가지 핵심 혜택 리스트 -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; color: #E2E8F0;">
+          <i class="fa-solid fa-circle-check" style="color: var(--neon-mint); font-size: 13px;"></i>
+          <span><b>전국민 누구나</b> (만 11세 이상) 스포츠활동 시 포인트 지급</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; color: #E2E8F0;">
+          <i class="fa-solid fa-circle-check" style="color: #38BDF8; font-size: 13px;"></i>
+          <span>체력측정, 공공·민간 지정 스포츠 시설 이용 시 자동 인정</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; color: #E2E8F0;">
+          <i class="fa-solid fa-circle-check" style="color: var(--trophy-gold); font-size: 13px;"></i>
+          <span>넷핏에서 운동 기록하고, 튼튼머니 포인트까지 더블 적립!</span>
+        </div>
+      </div>
+
+      <!-- 공식 안내 바로가기 버튼 -->
+      <a href="https://nfa.kspo.or.kr" target="_blank" rel="noopener noreferrer" class="button btn-mint" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 900; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 0 20px rgba(0,245,155,0.25);">
+        <span>국민체력100 튼튼머니 공식 신청 안내</span>
+        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 11px;"></i>
+      </a>
+    </div>
+
+    <!-- 팝업 하단 바: [오늘 하루 보지 않기] / [닫기] -->
+    <div style="background: rgba(8, 12, 20, 0.95); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06);">
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94A3B8; user-select: none;">
+        <input type="checkbox" id="teunteunTodayCheckbox" style="accent-color: var(--neon-mint); cursor: pointer; width: 15px; height: 15px;">
+        <span>오늘 하루 보지 않기</span>
+      </label>
+      <button type="button" onclick="closeTeunTeunPopup()" style="background: none; border: none; color: #CBD5E1; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+        <span>닫기</span>
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TEUNTEUN_STORAGE_KEY = "netfit_teunteun_popup_hide_until";
+const TEUNTEUN_SESSION_KEY = "netfit_teunteun_session_shown";
+
+window.openTeunTeunPopup = function(force = false) {
+  if (!force) {
+    const params = new URLSearchParams(window.location.search);
+    const forceParam = params.get("popup");
+    if (forceParam === "1" || forceParam === "true") {
+      force = true;
+    }
+  }
+
+  if (!force) {
+    try {
+      // 1. '오늘 하루 보지 않기' 확인
+      const hideUntil = localStorage.getItem(TEUNTEUN_STORAGE_KEY);
+      if (hideUntil) {
+        const hideTimestamp = parseInt(hideUntil, 10);
+        if (Date.now() < hideTimestamp) {
+          return;
+        } else {
+          localStorage.removeItem(TEUNTEUN_STORAGE_KEY);
+        }
+      }
+      // 2. 이번 브라우저 세션에서 이미 한 번 봤는지 확인 (어느 버튼을 누르든 반복 출력 방지)
+      if (sessionStorage.getItem(TEUNTEUN_SESSION_KEY) === "true") {
+        return;
+      }
+    } catch (e) {}
+  }
+
+  const popup = document.getElementById("teunteunPopup");
+  const card = document.getElementById("teunteunPopupCard");
+  if (popup && card) {
+    popup.style.display = "flex";
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        popup.style.opacity = "1";
+        card.style.transform = "scale(1)";
+      }, 50);
+    });
+    // 이번 세션 노출 완료 기록
+    try {
+      sessionStorage.setItem(TEUNTEUN_SESSION_KEY, "true");
+    } catch (e) {}
+  }
+};
+
+window.closeTeunTeunPopup = function() {
+  const chk = document.getElementById("teunteunTodayCheckbox");
+  if (chk && chk.checked) {
+    try {
+      const expiry = Date.now() + (24 * 60 * 60 * 1000);
+      localStorage.setItem(TEUNTEUN_STORAGE_KEY, expiry.toString());
+    } catch (e) {}
+  }
+  const popup = document.getElementById("teunteunPopup");
+  const card = document.getElementById("teunteunPopupCard");
+  if (popup && card) {
+    popup.style.opacity = "0";
+    card.style.transform = "scale(0.92)";
+    setTimeout(() => {
+      popup.style.display = "none";
+    }, 280);
+  }
+};
+
+// 로그인 후 메인 대시보드 진입 시 세션 최초 1회만 부드럽게 노출 (페이지 이동 및 버튼 클릭 시 재팝업 방지)
+document.addEventListener("DOMContentLoaded", () => {
+  {% if request.resolver_match.url_name == 'dashboard' %}
+    setTimeout(() => {
+      window.openTeunTeunPopup(false);
+    }, 800);
+  {% endif %}
+});
+</script>

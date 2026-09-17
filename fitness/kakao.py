@@ -28,14 +28,19 @@ def kakao_login(request):
         return redirect("dashboard")
     if not settings.KAKAO_REST_API_KEY:
         return fail(request, "카카오 로그인 준비 중입니다. 일반 로그인을 이용해 주세요.")
+    redirect_uri = settings.KAKAO_REDIRECT_URI
+    host = request.get_host()
+    if host and ("127.0.0.1" in host or "localhost" in host) and ("127.0.0.1" in redirect_uri or "localhost" in redirect_uri):
+        scheme = "https" if request.is_secure() else "http"
+        redirect_uri = f"{scheme}://{host}/login/kakao/callback/"
     state = secrets.token_urlsafe(32)
     request.session["kakao_oauth"] = {
         "state": state, "created": time.time(),
-        "redirect_uri": settings.KAKAO_REDIRECT_URI,
+        "redirect_uri": redirect_uri,
     }
     return redirect("https://kauth.kakao.com/oauth/authorize?" + urlencode({
         "client_id": settings.KAKAO_REST_API_KEY,
-        "redirect_uri": settings.KAKAO_REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "response_type": "code", "state": state,
     }))
 

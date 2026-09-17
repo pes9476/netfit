@@ -1,0 +1,277 @@
+<!-- ==========================================================================
+     📱 iOS 감성 GPS 위치 사용 허용 권한 모달 (NetFit 공통 에디션)
+     날씨 브리핑 & 주변 체육시설 통합 연동
+     ========================================================================== -->
+<div id="gpsPermissionModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.25s ease;">
+  <div id="gpsPermissionCard" style="background: rgba(26, 36, 52, 0.96); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 24px; width: 100%; max-width: 310px; box-shadow: 0 24px 70px rgba(0,0,0,0.75), 0 0 35px rgba(56, 189, 248, 0.2); overflow: hidden; transform: scale(0.92); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); text-align: center;">
+
+    <!-- 1. 타이틀 & 안내 설명 -->
+    <div style="padding: 22px 18px 12px;">
+      <h3 style="margin: 0 0 7px; font-size: 16px; font-weight: 800; color: #FFFFFF; line-height: 1.35; letter-spacing: -0.3px;">
+        ‘NetFit’이 사용자의 위치를<br>사용하도록 허용하겠습니까?
+      </h3>
+      <p style="margin: 0; font-size: 11.5px; color: #94A3B8; line-height: 1.45; word-break: keep-all;">
+        사용자의 위치는 지도에서 내 위치를 표시하고, 주변 체육시설까지의 이동 거리를 계산하여 검색 결과를 향상하는 데 사용됩니다.
+      </p>
+    </div>
+
+    <!-- 2. iOS 미니 지도 프리뷰 (정확한 위치 켬 캡슐 + 파란색 펄스 점) -->
+    <div style="position: relative; height: 135px; margin: 0 14px 12px; border-radius: 14px; overflow: hidden; background: #0F172A; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;">
+      
+      <!-- 지도 벡터 그래픽 (지형, 도로, 하천 패턴) -->
+      <svg width="100%" height="100%" viewBox="0 0 282 135" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; inset: 0; opacity: 0.75;">
+        <rect width="282" height="135" fill="#0F172A"/>
+        <!-- 녹지 영역 -->
+        <path d="M-10 35 Q40 15 90 55 T200 25 T300 45 L300 0 L-10 0 Z" fill="#1B2E3D" opacity="0.6"/>
+        <path d="M110 135 Q160 85 210 105 T300 85 L300 135 Z" fill="#1B2E3D" opacity="0.5"/>
+        <!-- 강/하천 (물결 라인) -->
+        <path d="M-10 95 C60 85 80 120 160 98 C220 82 240 102 300 78" stroke="#0284C7" stroke-width="15" stroke-linecap="round" opacity="0.35"/>
+        <!-- 도로 격자선 -->
+        <path d="M0 68 H282" stroke="#334155" stroke-width="2.5" opacity="0.45"/>
+        <path d="M0 32 H282" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.35"/>
+        <path d="M0 108 H282" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.35"/>
+        <path d="M68 0 V135" stroke="#334155" stroke-width="2" opacity="0.35"/>
+        <path d="M214 0 V135" stroke="#334155" stroke-width="2" opacity="0.35"/>
+        <path d="M141 0 V135" stroke="#38BDF8" stroke-width="2" opacity="0.25"/>
+      </svg>
+
+      <!-- 좌측 상단: [↖ 정확한 위치: 켬] iOS 스타일 캡슐 버튼 -->
+      <div id="gpsPillBadge" onclick="toggleGpsAccuracy()" style="position: absolute; top: 10px; left: 10px; z-index: 3; cursor: pointer; background: rgba(255, 255, 255, 0.95); color: #0A84FF; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.2s;">
+        <i class="fa-solid fa-location-arrow" style="font-size: 10px;"></i>
+        <span id="gpsPillText">정확한 위치: 켬</span>
+      </div>
+
+      <!-- 우측 상단: 지도 모드 인디케이터 -->
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 3; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 3px 6px; font-size: 10px; color: #94A3B8;">
+        <i class="fa-solid fa-map"></i>
+      </div>
+
+      <!-- 중앙: iOS 스타일 파란색 펄스 GPS 위치 점 -->
+      <div style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;">
+        <div class="ios-radar-pulse" style="position: absolute; width: 62px; height: 62px; border-radius: 50%; background: rgba(10, 132, 255, 0.22); border: 1px solid rgba(10, 132, 255, 0.5);"></div>
+        <div class="ios-radar-wave" style="position: absolute; width: 100px; height: 100px; border-radius: 50%; border: 1px dashed rgba(56, 189, 248, 0.4);"></div>
+        <div style="width: 15px; height: 15px; border-radius: 50%; background: #0A84FF; border: 3px solid #FFFFFF; box-shadow: 0 0 14px rgba(10, 132, 255, 0.9); z-index: 3;"></div>
+      </div>
+
+    </div>
+
+    <!-- 3. iOS 스타일 3단 세로 분할 버튼 바 -->
+    <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column;">
+      <!-- 버튼 1: 한 번 허용 -->
+      <button type="button" id="btnIosOnce" onclick="handleGPSPermissionChoice('once')" 
+              style="background: none; border: none; padding: 13px 14px; color: #38BDF8; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: background 0.15s; outline: none;" 
+              onmouseover="this.style.background='rgba(56,189,248,0.1)'" 
+              onmouseout="this.style.background='none'">
+        <span id="btnIosOnceText">한 번 허용</span>
+      </button>
+
+      <!-- 버튼 2: 앱을 사용하는 동안 허용 -->
+      <button type="button" id="btnIosAlways" onclick="handleGPSPermissionChoice('always')" 
+              style="background: none; border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 13px 14px; color: #38BDF8; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: background 0.15s; outline: none;" 
+              onmouseover="this.style.background='rgba(56,189,248,0.1)'" 
+              onmouseout="this.style.background='none'">
+        <span id="btnIosAlwaysText">앱을 사용하는 동안 허용</span>
+      </button>
+
+      <!-- 버튼 3: 허용 안 함 -->
+      <button type="button" onclick="closeGPSPermissionModal()" 
+              style="background: none; border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 14px; color: #94A3B8; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; outline: none;" 
+              onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
+              onmouseout="this.style.background='none'">
+        허용 안 함
+      </button>
+    </div>
+
+    <!-- 하단 빠른 프리셋 바로가기 링크 -->
+    <div style="padding: 9px 14px 12px; background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(255,255,255,0.05); font-size: 11px;">
+      <a href="javascript:void(0)" onclick="handleGpsModalPresetClick()" style="color: var(--neon-mint); text-decoration: none; font-weight: 700;">
+        📍 부평·가산·강남 원클릭 선택하기 ➔
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes iosPulseAnim {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.35; }
+  100% { transform: scale(0.85); opacity: 0.8; }
+}
+@keyframes iosRadarWave {
+  0% { transform: scale(0.7) rotate(0deg); opacity: 0.8; }
+  100% { transform: scale(1.3) rotate(360deg); opacity: 0; }
+}
+.ios-radar-pulse {
+  animation: iosPulseAnim 2.2s infinite ease-in-out;
+}
+.ios-radar-wave {
+  animation: iosRadarWave 3.2s infinite linear;
+}
+</style>
+
+<script>
+let isHighAccuracy = true;
+let activeGpsSuccessCallback = null;
+
+// GPS 권한 허용 여부 전역 확인 (세션 or 로컬스토리지)
+function isNetfitGPSAllowed() {
+  try {
+    return sessionStorage.getItem("netfit_gps_allowed") === "true" ||
+           localStorage.getItem("netfit_gps_allowed") === "true";
+  } catch(e) {
+    return false;
+  }
+}
+
+// GPS 권한 모달 열기 (이미 허용된 경우 모달 없이 즉시 위치 조회 콜백 실행!)
+function openGPSPermissionModal(onSuccessCallback) {
+  activeGpsSuccessCallback = onSuccessCallback;
+
+  // 이미 날씨나 체육시설 중 하나에서 허용을 누른 상태라면, 모달을 다시 띄우지 않고 바로 콜백 실행!
+  if (isNetfitGPSAllowed()) {
+    executeGPSFetch(activeGpsSuccessCallback);
+    return;
+  }
+
+  const modal = document.getElementById("gpsPermissionModal");
+  const card = document.getElementById("gpsPermissionCard");
+  if (modal && card) {
+    modal.style.display = "flex";
+    requestAnimationFrame(() => {
+      modal.style.opacity = "1";
+      card.style.transform = "scale(1)";
+    });
+  }
+}
+
+function closeGPSPermissionModal() {
+  const modal = document.getElementById("gpsPermissionModal");
+  const card = document.getElementById("gpsPermissionCard");
+  if (modal && card) {
+    modal.style.opacity = "0";
+    card.style.transform = "scale(0.92)";
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 220);
+  }
+}
+
+// '한 번 허용' or '앱을 사용하는 동안 허용' 선택 시
+function handleGPSPermissionChoice(mode) {
+  if (mode === 'always') {
+    try {
+      localStorage.setItem("netfit_gps_allowed", "true");
+      sessionStorage.setItem("netfit_gps_allowed", "true");
+    } catch(e) {}
+  } else {
+    try {
+      sessionStorage.setItem("netfit_gps_allowed", "true");
+    } catch(e) {}
+  }
+
+  const btnOnceText = document.getElementById("btnIosOnceText");
+  const btnAlwaysText = document.getElementById("btnIosAlwaysText");
+  if (mode === 'always') {
+    if (btnAlwaysText) btnAlwaysText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 수신 중...';
+  } else {
+    if (btnOnceText) btnOnceText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 수신 중...';
+  }
+
+  executeGPSFetch((coords) => {
+    closeGPSPermissionModal();
+    if (btnOnceText) btnOnceText.textContent = "한 번 허용";
+    if (btnAlwaysText) btnAlwaysText.textContent = "앱을 사용하는 동안 허용";
+    if (activeGpsSuccessCallback) {
+      activeGpsSuccessCallback(coords);
+    }
+  }, (err) => {
+    closeGPSPermissionModal();
+    if (btnOnceText) btnOnceText.textContent = "한 번 허용";
+    if (btnAlwaysText) btnAlwaysText.textContent = "앱을 사용하는 동안 허용";
+  });
+}
+
+// 실제 브라우저 Geolocation API 호출
+function executeGPSFetch(successCb, errorCb) {
+  if (!navigator.geolocation) {
+    alert("현재 브라우저에서 GPS 위치 서비스를 지원하지 않습니다. 빠른 위치 선택(부평, 가산동 등) 버튼을 활용해 주세요.");
+    if (errorCb) errorCb({ code: 0, message: "Geolocation unsupported" });
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      const coords = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      // 성공 시 세션 권한 보장
+      try { sessionStorage.setItem("netfit_gps_allowed", "true"); } catch(e){}
+      if (successCb) successCb(coords);
+    },
+    function(error) {
+      let errMessage = "GPS 위치 정보를 가져오지 못했습니다.";
+      if (error.code === 1) {
+        errMessage = "브라우저의 위치 권한이 차단되어 있습니다.\n브라우저 주소창 좌측의 자물쇠/설정 아이콘을 클릭하여 '위치' 권한을 허용해 주시거나,\n아래의 [인천 부평], [서울 가산동] 등 원클릭 지역 칩을 이용해 주세요!";
+      } else if (error.code === 2) {
+        errMessage = "현재 위치 신호를 측정할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+      } else if (error.code === 3) {
+        errMessage = "위치 확인 시간(Timeout)이 초과되었습니다. 다시 시도해 주세요.";
+      }
+      alert(errMessage);
+      if (errorCb) errorCb(error);
+    },
+    {
+      enableHighAccuracy: isHighAccuracy,
+      timeout: 10000,
+      maximumAge: 30000
+    }
+  );
+}
+
+function toggleGpsAccuracy() {
+  isHighAccuracy = !isHighAccuracy;
+  const pill = document.getElementById("gpsPillBadge");
+  const pillText = document.getElementById("gpsPillText");
+  const pulseRing = document.querySelector(".ios-radar-wave");
+  if (isHighAccuracy) {
+    pill.style.background = "rgba(255, 255, 255, 0.95)";
+    pill.style.color = "#0A84FF";
+    pillText.textContent = "정확한 위치: 켬";
+    if (pulseRing) pulseRing.style.display = "block";
+  } else {
+    pill.style.background = "rgba(255, 255, 255, 0.25)";
+    pill.style.color = "#94A3B8";
+    pillText.textContent = "정확한 위치: 끔";
+    if (pulseRing) pulseRing.style.display = "none";
+  }
+}
+
+function handleGpsModalPresetClick() {
+  closeGPSPermissionModal();
+  const container = document.getElementById("presetChipsContainer");
+  if (container) {
+    container.scrollIntoView({ behavior: "smooth", block: "center" });
+    container.style.boxShadow = "0 0 20px rgba(0, 245, 155, 0.6)";
+    container.style.border = "1px solid var(--neon-mint)";
+    setTimeout(() => {
+      container.style.boxShadow = "none";
+      container.style.border = "none";
+    }, 1500);
+  } else {
+    window.location.href = "{% url 'facilities' %}?preset=부평";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("gpsPermissionModal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeGPSPermissionModal();
+      }
+    });
+  }
+});
+</script>

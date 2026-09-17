@@ -73,6 +73,8 @@ _kakao_file = BASE_DIR / "kakao.local.json"
 _kakao_local = json.loads(_kakao_file.read_text(encoding="utf-8")) if _kakao_file.exists() else {}
 KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "").strip() or _kakao_local.get("KAKAO_REST_API_KEY", "").strip()
 KAKAO_CLIENT_SECRET = os.environ.get("KAKAO_CLIENT_SECRET", "").strip() or _kakao_local.get("KAKAO_CLIENT_SECRET", "").strip()
-KAKAO_REDIRECT_URI = os.environ.get(
-    "KAKAO_REDIRECT_URI", "http://127.0.0.1:8000/login/kakao/callback/"
+KAKAO_REDIRECT_URI = (
+    os.environ.get("KAKAO_REDIRECT_URI", "").strip()
+    or _kakao_local.get("KAKAO_REDIRECT_URI", "").strip()
+    or "http://127.0.0.1:8080/login/kakao/callback/"
 )

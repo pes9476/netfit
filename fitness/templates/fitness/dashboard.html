@@ -1,28 +1,740 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<article class="weather-card" id="todayWeather" data-fallback-latitude="{{ weather_latitude }}" data-fallback-longitude="{{ weather_longitude }}"><span class="weather-icon" id="weatherIcon">🌤️</span><small id="weatherLocationLabel">오늘의 날씨 · 현재 위치 확인 중</small><b id="weatherSummary">불러오는 중…</b><p id="weatherWorkoutTip">날씨 확인 중</p></article>
+<article class="weather-card" id="todayWeather" data-fallback-latitude="{{ weather_latitude }}" data-fallback-longitude="{{ weather_longitude }}" style="background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(56,189,248,0.25); border-radius: 16px; padding: 14px 20px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
+  <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 280px;">
+    <div class="weather-icon" id="weatherIcon" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 245, 155, 0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">🌤️</div>
+    <div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span style="font-size: 13px; font-weight: 800; color: #FFFFFF;">실시간 날씨 브리핑</span>
+        <span id="weatherLocationBadge" style="font-size: 11px; font-weight: 900; padding: 2px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); color: #38BDF8;">
+          <i id="weatherLocationIcon" class="fa-solid fa-house-user"></i>
+          <span id="weatherLocationLabel">📍 홈 지역 ({{ user.profile.area }})</span>
+        </span>
+        <button type="button" id="btnSyncWeatherGPS" onclick="syncWeatherWithGPS()" style="cursor: pointer; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: #E2E8F0; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
+          <i id="btnGpsIcon" class="fa-solid fa-satellite-dish" style="color: #38BDF8;"></i>
+          <span id="btnGpsText">내 GPS 위치로 찾기</span>
+        </button>
+      </div>
+      <div style="margin-top: 5px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+        <b id="weatherSummary" style="color: #FFFFFF; font-size: 14px; font-weight: 800; line-height: 1;">불러오는 중…</b>
+        <span id="weatherWindInfo" style="color: var(--text-dim); font-size: 12px; line-height: 1; vertical-align: baseline;"></span>
+      </div>
+    </div>
+  </div>
+  <div style="text-align: right; flex-shrink: 0;">
+    <p id="weatherWorkoutTip" style="margin: 0; font-size: 12px; color: var(--neon-mint); font-weight: 700; background: rgba(0,245,155,0.08); border: 1px solid rgba(0,245,155,0.2); padding: 6px 14px; border-radius: 10px;">날씨 확인 중</p>
+  </div>
+</article>
+
 <section class="dash">
   <div class="dashboard-left">
-  <article class="card">
-    <div class="card-title"><span>{{ user.profile.display_name|default:"내 캐릭터" }}</span></div>
-    <div class="card-character dashboard-character-stage">
-      <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }} outfit-{{ user.profile.equipped_outfit|lower }}"></div>
-      <span class="scene-caption">{% if latest_record %}오늘: {{ latest_record.workout_name }}{% else %}오늘 운동을 기록해요{% endif %}</span>
-    </div>
-    <p class="card-note">{{ user.profile.get_gender_display }} · {% if user.profile.age_group == "child" %}어린이{% elif user.profile.age_group == "senior" %}시니어{% else %}성인{% endif %} · BMI {% if user.profile.bmi %}{{ user.profile.bmi }}{% else %}-{% endif %}</p>
-  </article>
-  <article class="sports-news-card"><div class="sports-news-head"><b>⚡ 실시간 운동·스포츠 뉴스</b><button type="button" id="refreshSportsNews">새로고침</button></div><ul id="sportsNewsList"><li>최신 뉴스를 불러오는 중…</li></ul></article>
+    <!-- 캐릭터 카드 -->
+    <article class="card card-새싹">
+      <div class="card-title">
+        <span><i class="fa-solid fa-id-card-clip" style="color: var(--neon-mint); margin-right: 6px;"></i>{{ user.profile.display_name|default:"내 캐릭터" }}</span>
+        <span class="tier-badge">Lv.{{ user.profile.level|default:1 }}</span>
+      </div>
+      <div class="card-character dashboard-character-stage">
+        <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }} outfit-{{ user.profile.equipped_outfit|lower }}"></div>
+        <span class="scene-caption">{% if latest_record %}오늘: {{ latest_record.workout_name }}{% else %}오늘 운동을 기록해요{% endif %}</span>
+      </div>
+      <p class="card-note">
+        {{ user.profile.get_gender_display }} · {% if user.profile.age_group == "child" %}어린이{% elif user.profile.age_group == "senior" %}시니어{% else %}성인{% endif %} · BMI {% if user.profile.bmi %}{{ user.profile.bmi }}{% else %}-{% endif %}
+      </p>
+    </article>
+    <!-- 나의 솔로 일일퀘스트 (좌측 컬럼: 캐릭터 카드 바로 아래) -->
+    {% if personal_quests %}
+      <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 20px;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">SOLO DAILY QUEST</span>
+            <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일퀘스트</h2>
+          </div>
+          <a class="button secondary" href="{% url 'onboarding_solo' %}" style="padding: 6px 12px; font-size: 11px;">새 일일퀘스트</a>
+        </div>
+        <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px;">
+          {% for quest in personal_quests %}
+            <article style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px;">
+              <div>
+                <small>{{ quest.get_source_display }}</small>
+                <h3 style="font-size: 14px; margin: 4px 0;">{{ quest.title }}</h3>
+                <p style="color: var(--text-muted); font-size: 11.5px; margin: 4px 0 10px;">{{ quest.workout_label }} · {{ quest.target_minutes }}분</p>
+              </div>
+              {% if quest.id in completed_personal_ids %}
+                <b class="quest-done" style="font-size: 11.5px;"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
+              {% else %}
+                <form method="post" action="{% url 'complete_daily_quest' 'personal' quest.id %}">
+                  {% csrf_token %}
+                  <button class="button btn-mint" type="submit" style="width: 100%; padding: 8px 10px; font-size: 11.5px;">일일퀘스트 완료하고 배지 받기</button>
+                </form>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% else %}
+      <section class="panel dashboard-quests empty compact-solo-quests" style="margin-top: 20px;">
+        <div>
+          <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">SOLO DAILY QUEST</span>
+          <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일퀘스트</h2>
+          <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 14px;">혼자 도전할 일일퀘스트를 만들어보세요.</p>
+        </div>
+        <a class="button secondary" href="{% url 'onboarding_solo' %}" style="align-self: flex-start; padding: 6px 12px; font-size: 11px;">퀘스트 만들기</a>
+      </section>
+    {% endif %}
   </div>
-  <div class="dashboard-main">
-    <article class="hero"><div class="eyebrow">나의 배지 컬렉션</div><h1>오늘의 운동이<br>우리의 내기 점수가 돼요.</h1><div class="badge-score-row"><span>총 배지 점수</span><strong>{{ badge_summary.total_points }}점</strong></div><div class="hero-badge-counts"><span>🥇 <b>{{ badge_summary.gold }}</b>개</span><span>🥈 <b>{{ badge_summary.silver }}</b>개</span><span>🥉 <b>{{ badge_summary.bronze }}</b>개</span></div><p>금 100점 · 은 50점 · 동 30점</p><a class="button" href="{% url 'activity' %}">운동 기록하고 배지 받기 →</a><small>60분 이상 금 · 30분 이상 은 · 30분 미만 동 배지를 받아요.</small></article>
-    <div class="stats"><article class="stat"><span>최근 운동 기록</span><b>{{ records|length }}회</b></article><article class="stat"><span>친구</span><b>{{ friend_count }}명</b></article><article class="stat"><span>활동 지역</span><b style="font-size:18px">{{ user.profile.area }}</b></article></div>
-    {% if group_quests %}<section class="panel dashboard-quests compact-party-quests"><div class="section-heading"><div><span>PARTY DAILY QUEST</span><h2>우리 파티 일일퀘스트</h2></div><a class="button secondary" href="{% url 'onboarding_group' %}">새 파티 만들기</a></div><div class="quest-cards">{% for quest in group_quests %}<article><small>{{ quest.party.name }}</small><h3>{{ quest.title }}</h3><p>{{ quest.workout_label }} · {{ quest.target_minutes }}분</p>{% if quest.id in completed_group_ids %}<b class="quest-done">✓ 완료 · 배지 수령</b>{% else %}<form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}">{% csrf_token %}<button class="button" type="submit">일일퀘스트 완료하고 배지 받기</button></form>{% endif %}</article>{% endfor %}</div></section>{% else %}<section class="panel dashboard-quests empty compact-party-quests"><div><h2>우리 파티 일일퀘스트</h2><p>파티를 만들고 기간을 정해 배지 점수 내기를 시작해요.</p></div><a class="button secondary" href="{% url 'onboarding_group' %}">파티 만들기</a></section>{% endif %}
+
+  <div class="dashboard-main" style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
+    <!-- 배지 히어로 섹션 (좌: 배지 요약 / 우: 핵심 메뉴 & 최근 운동 피드) -->
+    <article class="hero" style="display: grid; grid-template-columns: minmax(300px, 1.15fr) minmax(300px, 1fr); gap: 24px; align-items: flex-start; padding: 26px 28px; border-radius: 20px; background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(30, 27, 75, 0.85) 60%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(99, 102, 241, 0.35); box-shadow: 0 12px 35px rgba(0,0,0,0.5);">
+      
+      <!-- 좌측: 나의 배지 컬렉션 -->
+      <div style="display: flex; flex-direction: column; justify-content: flex-start; gap: 14px;">
+        <div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 8px; background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.4); color: var(--neon-mint); font-size: 11.5px; font-weight: 900; margin-bottom: 12px;">
+            <i class="fa-solid fa-medal"></i> 나의 배지 컬렉션
+          </div>
+          <h1 style="font-size: clamp(22px, 2.5vw, 30px); font-weight: 900; line-height: 1.35; margin: 0 0 16px; color: #FFFFFF;">
+            오늘의 운동이<br><span style="color: var(--neon-mint);">우리의 내기 점수</span>가 돼요.
+          </h1>
+
+          <!-- 통합 배지 스코어 & 메달 현황 덱 -->
+          <div style="background: rgba(14, 22, 38, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 12.5px; color: #94A3B8; font-weight: 700;">총 배지 점수</span>
+              <strong style="font-size: 24px; font-weight: 900; color: var(--trophy-gold); text-shadow: 0 0 12px rgba(245,158,11,0.4);">{{ badge_summary.total_points }}점</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+                <span style="font-size: 11px; color: #E2E8F0; font-weight: 700;">🥇 금 (100점)</span>
+                <b style="display: block; font-size: 14px; color: #FFFFFF; font-weight: 900; margin-top: 2px;">{{ badge_summary.gold }}개</b>
+              </div>
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+                <span style="font-size: 11px; color: #E2E8F0; font-weight: 700;">🥈 은 (50점)</span>
+                <b style="display: block; font-size: 14px; color: #FFFFFF; font-weight: 900; margin-top: 2px;">{{ badge_summary.silver }}개</b>
+              </div>
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+                <span style="font-size: 11px; color: #E2E8F0; font-weight: 700;">🥉 동 (30점)</span>
+                <b style="display: block; font-size: 14px; color: #FFFFFF; font-weight: 900; margin-top: 2px;">{{ badge_summary.bronze }}개</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <a class="button btn-mint" href="{% url 'activity' %}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; font-size: 13px; font-weight: 900; border-radius: 12px; box-shadow: 0 0 20px rgba(0,245,155,0.25); width: 100%; max-width: 260px; text-decoration: none;">
+            <i class="fa-solid fa-bolt"></i>
+            <span>운동 기록하고 배지 받기</span>
+            <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
+          </a>
+          <small style="display: block; margin-top: 8px; font-size: 11px; color: var(--text-dim);">60분 이상 금 · 30분 이상 은 · 30분 미만 동 배지를 수여합니다.</small>
+        </div>
+      </div>
+
+      <!-- 우측: 핵심 메뉴 & 최근 운동 피드 (일체형 사이버 글래스 콘솔) -->
+      <div style="background: linear-gradient(180deg, rgba(16, 26, 44, 0.85) 0%, rgba(10, 16, 28, 0.95) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; justify-content: flex-start; gap: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); backdrop-filter: blur(12px);">
+        
+        <!-- 🧭 핵심 메뉴 (Quick Action) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-compass" style="color: #38BDF8; font-size: 13px;"></i>
+              <b style="font-size: 12.5px; font-weight: 900; color: #FFFFFF;">핵심 메뉴</b>
+            </div>
+            <span style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Quick Action</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <a href="{% url 'profile' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--neon-mint)'; this.style.background='rgba(0,245,155,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: rgba(0,245,155,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-address-card" style="color: var(--neon-mint); font-size: 11px;"></i>
+              </span>
+              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">프로필·인바디</span>
+            </a>
+
+            <a href="{% url 'facilities' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='#38BDF8'; this.style.background='rgba(56,189,248,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: rgba(56,189,248,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-map-location-dot" style="color: #38BDF8; font-size: 11px;"></i>
+              </span>
+              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">주변 시설</span>
+            </a>
+
+            <a href="{% url 'ranking' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--trophy-gold)'; this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: rgba(245,158,11,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-trophy" style="color: var(--trophy-gold); font-size: 11px;"></i>
+              </span>
+              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">전국 랭킹</span>
+            </a>
+
+            <a href="{% url 'friends' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--indigo-primary)'; this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: rgba(99,102,241,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-user-group" style="color: var(--indigo-primary); font-size: 11px;"></i>
+              </span>
+              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">친구 관리</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 슬림 네온 구분선 -->
+        <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(56,189,248,0.25), transparent);"></div>
+
+        <!-- 🏃 최근 운동 피드 -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-dumbbell" style="color: var(--neon-mint); font-size: 12px;"></i>
+              <b style="font-size: 12.5px; font-weight: 900; color: #FFFFFF;">최근 운동 피드</b>
+            </div>
+            <a href="{% url 'activity' %}" style="font-size: 10.5px; color: #38BDF8; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; transition: all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.12)'">
+              <i class="fa-solid fa-plus"></i> 기록하기
+            </a>
+          </div>
+
+          {% if records %}
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              {% for rec in records|slice:":2" %}
+                <div style="padding: 7px 10px; background: #162032; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 7px;">
+                    <span style="width: 22px; height: 22px; border-radius: 6px; background: rgba(0,245,155,0.15); color: var(--neon-mint); display: flex; align-items: center; justify-content: center; font-size: 11px;">
+                      {% if rec.workout_type == "러닝" %}🏃
+                      {% elif rec.workout_type == "수영" %}🏊
+                      {% elif rec.workout_type == "자전거" %}🚴
+                      {% elif rec.workout_type == "헬스" %}🏋️
+                      {% else %}👟{% endif %}
+                    </span>
+                    <b style="color: #FFFFFF; font-size: 11.5px;">{{ rec.workout_name }}</b>
+                    <small style="color: var(--text-muted); font-size: 10px;">{{ rec.minutes }}분</small>
+                  </div>
+                  <b style="color: var(--trophy-gold); font-size: 11.5px; font-weight: 900;">{{ rec.calories_burned|default:"390" }} kcal</b>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div style="padding: 10px 12px; background: rgba(22, 32, 50, 0.6); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-muted); font-size: 11.5px;">오늘 아직 기록된 운동이 없습니다.</span>
+              <a href="{% url 'activity' %}" style="color: var(--neon-mint); font-weight: 800; font-size: 11.5px; text-decoration: none;">+ 바로 기록 ➔</a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- 슬림 네온 구분선 -->
+        <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(56,189,248,0.25), transparent);"></div>
+
+        <!-- 📊 조그만 미니 스탯 3종 (핵심메뉴 & 최근운동피드 칸 아래 쏙 넣기) -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <div style="background: #162032; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+            <span style="display: block; font-size: 10px; color: var(--text-muted); font-weight: 700;">최근 운동</span>
+            <b style="font-size: 13px; color: var(--neon-mint); font-weight: 900;">{{ records|length }}회</b>
+          </div>
+          <div style="background: #162032; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+            <span style="display: block; font-size: 10px; color: var(--text-muted); font-weight: 700;">친구</span>
+            <b style="font-size: 13px; color: #38BDF8; font-weight: 900;">{{ friend_count }}명</b>
+          </div>
+          <div style="background: #162032; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 4px; text-align: center;">
+            <span style="display: block; font-size: 10px; color: var(--text-muted); font-weight: 700;">활동 지역</span>
+            <b style="font-size: 12px; color: var(--trophy-gold); font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">{{ user.profile.area }}</b>
+          </div>
+        </div>
+
+      </div>
+
+    </article>
+
+
+    <!-- ⚡ 실시간 스포츠 뉴스 티커 바 (파티 일일퀘스트 바로 위! - 고정 높이/너비로 옆 칸 흔들림 0%) -->
+    <article class="panel sports-news-ticker-panel" style="padding: 12px 18px; margin: 0; background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(0,245,155,0.3); border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); height: 50px; box-sizing: border-box; display: flex; align-items: center;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0;">
+          <span style="font-size: 11px; font-weight: 900; padding: 4px 9px; border-radius: 8px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.35); display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;">
+            <i class="fa-solid fa-bolt"></i> 실시간 스포츠
+          </span>
+          <div style="flex: 1 1 0; min-width: 0; overflow: hidden; height: 20px; line-height: 20px;">
+            <a id="dashboardNewsTickerLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; height: 20px; line-height: 20px;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
+              최신 스포츠 뉴스를 불러오는 중…
+            </a>
+          </div>
+        </div>
+        <button type="button" id="btnRefreshTickerNews" style="cursor: pointer; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: #CBD5E1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'; this.style.color='#FFFFFF'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#CBD5E1'">
+          <i id="btnRefreshTickerIcon" class="fa-solid fa-rotate-right"></i> <span>새로고침</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- 우리 파티 일일퀘스트 (우측 컬럼: 스포츠 뉴스 바로 아래! - 솔로 퀘스트와 바닥 라인 완벽 일치) -->
+    {% if group_quests %}
+      <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY DAILY QUEST</span>
+            <h2>우리 파티 일일퀘스트</h2>
+          </div>
+          <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 8px 14px; font-size: 12px;">새 파티 만들기</a>
+        </div>
+        <div class="quest-cards" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+          {% for quest in group_quests %}
+            <article style="display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <small>{{ quest.party.name }}</small>
+                <h3>{{ quest.title }}</h3>
+                <p style="color: var(--text-muted); font-size: 12px; margin: 4px 0 12px;">{{ quest.workout_label }} · {{ quest.target_minutes }}분</p>
+              </div>
+              {% if quest.id in completed_group_ids %}
+                <b class="quest-done"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
+              {% else %}
+                <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}">
+                  {% csrf_token %}
+                  <button class="button btn-mint" type="submit" style="width: 100%; padding: 10px; font-size: 12px;">일일퀘스트 완료하고 배지 받기</button>
+                </form>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% else %}
+      <section class="panel dashboard-quests empty compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY DAILY QUEST</span>
+          <h2>우리 파티 일일퀘스트</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">파티를 만들고 기간을 정해 배지 점수 내기를 시작해요.</p>
+        </div>
+        <a class="button secondary" href="{% url 'onboarding_group' %}" style="align-self: flex-start;">파티 만들기</a>
+      </section>
+    {% endif %}
   </div>
 </section>
-<div id="daily-quests"></div>
-{% if personal_quests %}<section class="panel dashboard-quests"><div class="section-heading"><div><span>SOLO DAILY QUEST</span><h2>나의 솔로 일일퀘스트</h2></div><a class="button secondary" href="{% url 'onboarding_solo' %}">새 일일퀘스트</a></div><div class="quest-cards">{% for quest in personal_quests %}<article><small>{{ quest.get_source_display }}</small><h3>{{ quest.title }}</h3><p>{{ quest.workout_label }} · {{ quest.target_minutes }}분</p>{% if quest.id in completed_personal_ids %}<b class="quest-done">✓ 완료 · 배지 수령</b>{% else %}<form method="post" action="{% url 'complete_daily_quest' 'personal' quest.id %}">{% csrf_token %}<button class="button" type="submit">일일퀘스트 완료하고 배지 받기</button></form>{% endif %}</article>{% endfor %}</div></section>{% endif %}
-{% for challenge in party_challenges %}<section class="panel party-scoreboard"><div class="section-heading"><div><span>PARTY CHALLENGE</span><h2>{{ challenge.party.name }} 배지 내기</h2><p>{{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}</p>{% if challenge.party.challenge_reward %}<p class="challenge-reward">🎁 내기 보상: <b>{{ challenge.party.challenge_reward }}</b></p>{% endif %}</div></div><ol>{% for row in challenge.rows %}<li{% if row.is_me %} class="is-me"{% endif %}><span>{% if forloop.first %}🏆{% else %}{{ forloop.counter }}위{% endif %} {{ row.name }}</span><b>{{ row.points }}점</b></li>{% endfor %}</ol></section>{% endfor %}
-<style>.weather-card{display:flex;align-items:center;gap:10px;min-height:48px;margin:-12px 0 14px;padding:8px 14px;border:1px solid #9bc7df;border-radius:11px;background:linear-gradient(135deg,#e8f7ff,#fff9d9)}.weather-icon{font-size:25px}.weather-card small{color:var(--muted);white-space:nowrap}.weather-card b{color:#31556f;font-size:14px}.weather-card p{margin:0 0 0 auto;color:#31556f;font-size:12px}.badge-score-row{display:flex;align-items:center;justify-content:space-between}.badge-score-row strong{color:#f8d568;font-size:30px}.badge-collection,.dashboard-quests,.party-scoreboard{margin-top:24px}.badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.badge-grid article{display:grid;place-items:center;padding:18px;border:2px solid #e2c992;border-radius:13px}.badge-grid span{font-size:38px}.badge-grid b{font-size:24px}.badge-grid small{color:var(--muted)}.recent-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.recent-badges span{padding:7px 11px;border:1px solid #d8b967;border-radius:99px;background:#fff3c8;color:#4b2e18!important;font-size:12px;font-weight:800;text-shadow:none}.total-badge-score{font-size:24px;color:var(--green)}.quest-done{color:var(--green)}.quest-cards form{margin-top:12px}.party-scoreboard ol{margin:0;padding:0;list-style:none}.party-scoreboard li{display:flex;justify-content:space-between;padding:12px;border-top:1px solid #eadbbc}.party-scoreboard li.is-me{background:#edf6e9}.party-scoreboard li:first-child{font-size:18px;color:var(--brown)}@media(max-width:700px){.weather-card{flex-wrap:wrap}.weather-card p{width:100%;margin-left:35px}.badge-grid{grid-template-columns:1fr}}</style>
-<script>(()=>{const card=document.getElementById('todayWeather');if(!card)return;const summary=document.getElementById('weatherSummary'),icon=document.getElementById('weatherIcon'),tip=document.getElementById('weatherWorkoutTip'),locationLabel=document.getElementById('weatherLocationLabel');const labels={0:['☀️','맑음'],1:['🌤️','대체로 맑음'],2:['⛅','구름 조금'],3:['☁️','흐림'],45:['🌫️','안개'],48:['🌫️','서리 안개'],51:['🌦️','약한 이슬비'],53:['🌦️','이슬비'],55:['🌧️','강한 이슬비'],61:['🌦️','약한 비'],63:['🌧️','비'],65:['🌧️','강한 비'],71:['🌨️','약한 눈'],73:['🌨️','눈'],75:['❄️','강한 눈'],80:['🌦️','소나기'],81:['🌧️','소나기'],82:['⛈️','강한 소나기'],95:['⛈️','뇌우']};function load(lat,lon,isCurrent){locationLabel.textContent=isCurrent?'오늘의 날씨 · 내 현재 위치':'오늘의 날씨 · 위치 권한 없음(등록 지역 기준)';fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FSeoul`).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(data=>{const w=data.current,[emoji,label]=labels[w.weather_code]||['🌤️','현재 날씨'];icon.textContent=emoji;summary.textContent=`${label} · ${Math.round(w.temperature_2m)}℃ (체감 ${Math.round(w.apparent_temperature)}℃)`;tip.textContent=w.weather_code>=51?'실내 운동을 추천해요.':w.temperature_2m>=30?'더위를 피해 가볍게 운동하세요.':w.temperature_2m<=0?'충분히 몸을 풀고 운동하세요.':'야외 운동하기 좋은 날이에요!';}).catch(()=>{summary.textContent='날씨 정보를 불러오지 못했어요';tip.textContent='잠시 후 다시 확인해 주세요.';});}const fallback=()=>load(card.dataset.fallbackLatitude,card.dataset.fallbackLongitude,false);if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>load(pos.coords.latitude,pos.coords.longitude,true),fallback,{enableHighAccuracy:false,timeout:7000,maximumAge:600000});}else{fallback();}})();</script>
-<script>(()=>{const list=document.getElementById('sportsNewsList'),button=document.getElementById('refreshSportsNews');function loadNews(){button.disabled=true;fetch('{% url "sports_news_api" %}').then(response=>response.json()).then(data=>{list.replaceChildren();if(!data.news.length){const item=document.createElement('li');item.textContent='현재 뉴스를 불러올 수 없어요.';list.append(item);return;}data.news.forEach(news=>{const item=document.createElement('li'),link=document.createElement('a'),meta=document.createElement('small');link.href=news.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=news.title;meta.textContent=`${news.source} · ${news.time}`;item.append(link,meta);list.append(item);});}).catch(()=>{list.innerHTML='<li>뉴스 연결을 잠시 후 다시 시도해 주세요.</li>';}).finally(()=>{button.disabled=false;});}button.addEventListener('click',loadNews);loadNews();})();</script>
+
+
+
+
+
+<!-- 파티 배지 내기 스코어보드 -->
+{% for challenge in party_challenges %}
+  <section class="panel party-scoreboard" style="margin-top: 24px;">
+    <div class="section-heading" style="margin-bottom: 16px;">
+      <div>
+        <span style="color: var(--trophy-gold); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY CHALLENGE</span>
+        <h2><i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 6px;"></i>{{ challenge.party.name }} 배지 내기</h2>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0;">{{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}</p>
+        {% if challenge.party.challenge_reward %}
+          <p class="challenge-reward">🎁 내기 보상: <b>{{ challenge.party.challenge_reward }}</b></p>
+        {% endif %}
+      </div>
+    </div>
+    <ol>
+      {% for row in challenge.rows %}
+        <li{% if row.is_me %} class="is-me"{% endif %}>
+          <span>{% if forloop.first %}🏆{% else %}{{ forloop.counter }}위{% endif %} {{ row.name }}</span>
+          <b style="color: var(--trophy-gold);">{{ row.points }}점</b>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endfor %}
+
+<style>
+.weather-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin: -10px 0 16px;
+  padding: 10px 18px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(16, 25, 42, 0.9) 0%, rgba(12, 18, 30, 0.96) 100%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+}
+.weather-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(0, 245, 155, 0.15);
+  border: 1px solid var(--neon-mint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.weather-card small {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38BDF8;
+  white-space: nowrap;
+}
+.weather-card b {
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.weather-card p {
+  margin: 0 0 0 auto;
+  color: var(--neon-mint);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.badge-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+}
+.badge-score-row strong {
+  color: var(--trophy-gold);
+  font-size: 32px;
+  font-weight: 900;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+}
+.party-scoreboard ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.party-scoreboard li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+.party-scoreboard li.is-me {
+  background: rgba(0, 245, 155, 0.08);
+  border-radius: 10px;
+  color: var(--neon-mint);
+  font-weight: 800;
+}
+.party-scoreboard li:first-child {
+  font-size: 16px;
+  color: var(--trophy-gold);
+  font-weight: 900;
+}
+.challenge-reward {
+  margin-top: 6px;
+  color: var(--trophy-gold);
+  font-size: 13px;
+}
+/* 좌우 컬럼 레이아웃 */
+.dash {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+@media(max-width: 960px) {
+  .dash {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+.dashboard-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 340px;
+  box-sizing: border-box;
+}
+@media(max-width: 960px) {
+  .dashboard-left {
+    width: 100%;
+  }
+}
+.compact-solo-quests {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.compact-solo-quests .quest-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.compact-party-quests {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+/* 실시간 스포츠 뉴스 티커 바 - 텍스트 변경 시 주변 칸 흔들림 원천 차단 */
+.sports-news-ticker-panel {
+  width: 100%;
+  height: 50px;
+  box-sizing: border-box;
+  contain: layout paint;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.sports-news-ticker-panel:hover {
+  border-color: var(--neon-mint);
+  box-shadow: 0 6px 22px rgba(0, 245, 155, 0.2);
+}
+</style>
+
+
+
+
+
+
+<script>
+// 🌤️ 실시간 날씨 데이터 DOM 반영 함수
+function applyWeatherToDOM(w) {
+  const badge = document.getElementById("weatherLocationBadge");
+  const label = document.getElementById("weatherLocationLabel");
+  const icon = document.getElementById("weatherLocationIcon");
+  const wIcon = document.getElementById("weatherIcon");
+  const summary = document.getElementById("weatherSummary");
+  const windInfo = document.getElementById("weatherWindInfo");
+  const tip = document.getElementById("weatherWorkoutTip");
+  const btnText = document.getElementById("btnGpsText");
+  const btnIcon = document.getElementById("btnGpsIcon");
+
+  if (badge) {
+    if (w.is_gps) {
+      badge.style.background = "rgba(0,245,155,0.18)";
+      badge.style.border = "1px solid var(--neon-mint)";
+      badge.style.color = "var(--neon-mint)";
+      badge.style.boxShadow = "0 0 10px rgba(0,245,155,0.25)";
+    } else {
+      badge.style.background = "rgba(56,189,248,0.15)";
+      badge.style.border = "1px solid rgba(56,189,248,0.4)";
+      badge.style.color = "#38BDF8";
+      badge.style.boxShadow = "none";
+    }
+  }
+  if (label) {
+    label.textContent = `📍 ${w.location_name}${w.is_gps ? ' (실시간 GPS)' : ''}`;
+  }
+  if (icon) {
+    icon.className = w.is_gps ? "fa-solid fa-location-crosshairs" : "fa-solid fa-house-user";
+  }
+  if (wIcon) {
+    if (w.icon) {
+      wIcon.innerHTML = `<i class="fa-solid ${w.icon}" style="color: ${w.color || 'var(--neon-mint)'};"></i>`;
+    }
+  }
+  if (summary) {
+    summary.innerHTML = `<span style="color: ${w.color || '#38BDF8'}; font-weight: 900;">${w.condition}</span> · <span style="color: #FFFFFF;">${w.temperature}℃</span>`;
+  }
+  if (windInfo) {
+    windInfo.textContent = `풍속 ${w.windspeed}m/s`;
+  }
+  if (tip) {
+    tip.textContent = w.message || "오늘도 즐겁게 운동하세요!";
+  }
+  if (btnText) {
+    btnText.textContent = w.is_gps ? "GPS 새로고침" : "내 GPS 위치로 찾기";
+  }
+  if (btnIcon) {
+    btnIcon.className = `fa-solid ${w.is_gps ? 'fa-rotate' : 'fa-satellite-dish'}`;
+    btnIcon.style.color = "#38BDF8";
+  }
+}
+
+// 🌤️ 실시간 GPS 위치 기반 날씨 갱신
+function syncWeatherWithGPS(isAuto = false) {
+  if (isAuto) {
+    if (typeof isNetfitGPSAllowed === "function" && isNetfitGPSAllowed()) {
+      executeGPSFetch(coords => {
+        fetchWeatherWithCoords(coords.latitude, coords.longitude);
+      });
+    }
+    return;
+  }
+
+  const btnText = document.getElementById("btnGpsText");
+  const btnIcon = document.getElementById("btnGpsIcon");
+  if (btnText) btnText.textContent = "GPS 신호 수신 중...";
+  if (btnIcon) btnIcon.className = "fa-solid fa-spinner fa-spin";
+
+  if (typeof openGPSPermissionModal === "function") {
+    openGPSPermissionModal(coords => {
+      fetchWeatherWithCoords(coords.latitude, coords.longitude);
+    });
+  } else {
+    if (!navigator.geolocation) {
+      alert("브라우저에서 위치 서비스를 지원하지 않습니다.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        try { sessionStorage.setItem("netfit_gps_allowed", "true"); } catch(e){}
+        fetchWeatherWithCoords(pos.coords.latitude, pos.coords.longitude);
+      },
+      err => {
+        console.warn("GPS 오류:", err.message);
+        if (btnText) {
+          btnText.textContent = "위치 수신 실패";
+          if (btnIcon) btnIcon.className = "fa-solid fa-triangle-exclamation";
+        }
+      }
+    );
+  }
+}
+
+function fetchWeatherWithCoords(lat, lng) {
+  const btnText = document.getElementById("btnGpsText");
+  const btnIcon = document.getElementById("btnGpsIcon");
+  const latVal = typeof lat === "number" ? lat.toFixed(5) : parseFloat(lat).toFixed(5);
+  const lngVal = typeof lng === "number" ? lng.toFixed(5) : parseFloat(lng).toFixed(5);
+
+  fetch(`/api/weather/?lat=${latVal}&lng=${lngVal}&loc_name=실시간 GPS`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.status === "success" && data.weather) {
+        applyWeatherToDOM(data.weather);
+      }
+    })
+    .catch(err => {
+      console.warn("날씨 갱신 실패:", err);
+    })
+    .finally(() => {
+      if (btnText) {
+        btnText.textContent = "GPS 새로고침";
+        if (btnIcon) btnIcon.className = "fa-solid fa-rotate";
+      }
+    });
+}
+
+// 페이지 로드 시 초기 날씨 조회
+document.addEventListener("DOMContentLoaded", () => {
+  const card = document.getElementById('todayWeather');
+  if (!card) return;
+
+  const alreadyAllowed = (typeof isNetfitGPSAllowed === "function" && isNetfitGPSAllowed()) ||
+                         sessionStorage.getItem("netfit_gps_allowed") === "true";
+
+  if (alreadyAllowed) {
+    syncWeatherWithGPS(true);
+  } else {
+    const lat = card.dataset.fallbackLatitude || 37.5665;
+    const lon = card.dataset.fallbackLongitude || 126.9780;
+    fetch(`/api/weather/?lat=${lat}&lng=${lon}&loc_name={{ user.profile.area }}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.status === "success" && data.weather) {
+          applyWeatherToDOM(data.weather);
+        }
+      })
+      .catch(() => {
+        // Fallback to client-side Open-Meteo direct fetch if API is unreachable
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FSeoul`)
+          .then(r => r.json())
+          .then(d => {
+            const w = d.current;
+            applyWeatherToDOM({
+              temperature: Math.round(w.temperature_2m),
+              windspeed: w.wind_speed_10m,
+              condition: "현재 날씨",
+              location_name: "{{ user.profile.area }}",
+              is_gps: false,
+              message: "야외 운동하기 좋은 날이에요!"
+            });
+          })
+          .catch(() => {});
+      });
+  }
+});
+</script>
+
+<script>
+(() => {
+  const tickerLink = document.getElementById('dashboardNewsTickerLink');
+  const refreshBtn = document.getElementById('btnRefreshTickerNews');
+  const refreshIcon = document.getElementById('btnRefreshTickerIcon');
+  if (!tickerLink) return;
+
+  let newsList = [];
+  let currentIndex = 0;
+  let tickerTimer = null;
+  let currentNewsPage = 0;
+
+  function renderHeadline(item, animate = true) {
+    if (!item) return;
+    if (animate) {
+      tickerLink.style.opacity = '0';
+      tickerLink.style.transform = 'translateY(6px)';
+      setTimeout(() => {
+        tickerLink.textContent = item.title;
+        tickerLink.href = item.url || '#';
+        tickerLink.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
+        tickerLink.style.opacity = '1';
+        tickerLink.style.transform = 'translateY(0)';
+      }, 250);
+    } else {
+      tickerLink.textContent = item.title;
+      tickerLink.href = item.url || '#';
+      tickerLink.title = `${item.title} (${item.source || '스포츠'} · ${item.time || '실시간'})`;
+      tickerLink.style.opacity = '1';
+      tickerLink.style.transform = 'translateY(0)';
+    }
+  }
+
+  function startCycle() {
+    if (tickerTimer) clearInterval(tickerTimer);
+    if (!newsList.length) return;
+    renderHeadline(newsList[currentIndex], false);
+    tickerTimer = setInterval(() => {
+      currentIndex = (currentIndex + 1) % newsList.length;
+      renderHeadline(newsList[currentIndex], true);
+    }, 3500);
+  }
+
+  function fetchNews(isRefresh = false) {
+    if (isRefresh) {
+      currentNewsPage += 1;
+      if (refreshBtn) refreshBtn.disabled = true;
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+    }
+
+    const startTime = performance.now();
+    const url = isRefresh
+      ? `{% url "sports_news_api" %}?refresh=1&page=${currentNewsPage}&_=${Date.now()}`
+      : `{% url "sports_news_api" %}?page=${currentNewsPage}&_=${Date.now()}`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (data.news && data.news.length) {
+          newsList = data.news;
+          currentIndex = 0;
+          startCycle();
+        } else {
+          tickerLink.textContent = '현재 실시간 뉴스를 불러올 수 없습니다.';
+        }
+      })
+      .catch(() => {
+        tickerLink.textContent = '스포츠 뉴스를 잠시 후 다시 확인해 주세요.';
+      })
+      .finally(() => {
+        if (isRefresh) {
+          const elapsed = performance.now() - startTime;
+          const wait = Math.max(0, 600 - elapsed);
+          setTimeout(() => {
+            if (refreshBtn) refreshBtn.disabled = false;
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+          }, wait);
+        }
+      });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => fetchNews(true));
+  }
+
+  fetchNews(false);
+})();
+</script>
 {% endblock %}
+

@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
 from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, OutfitPurchase, Party, PersonalDailyQuest, WorkoutRecord
-from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, total_card_xp
+from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, get_weather_data, total_card_xp
 
 DEMO_OPPONENTS = [
     {"name": "민수 · 파워 트레이너", "level": 3, "power": 58, "reward": "치킨 사기 🍗"},
@@ -313,37 +313,268 @@ def ranking_view(request):
 @login_required
 def outfit_shop(request):
     catalog = [
-        {"code": "CAP", "name": "운동 모자", "icon": "🧢", "cost": 150},
-        {"code": "SPORT", "name": "스포츠 유니폼", "icon": "👕", "cost": 250},
-        {"code": "CROWN", "name": "챔피언 왕관", "icon": "👑", "cost": 400},
+        {
+            "code": "BAND",
+            "name": "스포티 네온 헤어밴드",
+            "icon": "⚡",
+            "category": "머리 장식",
+            "filter_group": "head",
+            "cost": 50,
+            "medals": 3,
+            "desc": "네온 민트 컬러의 땀흡수 스포츠 헤어밴드. 열정적인 러너의 상징!",
+        },
+        {
+            "code": "GLASS",
+            "name": "사이버 네온 선글라스",
+            "icon": "🕶️",
+            "category": "페이스/안경",
+            "filter_group": "head",
+            "cost": 80,
+            "medals": 5,
+            "desc": "사이버펑크 감성의 고글 선글라스. 자외선과 상대방의 기세를 차단합니다.",
+        },
+        {
+            "code": "HEADSET",
+            "name": "사이버 게이밍 헤드셋",
+            "icon": "🎧",
+            "category": "머리 장식",
+            "filter_group": "head",
+            "cost": 100,
+            "medals": 6,
+            "desc": "비트감 넘치는 운동 BGM을 선사하는 네온 LED 게이밍 헤드셋.",
+        },
+        {
+            "code": "MASK",
+            "name": "사이버 닌자 마스크",
+            "icon": "🥷",
+            "category": "페이스/안경",
+            "filter_group": "head",
+            "cost": 110,
+            "medals": 7,
+            "desc": "미세먼지와 바람을 완벽 차단하는 하이테크 네온 방진 마스크.",
+        },
+        {
+            "code": "BELT",
+            "name": "골드 챔피언 벨트",
+            "icon": "🥋",
+            "category": "의상/벨트",
+            "filter_group": "body",
+            "cost": 120,
+            "medals": 8,
+            "desc": "피트니스 아레나 챔피언의 황금 버클 벨트. 당당한 승리자의 상징.",
+        },
+        {
+            "code": "CAP",
+            "name": "운동 모자",
+            "icon": "🧢",
+            "category": "머리 장식",
+            "filter_group": "head",
+            "cost": 150,
+            "medals": 10,
+            "desc": "어떤 운동에도 잘 어울리는 기본 스포츠 스트릿 캡.",
+        },
+        {
+            "code": "MEDAL",
+            "name": "골드 빅토리 목걸이",
+            "icon": "🥇",
+            "category": "액세서리",
+            "filter_group": "body",
+            "cost": 180,
+            "medals": 12,
+            "desc": "가장 먼저 결승선을 통과한 1등 러너에게 수여된 순금 메달 목걸이.",
+        },
+        {
+            "code": "GLOVES",
+            "name": "파이어 복싱 글러브",
+            "icon": "🥊",
+            "category": "액세서리",
+            "filter_group": "body",
+            "cost": 200,
+            "medals": 14,
+            "desc": "강력한 펀치 파워와 악력을 불어넣는 화염 가죽 복싱 글러브.",
+        },
+        {
+            "code": "SPORT",
+            "name": "스포츠 유니폼",
+            "icon": "👕",
+            "category": "의상/벨트",
+            "filter_group": "body",
+            "cost": 250,
+            "medals": 15,
+            "desc": "통기성과 탄력이 뛰어난 기능성 프로 스포츠 유니폼.",
+        },
+        {
+            "code": "CLOAK",
+            "name": "다크 히어로 망토",
+            "icon": "🦸",
+            "category": "특수/이펙트",
+            "filter_group": "special",
+            "cost": 300,
+            "medals": 18,
+            "desc": "바람에 휘날리며 위엄을 드러내는 보랏빛 사이버 히어로 망토.",
+        },
+        {
+            "code": "SWORD",
+            "name": "네온 빔세이버",
+            "icon": "⚔️",
+            "category": "특수/이펙트",
+            "filter_group": "special",
+            "cost": 350,
+            "medals": 20,
+            "desc": "빛의 에너지 입자를 칼날로 형상화한 하이테크 레이저 세이버.",
+        },
+        {
+            "code": "CROWN",
+            "name": "챔피언 왕관",
+            "icon": "👑",
+            "category": "머리 장식",
+            "filter_group": "head",
+            "cost": 400,
+            "medals": 22,
+            "desc": "NETFIT 최정상 파이터에게 걸맞은 번쩍이는 황금 왕관.",
+        },
+        {
+            "code": "WING",
+            "name": "사이버 홀로그램 윙",
+            "icon": "🪽",
+            "category": "특수/이펙트",
+            "filter_group": "special",
+            "cost": 500,
+            "medals": 25,
+            "desc": "빛의 속도로 질주하는 러너를 위한 홀로그램 날개 이펙트.",
+        },
+        {
+            "code": "DRAGON",
+            "name": "미니 파이어 펫",
+            "icon": "🐲",
+            "category": "동반자/펫",
+            "filter_group": "special",
+            "cost": 550,
+            "medals": 28,
+            "desc": "러너의 곁을 든든하게 날아다니며 응원해주는 수호신 아기 드래곤.",
+        },
+        {
+            "code": "AURA",
+            "name": "불꽃 버닝 파이어 오라",
+            "icon": "🔥",
+            "category": "특수/이펙트",
+            "filter_group": "special",
+            "cost": 650,
+            "medals": 35,
+            "desc": "운동 에너지가 임계점을 넘을 때 발현되는 압도적인 화염 오라.",
+        },
+        {
+            "code": "VICTORY",
+            "name": "골드 빅토리 트로피",
+            "icon": "🏆",
+            "category": "특수/이펙트",
+            "filter_group": "special",
+            "cost": 800,
+            "medals": 40,
+            "desc": "모든 챌린지를 정복한 전설의 챔피언에게 수여되는 레전드 트로피.",
+        },
     ]
     valid_codes = {item[0] for item in OutfitPurchase.OUTFIT_CHOICES}
     if request.method == "POST":
         action = request.POST.get("action")
-        code = request.POST.get("outfit", "")
-        if action == "unequip":
-            request.user.profile.equipped_outfit = "NONE"
+        code = request.POST.get("outfit", "").strip()
+        msg_text = ""
+        msg_type = "info"
+        if action == "unequip_all":
+            request.user.profile.unequip_outfit(None)
             request.user.profile.save(update_fields=["equipped_outfit"])
-            messages.success(request, "기본 모습으로 변경했어요.")
+            msg_text = "모든 장착 아이템을 해제했어요."
+            msg_type = "success"
+        elif action == "unequip":
+            request.user.profile.unequip_outfit(code if code else None)
+            request.user.profile.save(update_fields=["equipped_outfit"])
+            msg_text = "장착을 해제했어요."
+            msg_type = "success"
         elif code in valid_codes and action == "buy":
             summary = badge_summary(request.user)
             cost = OutfitPurchase.COSTS[code]
             if OutfitPurchase.objects.filter(user=request.user, outfit=code).exists():
-                messages.info(request, "이미 보유한 의상이에요.")
+                msg_text = "이미 보유한 아이템이에요."
+                msg_type = "info"
             elif summary["available_points"] < cost:
-                messages.error(request, "사용 가능한 배지 포인트가 부족해요.")
+                msg_text = "사용 가능한 배지 포인트(메달)가 부족해요."
+                msg_type = "error"
             else:
                 OutfitPurchase.objects.create(user=request.user, outfit=code, cost=cost)
-                messages.success(request, f"{dict(OutfitPurchase.OUTFIT_CHOICES)[code]}을 구매했어요!")
+                request.user.profile.equip_outfit(code)
+                request.user.profile.save(update_fields=["equipped_outfit"])
+                msg_text = f"🎉 {dict(OutfitPurchase.OUTFIT_CHOICES)[code]}을(를) 구매하고 장착했어요!"
+                msg_type = "success"
         elif code in valid_codes and action == "equip":
             if OutfitPurchase.objects.filter(user=request.user, outfit=code).exists():
-                request.user.profile.equipped_outfit = code
+                request.user.profile.equip_outfit(code)
                 request.user.profile.save(update_fields=["equipped_outfit"])
-                messages.success(request, "캐릭터 의상을 변경했어요.")
+                msg_text = f"✨ {dict(OutfitPurchase.OUTFIT_CHOICES)[code]}을(를) 착용했어요."
+                msg_type = "success"
+
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest" or request.POST.get("ajax") == "1"
+        if not is_ajax and msg_text:
+            if msg_type == "success":
+                messages.success(request, msg_text)
+            elif msg_type == "info":
+                messages.info(request, msg_text)
+            elif msg_type == "error":
+                messages.error(request, msg_text)
+
+        if is_ajax:
+            owned = list(OutfitPurchase.objects.filter(user=request.user).values_list("outfit", flat=True))
+            summary = badge_summary(request.user)
+            spent_points = max(0, summary["total_points"] - summary["available_points"])
+            equipped_codes = request.user.profile.equipped_outfits_list
+            base_sprite_outfit = ""
+            if "CAP" in equipped_codes:
+                base_sprite_outfit = "cap"
+            elif "SPORT" in equipped_codes:
+                base_sprite_outfit = "sport"
+            elif "CROWN" in equipped_codes:
+                base_sprite_outfit = "crown"
+            equipped_items_data = [
+                {"code": it["code"], "name": it["name"], "icon": it["icon"], "category": it["category"], "cost": it["cost"]}
+                for it in catalog if it["code"] in equipped_codes
+            ]
+            return JsonResponse({
+                "status": msg_type,
+                "message": msg_text,
+                "equipped_codes": equipped_codes,
+                "owned_outfits": owned,
+                "available_points": summary["available_points"],
+                "spent_points": spent_points,
+                "total_points": summary["total_points"],
+                "equipped_items": equipped_items_data,
+                "base_sprite_outfit": base_sprite_outfit,
+            })
+
         return redirect("outfit_shop")
+
     owned = set(OutfitPurchase.objects.filter(user=request.user).values_list("outfit", flat=True))
+    summary = badge_summary(request.user)
+    spent_points = max(0, summary["total_points"] - summary["available_points"])
+
+    equipped_codes = request.user.profile.equipped_outfits_list
+    equipped_items = [it for it in catalog if it["code"] in equipped_codes]
+
+    base_sprite_outfit = ""
+    if "CAP" in equipped_codes:
+        base_sprite_outfit = "cap"
+    elif "SPORT" in equipped_codes:
+        base_sprite_outfit = "sport"
+    elif "CROWN" in equipped_codes:
+        base_sprite_outfit = "crown"
+
     return render(request, "fitness/outfit_shop.html", {
-        "catalog": catalog, "owned_outfits": owned, "badge_summary": badge_summary(request.user),
+        "catalog": catalog,
+        "owned_outfits": owned,
+        "badge_summary": summary,
+        "spent_points": spent_points,
+        "equipped_codes": set(equipped_codes),
+        "equipped_items": equipped_items,
+        "base_sprite_outfit": base_sprite_outfit,
+        "equipped_item": equipped_items[0] if equipped_items else None,
     })
 
 
@@ -373,67 +604,199 @@ def add_friend(request):
     return redirect("friends")
 
 
+PRESET_LOCATIONS = {
+    "bupyeong": (37.4988, 126.7237, "인천 부평"),
+    "gasan": (37.4812, 126.8827, "서울 가산동"),
+    "gangnam": (37.4979, 127.0276, "서울 강남"),
+    "songdo": (37.3888, 126.6533, "인천 송도"),
+    "hongdae": (37.5575, 126.9244, "서울 홍대"),
+    "pangyo": (37.3947, 127.1111, "경기 판교"),
+}
+
+PRESET_BUTTONS = [
+    {"key": "bupyeong", "name": "인천 부평", "icon": "fa-building"},
+    {"key": "gasan", "name": "서울 가산동", "icon": "fa-briefcase"},
+    {"key": "gangnam", "name": "서울 강남", "icon": "fa-city"},
+    {"key": "songdo", "name": "인천 송도", "icon": "fa-water"},
+    {"key": "hongdae", "name": "서울 홍대", "icon": "fa-compass"},
+    {"key": "pangyo", "name": "경기 판교", "icon": "fa-laptop-code"},
+]
+
+
 @login_required
 def facilities_view(request):
     profile = request.user.profile
     keyword = request.GET.get("q", "").strip()[:80]
+    query = keyword
+    f_type = request.GET.get("type", "").strip()
     category = request.GET.get("category", "all")
+    preset_key = request.GET.get("preset", "").strip()
+
     categories = [
         ("all", "전체", ""), ("baseball", "야구장", "야구"), ("tennis", "테니스장", "테니스"),
         ("soccer", "축구장", "축구"), ("swimming", "수영장", "수영"),
         ("gym", "체육관", "체육관"), ("field", "운동장", "운동장"),
     ]
-    category_terms = {key: term for key, _, term in categories}
-    if category not in category_terms:
-        category = "all"
-    try:
-        current_lat = float(request.GET.get("lat", ""))
-        current_lon = float(request.GET.get("lon", ""))
-        use_current_location = -90 <= current_lat <= 90 and -180 <= current_lon <= 180
-    except (TypeError, ValueError):
-        current_lat = current_lon = None
-        use_current_location = False
-    facilities = Facility.objects.filter(is_active=True)
-    if not use_current_location:
-        facilities = facilities.filter(region=profile.area)
+    types = ["전체", "축구장", "야구장", "수영장", "테니스장", "배드민턴", "체육관", "간이운동장"]
+
+    user_lat = None
+    user_lng = None
+    current_location_label = None
+    is_gps = False
+
+    # 1. 퀵 프리셋 선택 시 (인천 부평, 서울 가산동 등)
+    if preset_key in PRESET_LOCATIONS:
+        p_lat, p_lng, p_label = PRESET_LOCATIONS[preset_key]
+        user_lat, user_lng = p_lat, p_lng
+        current_location_label = p_label
+    # 2. GPS 파라미터 (lat/lng 또는 lat/lon)
+    elif request.GET.get("lat") and (request.GET.get("lng") or request.GET.get("lon")):
+        try:
+            user_lat = float(request.GET.get("lat"))
+            user_lng = float(request.GET.get("lng") or request.GET.get("lon"))
+            if -90 <= user_lat <= 90 and -180 <= user_lng <= 180:
+                current_location_label = request.GET.get("loc_name", "실시간 GPS 위치")
+                is_gps = True
+            else:
+                user_lat, user_lng = None, None
+        except (TypeError, ValueError):
+            user_lat, user_lng = None, None
+
+    use_current_location = user_lat is not None and user_lng is not None
+
+    facilities_qs = Facility.objects.filter(is_active=True)
+
+    if use_current_location:
+        facilities_qs = facilities_qs.filter(latitude__isnull=False, longitude__isnull=False)
+        # 1차 정밀 반경 (±0.18도 ≈ 반경 20km 이내 집중 탐색)
+        lat_range = 0.18
+        lng_range = 0.22
+        local_qs = facilities_qs.filter(
+            latitude__gte=user_lat - lat_range,
+            latitude__lte=user_lat + lat_range,
+            longitude__gte=user_lng - lng_range,
+            longitude__lte=user_lng + lng_range,
+        )
+        # 외곽 지역이거나 시설 수가 적을 경우 반경 45km로 안전 확장
+        if local_qs.count() < 15:
+            lat_range = 0.45
+            lng_range = 0.55
+            local_qs = facilities_qs.filter(
+                latitude__gte=user_lat - lat_range,
+                latitude__lte=user_lat + lat_range,
+                longitude__gte=user_lng - lng_range,
+                longitude__lte=user_lng + lng_range,
+            )
+        facilities_qs = local_qs
+    else:
+        if not keyword:
+            facilities_qs = facilities_qs.filter(region=profile.area)
+            current_location_label = f"홈 지역 ({profile.area})"
+        else:
+            current_location_label = f"'{keyword}' 검색 결과"
+
     if keyword:
-        facilities = facilities.filter(Q(name__icontains=keyword) | Q(facility_type__icontains=keyword) | Q(address__icontains=keyword))
-    if category_terms[category]:
-        term = category_terms[category]
-        facilities = facilities.filter(Q(name__icontains=term) | Q(facility_type__icontains=term))
+        facilities_qs = facilities_qs.filter(
+            Q(name__icontains=keyword) | Q(facility_type__icontains=keyword) | Q(address__icontains=keyword)
+        )
+
+    # 종목별 필터: type 파라미터 우선, 없으면 category 파라미터
+    target_type = f_type if f_type and f_type != "전체" else ""
+    if not target_type and category != "all":
+        category_terms = {k: t for k, _, t in categories}
+        target_type = category_terms.get(category, "")
+
+    if target_type:
+        facilities_qs = facilities_qs.filter(Q(name__icontains=target_type) | Q(facility_type__icontains=target_type))
+
+    candidate_list = list(facilities_qs[:1000] if use_current_location else facilities_qs[:60])
     facility_rows = []
-    candidates = list(facilities[:500] if use_current_location else facilities[:60])
-    for facility in candidates:
+
+    for facility in candidate_list:
         if use_current_location and facility.latitude is not None and facility.longitude is not None:
-            lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
+            lat1, lat2 = math.radians(user_lat), math.radians(facility.latitude)
             dlat = lat2 - lat1
-            dlon = math.radians(facility.longitude - current_lon)
+            dlon = math.radians(facility.longitude - user_lng)
             a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-            facility.distance_km = round(6371 * 2 * math.asin(math.sqrt(a)), 1)
-        elif use_current_location:
-            continue
+            dist = 6371 * 2 * math.asin(math.sqrt(a))
+            facility.distance_km = round(dist, 1)
+            if dist < 1.0:
+                facility.distance_str = f"{int(dist * 1000)}m"
+            else:
+                facility.distance_str = f"{dist:.1f}km"
+        else:
+            facility.distance_km = 9999
+            facility.distance_str = "-"
+
         destination = quote(facility.name, safe="")
         if facility.longitude is not None and facility.latitude is not None:
-            facility.naver_directions_url = "https://map.naver.com/p/directions/-/" + f"{facility.longitude},{facility.latitude},{destination},PLACE_POI/-/transit"
+            facility.naver_directions_url = f"https://map.naver.com/p/directions/-/{facility.longitude},{facility.latitude},{destination},PLACE_POI/-/transit"
             facility.kakao_map_url = f"https://map.kakao.com/link/to/{destination},{facility.latitude},{facility.longitude}"
         else:
             search_query = quote(f"{facility.name} {facility.address}".strip(), safe="")
-            facility.naver_directions_url = "https://map.naver.com/p/search/" + search_query
-            facility.kakao_map_url = "https://map.kakao.com/link/search/" + search_query
+            facility.naver_directions_url = f"https://map.naver.com/p/search/{search_query}"
+            facility.kakao_map_url = f"https://map.kakao.com/link/search/{search_query}"
+        facility.naver_map_url = facility.naver_directions_url
+
         facility_rows.append(facility)
+
     if use_current_location:
-        facility_rows.sort(key=lambda facility: facility.distance_km)
+        facility_rows.sort(key=lambda f: f.distance_km)
+        total_count = len(facility_rows)
         facility_rows = facility_rows[:60]
+    else:
+        total_count = facilities_qs.count()
+
     return render(request, "fitness/facilities.html", {
-        "facilities": facility_rows, "area": profile.area,
-        "keyword": keyword, "category": category, "categories": categories,
-        "use_current_location": use_current_location, "current_lat": current_lat, "current_lon": current_lon,
+        "facilities": facility_rows,
+        "area": profile.area,
+        "total_count": total_count,
+        "keyword": keyword,
+        "query": query,
+        "category": category,
+        "categories": categories,
+        "selected_type": f_type or (category if category != "all" else "전체"),
+        "types": types,
+        "user_lat": user_lat,
+        "user_lng": user_lng,
+        "current_lat": user_lat,
+        "current_lon": user_lng,
+        "current_location_label": current_location_label or f"홈 지역 ({profile.area})",
+        "selected_preset": preset_key,
+        "presets": PRESET_BUTTONS,
+        "is_gps": is_gps,
+        "use_current_location": use_current_location,
     })
+
+
+def weather_api(request):
+    """실시간 GPS 좌표를 받아 즉시 날씨 JSON을 반환하는 API 엔드포인트"""
+    lat = request.GET.get("lat")
+    lng = request.GET.get("lng")
+    loc_name = request.GET.get("loc_name", "")
+    user_area = request.user.profile.area if request.user.is_authenticated else "서울특별시"
+
+    if lat and lng:
+        try:
+            w = get_weather_data(lat=float(lat), lon=float(lng), location_name=loc_name, is_gps=True)
+            return JsonResponse({"status": "success", "weather": w})
+        except ValueError:
+            pass
+
+    coords = weather_coordinates(user_area)
+    w = get_weather_data(lat=coords[0], lon=coords[1], location_name=user_area, is_gps=False)
+    return JsonResponse({"status": "success", "weather": w})
 
 
 @login_required
 def sports_news_api(request):
-    return JsonResponse({"news": get_sports_news(limit=6)})
+    force_refresh = request.GET.get("refresh") in ("1", "true", "True")
+    try:
+        page = int(request.GET.get("page")) if request.GET.get("page") is not None else None
+    except (TypeError, ValueError):
+        page = None
+    news = get_sports_news(limit=6, refresh=force_refresh, page=page)
+    return JsonResponse({"status": "success", "news": news})
 
 
 @login_required
@@ -734,4 +1097,8 @@ def demo_battle(request):
 
 
 class UserLogoutView(LogoutView):
-    pass
+    def dispatch(self, request, *args, **kwargs):
+        storage = messages.get_messages(request)
+        for _ in storage:
+            pass
+        return super().dispatch(request, *args, **kwargs)

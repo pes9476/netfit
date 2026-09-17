@@ -1,14 +1,124 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>운동 기록</h1><p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다.</p></section>
+<section class="page-intro">
+  <h1><i class="fa-solid fa-person-running" style="color: var(--neon-mint); margin-right: 8px;"></i>운동 기록</h1>
+  <p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다.</p>
+</section>
+
 <div class="grid2 activity-entry-grid">
-  <article class="panel"><h2>오늘 한 운동 입력</h2><form method="post" action="{% url 'record_workout' %}">{% csrf_token %}<input type="hidden" name="next" value="activity"><div class="form-grid">{% for field in workout_form %}<div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div><button class="button">운동 기록하고 배지 받기</button></form></article>
-  <article class="panel ai-facility-panel"><div class="ai-facility-head"><span>✨ AI FACILITY PICK</span><h2>내 주변 공공체육시설 추천</h2><div class="ai-facility-actions"><button class="button secondary" type="button" id="activityLocationButton">📍 현재 위치로 다시 추천</button><a class="button" href="{% url 'facilities' %}">전체 보기 →</a></div><small id="activityLocationStatus"></small></div><div class="activity-facility-list">{% for facility in recommended_facilities %}<article><span>🏟️</span><div><b>{{ facility.name }}</b><small>{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</small></div><a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer">지도</a></article>{% empty %}<p>추천할 시설이 없습니다. 주변시설 페이지에서 검색해 보세요.</p>{% endfor %}</div></article>
+  <!-- 운동 입력 폼 -->
+  <article class="panel">
+    <h2><i class="fa-solid fa-pen-to-square" style="color: var(--neon-mint); margin-right: 8px;"></i>오늘 한 운동 입력</h2>
+    <form method="post" action="{% url 'record_workout' %}" style="margin-top: 16px;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="activity">
+      <div class="form-grid">
+        {% for field in workout_form %}
+          <div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+          </div>
+        {% endfor %}
+      </div>
+      <button class="button btn-mint" type="submit" style="width: 100%; margin-top: 16px;">
+        <i class="fa-solid fa-medal"></i>
+        <span>운동 기록하고 배지 받기</span>
+      </button>
+    </form>
+  </article>
+
+  <!-- AI 시설 추천 -->
+  <article class="panel ai-facility-panel">
+    <div class="ai-facility-head">
+      <span>✨ AI FACILITY PICK</span>
+      <h2>내 주변 공공체육시설 추천</h2>
+      <div class="ai-facility-actions">
+        <button class="button secondary" type="button" id="activityLocationButton">
+          <i class="fa-solid fa-location-crosshairs"></i>
+          <span>현재 위치로 다시 추천</span>
+        </button>
+        <a class="button" href="{% url 'facilities' %}">전체 보기 →</a>
+      </div>
+      <small id="activityLocationStatus" style="margin-top: 6px;"></small>
+    </div>
+    <div class="activity-facility-list">
+      {% for facility in recommended_facilities %}
+        <article>
+          <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
+          <div>
+            <b>{{ facility.name }}</b>
+            <small>{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</small>
+          </div>
+          <a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+        </article>
+      {% empty %}
+        <p style="color: var(--text-muted); margin: 12px 0;">추천할 시설이 없습니다. 주변시설 페이지에서 검색해 보세요.</p>
+      {% endfor %}
+    </div>
+  </article>
 </div>
-<section class="section-head"><div><h2>최근 운동 기록</h2><p>가장 최근 20개 기록입니다.</p></div></section>
-<article class="panel">{% for record in records %}<div class="activity"><span class="icon">🏃</span><span><b>{{ record.workout_name }} · {{ record.minutes }}분{% if record.distance_km %} · {{ record.distance_km }}km{% endif %}</b><small>{{ record.created_at|date:"Y.m.d H:i" }} · {{ record.location|default:"운동 장소 미입력" }}{% if record.with_party %} · 파티원과 함께{% endif %}</small></span><span class="gain">{% if record.badge_award %}{% if record.badge_award.badge_type == 'GOLD' %}🥇{% elif record.badge_award.badge_type == 'SILVER' %}🥈{% else %}🥉{% endif %} +{{ record.badge_award.points }}점{% else %}기존 기록{% endif %}</span></div>{% empty %}<p style="color:var(--muted)">첫 운동을 기록해보세요.</p>{% endfor %}</article>
+
+<!-- 최근 기록 목록 -->
+<section class="section-head">
+  <div>
+    <h2><i class="fa-solid fa-clock-rotate-left" style="color: #38BDF8; margin-right: 8px;"></i>최근 운동 기록</h2>
+    <p>가장 최근 20개 기록입니다.</p>
+  </div>
+</section>
+
+<article class="panel">
+  {% for record in records %}
+    <div class="activity">
+      <span class="icon"><i class="fa-solid fa-person-running"></i></span>
+      <span>
+        <b>{{ record.workout_name }} · {{ record.minutes }}분{% if record.distance_km %} · {{ record.distance_km }}km{% endif %}</b>
+        <small>{{ record.created_at|date:"Y.m.d H:i" }} · {{ record.location|default:"운동 장소 미입력" }}{% if record.with_party %} · 파티원과 함께{% endif %}</small>
+      </span>
+      <span class="gain">
+        {% if record.badge_award %}
+          {% if record.badge_award.badge_type == 'GOLD' %}🥇{% elif record.badge_award.badge_type == 'SILVER' %}🥈{% else %}🥉{% endif %} +{{ record.badge_award.points }}점
+        {% else %}
+          기존 기록
+        {% endif %}
+      </span>
+    </div>
+  {% empty %}
+    <p style="color: var(--text-muted); margin: 8px 0;">첫 운동을 기록해보세요.</p>
+  {% endfor %}
+</article>
+
 <script>
-const workoutSelect=document.getElementById("id_workout_type"),customWorkout=document.getElementById("id_custom_workout_name"),customField=customWorkout.closest(".custom-workout-field");function toggleCustomWorkout(){const isCustom=workoutSelect.value==="기타";customField.hidden=!isCustom;customWorkout.required=isCustom;}workoutSelect.addEventListener("change",toggleCustomWorkout);toggleCustomWorkout();
-document.getElementById('activityLocationButton').addEventListener('click',()=>{const status=document.getElementById('activityLocationStatus');if(!navigator.geolocation){status.textContent='이 브라우저에서는 위치 기능을 사용할 수 없어요.';return;}status.textContent='현재 위치를 확인하고 있어요…';navigator.geolocation.getCurrentPosition(pos=>{const url=new URL(location.href);url.searchParams.set('lat',pos.coords.latitude.toFixed(6));url.searchParams.set('lon',pos.coords.longitude.toFixed(6));location.href=url;},()=>{status.textContent='위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';},{enableHighAccuracy:false,timeout:8000,maximumAge:300000});});
+const workoutSelect = document.getElementById("id_workout_type"),
+      customWorkout = document.getElementById("id_custom_workout_name"),
+      customField = customWorkout ? customWorkout.closest(".custom-workout-field") : null;
+
+function toggleCustomWorkout() {
+  if (!workoutSelect || !customField || !customWorkout) return;
+  const isCustom = workoutSelect.value === "기타";
+  customField.hidden = !isCustom;
+  customWorkout.required = isCustom;
+}
+if (workoutSelect) {
+  workoutSelect.addEventListener("change", toggleCustomWorkout);
+  toggleCustomWorkout();
+}
+
+document.getElementById('activityLocationButton')?.addEventListener('click', () => {
+  const status = document.getElementById('activityLocationStatus');
+  if (!navigator.geolocation) {
+    status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+    return;
+  }
+  status.textContent = '현재 위치를 확인하고 있어요…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const url = new URL(location.href);
+    url.searchParams.set('lat', pos.coords.latitude.toFixed(6));
+    url.searchParams.set('lon', pos.coords.longitude.toFixed(6));
+    location.href = url;
+  }, () => {
+    status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
+  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+});
 </script>
 {% endblock %}

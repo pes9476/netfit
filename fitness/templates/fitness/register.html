@@ -1,3 +1,53 @@
-{% extends "fitness/base.html" %}{% block content %}
-<section class="auth panel"><div class="logo">NET<b>FIT</b><small>MOVE · GROW · BATTLE</small></div><h1>운동 카드 만들기</h1><p style="color:var(--muted)">활동 지역을 선택하면 지역 카드 배틀에 반영됩니다.</p><form method="post">{% csrf_token %}{% for error in form.non_field_errors %}<p role="alert" style="color:#fda4af">{{ error }}</p>{% endfor %}{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<small style="color:#fda4af">{{ error }}</small>{% endfor %}</div>{% endfor %}<button class="button">회원가입하고 시작하기</button></form><p><a href="{% url 'login' %}">이미 계정이 있어요</a></p></section>
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="auth panel" style="max-width: 480px; margin: 40px auto; border: 1px solid rgba(0, 245, 155, 0.3); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0,245,155,0.08);">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div class="logo" style="justify-content: center; margin-bottom: 12px;">
+      <i class="fa-solid fa-bolt" style="color: var(--neon-mint); font-size: 26px;"></i>
+      <span style="font-size: 24px;"><b>NetFit</b></span>
+    </div>
+    <h1 style="font-size: 24px; font-weight: 900; margin: 0 0 6px;">신규 파이터 등록</h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin: 0;">첫 가입 시 온보딩을 거쳐 첫 피지컬 카드가 생성됩니다.</p>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}
+      <div class="notice error" style="padding: 10px 14px; font-size: 12px; margin-bottom: 12px;">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+      </div>
+    {% endfor %}
+
+    {% for field in form %}
+      <div class="field">
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;">
+          {% if field.name == 'username' %}
+            <i class="fa-solid fa-user" style="color: var(--neon-mint);"></i> 아이디
+          {% elif field.name == 'password' or 'password' in field.name %}
+            <i class="fa-solid fa-lock" style="color: var(--neon-mint);"></i> {{ field.label }}
+          {% else %}
+            {{ field.label }}
+          {% endif %}
+        </label>
+        {{ field }}
+        {% for error in field.errors %}
+          <small role="alert" style="color: #FDA4AF; display: block; margin-top: 4px; font-size: 11px;">{{ error }}</small>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <button class="button" type="submit" style="width: 100%; margin-top: 18px; padding: 14px; font-size: 15px;">
+      <span>가입하고 내 카드 만들기</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </form>
+
+  <div style="text-align: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08);">
+    <span style="color: var(--text-muted); font-size: 13px;">이미 계정이 있으신가요?</span>
+    <a href="{% url 'login' %}" style="color: var(--neon-mint); font-weight: 800; font-size: 13px; margin-left: 8px;">
+      로그인하기 <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+    </a>
+  </div>
+</section>
 {% endblock %}

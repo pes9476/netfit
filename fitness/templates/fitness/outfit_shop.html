@@ -1,8 +1,1121 @@
 {% extends "fitness/base.html" %}
+{% load static %}
+
 {% block content %}
-<section class="page-intro"><h1>캐릭터 옷 상점</h1><p>운동과 일일퀘스트로 모은 배지 포인트로 의상을 구매하고 캐릭터를 꾸며보세요.</p></section>
-<section class="shop-balance panel"><div><small>누적 배지 점수</small><b>{{ badge_summary.total_points }}점</b></div><div><small>사용 가능한 포인트</small><b>{{ badge_summary.available_points }}점</b></div><a class="button" href="{% url 'dashboard' %}">← 대시보드</a></section>
-<section class="outfit-grid">{% for item in catalog %}<article class="panel outfit-item"><span>{{ item.icon }}</span><h2>{{ item.name }}</h2><p>{{ item.cost }}점</p>{% if item.code in owned_outfits %}{% if user.profile.equipped_outfit == item.code %}<b class="equipped">착용 중</b>{% else %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="equip"><input type="hidden" name="outfit" value="{{ item.code }}"><button class="button">착용하기</button></form>{% endif %}{% else %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="buy"><input type="hidden" name="outfit" value="{{ item.code }}"><button class="button">{{ item.cost }}점으로 구매</button></form>{% endif %}</article>{% endfor %}</section>
-{% if user.profile.equipped_outfit != 'NONE' %}<form method="post" class="unequip-form">{% csrf_token %}<input type="hidden" name="action" value="unequip"><button class="button secondary">기본 모습으로 변경</button></form>{% endif %}
-<style>.shop-balance{display:flex;align-items:center;gap:36px;margin-bottom:22px}.shop-balance div{display:grid;gap:4px}.shop-balance small{color:var(--muted)}.shop-balance b{font-size:25px;color:var(--mint)}.shop-balance .button{margin-left:auto}.outfit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.outfit-item{text-align:center}.outfit-item>span{font-size:72px}.outfit-item p{color:var(--mint);font-size:20px;font-weight:900}.equipped{display:inline-block;padding:11px;color:var(--mint)}.unequip-form{margin-top:18px}@media(max-width:700px){.shop-balance{align-items:flex-start;flex-direction:column;gap:12px}.shop-balance .button{margin-left:0}.outfit-grid{grid-template-columns:1fr}}</style>
+<!-- CSRF 토큰 보관 (AJAX용) -->
+<input type="hidden" id="csrfTokenShop" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<!-- 🛍️ 페이지 상단 타이틀 & 헤더 -->
+<section class="page-intro" style="margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h1 style="display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 900; color: #FFFFFF; margin: 0;">
+        <span style="font-size: 28px;">🛍️</span>
+        <span>캐릭터 꾸미기 & 메달 샵</span>
+      </h1>
+      <p style="color: var(--text-muted); margin-top: 6px; font-size: 13px;">
+        <b>"원하는 만큼 자유롭게 코디하세요!"</b> 모자, 선글라스, 망토, 날개, 오라 등 여러 아이템을 동시에 착용할 수 있습니다.
+      </p>
+    </div>
+    
+    <a href="{% url 'dashboard' %}" class="button btn-ghost" style="border-radius: 12px; padding: 8px 16px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+      <i class="fa-solid fa-arrow-left"></i> 대시보드로 돌아가기
+    </a>
+  </div>
+</section>
+
+<!-- 🛡️ 리워드 핵심 규칙 안내 배너 -->
+<div class="notice" style="margin-bottom: 20px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 12px 18px; display: flex; align-items: center; gap: 12px;">
+  <i class="fa-solid fa-shield-cat" style="color: var(--trophy-gold); font-size: 22px; flex-shrink: 0;"></i>
+  <span style="font-size: 12.5px; line-height: 1.6; color: #E2E8F0;">
+    <b style="color: var(--trophy-gold);">NETFIT 리워드 핵심 규칙:</b> 
+    아이템을 구매하여 메달을 소비해도, <b>과거 및 진행 중인 챌린지 순위 점수는 한 점도 깎이지 않고 그대로 보존</b>됩니다!
+  </span>
+</div>
+
+<!-- 🥇 1. 메달 지갑 요약 카드 그리드 -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px;">
+  <div class="panel" style="background: linear-gradient(135deg, #131E30 0%, #1A2740 100%); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 16px; padding: 18px 20px; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 12px; color: #FBBF24; font-weight: 800;">현재 사용 가능 메달</span>
+      <span style="font-size: 20px;">🥇</span>
+    </div>
+    <div id="availablePointsValue" style="font-size: 32px; font-weight: 900; color: #FFFFFF; margin-top: 8px;">
+      {{ badge_summary.available_points }} <span style="font-size: 18px; color: #FBBF24;">점</span>
+    </div>
+    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">아바타 꾸미기에 즉시 사용 가능</div>
+  </div>
+
+  <div class="panel" style="background: #111827; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 18px 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 12px; color: var(--neon-mint); font-weight: 800;">평생 누적 획득 메달</span>
+      <span style="font-size: 20px;">🏆</span>
+    </div>
+    <div style="font-size: 32px; font-weight: 900; color: #FFFFFF; margin-top: 8px;">
+      {{ badge_summary.total_points }} <span style="font-size: 18px; color: var(--neon-mint);">점</span>
+    </div>
+    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">일일·주간·챌린지 미션 총합</div>
+  </div>
+
+  <div class="panel" style="background: #111827; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 18px 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 12px; color: #38BDF8; font-weight: 800;">캐릭터 꾸미기 소비</span>
+      <span style="font-size: 20px;">🛍️</span>
+    </div>
+    <div id="spentPointsValue" style="font-size: 32px; font-weight: 900; color: #FFFFFF; margin-top: 8px;">
+      {{ spent_points }} <span style="font-size: 18px; color: #38BDF8;">점</span>
+    </div>
+    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">순위 점수에는 차감 미반영 (안전)</div>
+  </div>
+</div>
+
+<!-- 🎨 2. 메인 꾸미기 2열 레이아웃 -->
+<div class="shop-main-layout" style="display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start;">
+  
+  <!-- ==================== [좌측 열: 내 파이터 다중 착용 상태 & 미션] ==================== -->
+  <div style="display: flex; flex-direction: column; gap: 16px; position: sticky; top: 20px;">
+    <article class="panel" style="padding: 18px; background: #0E1626; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="font-size: 14px; margin: 0; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-sparkles" style="color: var(--neon-mint);"></i>
+          <span>내 파이터 피팅룸</span>
+          <span id="equippedCountTag" style="font-size: 11px; color: #38BDF8; font-weight: 800; background: rgba(56,189,248,0.12); padding: 2px 7px; border-radius: 10px;">
+            {{ equipped_items|length }}개 착용 중
+          </span>
+        </h3>
+        <div id="unequipAllBtnWrap">
+          {% if equipped_items %}
+            <button type="button" class="button btn-ghost" onclick="handleShopAction('unequip_all')" style="padding: 3px 8px; font-size: 10.5px; border-radius: 6px; color: #F43F5E; border-color: rgba(244,63,94,0.3); cursor: pointer;" title="모든 장비 한 번에 벗기">
+              전체 해제
+            </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 🎮 정돈된 파이터 피팅 룸 무대 -->
+      <div class="shop-stage-box" style="background: radial-gradient(circle at 50% 35%, #162544 0%, #080D18 100%); border-radius: 14px; height: 245px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 1px solid rgba(0, 245, 155, 0.25);">
+        
+        <!-- 하단 네온 발판 링 -->
+        <div class="stage-pedestal"></div>
+
+        <!-- 🐯 파이터 캐릭터 및 100% 모션 동기화된 액세서리 어셈블리 -->
+        <div class="mascot-assembly style-{{ user.profile.body_style|lower }}">
+          
+          <!-- [배경 레이어]: 캐릭터 뒤에 위치하는 망토, 날개, 오라 -->
+          <div class="mascot-accessories-layer bg-layer">
+            <!-- 🔥 버닝 파이어 오라 -->
+            <div id="acc-AURA" class="acc-aura" style="display: {% if 'AURA' in equipped_codes %}block{% else %}none{% endif %};"></div>
+
+            <!-- 🪽 사이버 홀로그램 윙 -->
+            <div id="acc-WING" style="display: {% if 'WING' in equipped_codes %}contents{% else %}none{% endif %};">
+              <div class="acc-wing-left"></div>
+              <div class="acc-wing-right"></div>
+            </div>
+
+            <!-- 🦸 다크 히어로 망토 -->
+            <div id="acc-CLOAK" class="acc-cloak" style="display: {% if 'CLOAK' in equipped_codes %}block{% else %}none{% endif %};"></div>
+          </div>
+
+          <!-- 마스코트 원본 캐릭터 (모자, 유니폼, 왕관 선택 시 공식 3D 스프라이트 전환) -->
+          <div id="mascotSprite" class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }} {% if base_sprite_outfit %}outfit-{{ base_sprite_outfit }}{% endif %}"></div>
+
+          <!-- [전경 레이어]: 캐릭터 본체와 100% 동기화되어 조깅/점프하는 정밀 액세서리 -->
+          <div class="mascot-accessories-layer fg-layer">
+            
+            <!-- ⚡ 스포티 네온 헤어밴드 (이마 곡선에 완벽 밀착) -->
+            <div id="acc-BAND" class="acc-headband" title="스포티 네온 헤어밴드" style="display: {% if 'BAND' in equipped_codes %}block{% else %}none{% endif %};">
+              <svg viewBox="0 0 100 28" class="acc-svg">
+                <defs>
+                  <linearGradient id="bandGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#00F59B" />
+                    <stop offset="45%" stop-color="#38BDF8" />
+                    <stop offset="100%" stop-color="#00F59B" />
+                  </linearGradient>
+                </defs>
+                <path d="M4,14 C25,5 75,3 96,9 C94,22 75,20 25,23 C8,23 4,18 4,14 Z" fill="url(#bandGrad)" stroke="#FFFFFF" stroke-width="1.2" />
+                <path d="M12,14 C32,9 68,8 88,12" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.9" />
+                <circle cx="50" cy="11" r="5" fill="#1E293B" stroke="#00F59B" stroke-width="1" />
+                <path d="M51,7 L47,12 L50,12 L49,15 L53,10 L50,10 Z" fill="#00F59B" />
+              </svg>
+            </div>
+
+            <!-- 🕶️ 사이버 네온 선글라스 (투명 틴트 렌즈로 눈이 자연스럽게 비침) -->
+            <div id="acc-GLASS" class="acc-sunglasses" title="사이버 네온 선글라스" style="display: {% if 'GLASS' in equipped_codes %}block{% else %}none{% endif %};">
+              <svg viewBox="0 0 100 40" class="acc-svg">
+                <defs>
+                  <linearGradient id="lensGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#00F59B" stop-opacity="0.85" />
+                    <stop offset="50%" stop-color="#38BDF8" stop-opacity="0.9" />
+                    <stop offset="100%" stop-color="#A855F7" stop-opacity="0.85" />
+                  </linearGradient>
+                  <linearGradient id="rimGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#00F59B" />
+                    <stop offset="100%" stop-color="#38BDF8" />
+                  </linearGradient>
+                </defs>
+                <path d="M6,10 Q50,4 94,8 Q90,30 73,28 Q58,25 50,16 Q42,25 27,28 Q10,30 6,10 Z" fill="#0B1120" stroke="url(#rimGrad)" stroke-width="2.4" stroke-linejoin="round" />
+                <path d="M11,12 Q32,8 45,16 Q36,25 26,25 Q16,25 11,12 Z" fill="url(#lensGrad)" />
+                <path d="M55,16 Q68,8 89,11 Q84,25 74,25 Q64,25 55,16 Z" fill="url(#lensGrad)" />
+                <line x1="18" y1="12" x2="31" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+                <line x1="62" y1="12" x2="75" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+              </svg>
+            </div>
+
+            <!-- 🎧 사이버 게이밍 헤드셋 -->
+            <div id="acc-HEADSET" class="acc-headset" title="사이버 게이밍 헤드셋" style="display: {% if 'HEADSET' in equipped_codes %}block{% else %}none{% endif %};">
+              <svg viewBox="0 0 100 70" class="acc-svg">
+                <path d="M18,36 C18,8 82,8 82,36" stroke="#1E293B" stroke-width="5" fill="none" stroke-linecap="round" />
+                <path d="M22,34 C22,12 78,12 78,34" stroke="#38BDF8" stroke-width="1.8" fill="none" opacity="0.9" />
+                <rect x="10" y="32" width="14" height="22" rx="7" fill="#0F172A" stroke="#38BDF8" stroke-width="2" />
+                <circle cx="17" cy="43" r="4" fill="#00F59B" />
+                <rect x="76" y="32" width="14" height="22" rx="7" fill="#0F172A" stroke="#38BDF8" stroke-width="2" />
+                <circle cx="83" cy="43" r="4" fill="#00F59B" />
+                <path d="M17,50 Q17,62 30,62" stroke="#00F59B" stroke-width="2.2" fill="none" stroke-linecap="round" />
+                <circle cx="31" cy="62" r="2.5" fill="#38BDF8" />
+              </svg>
+            </div>
+
+            <!-- 🥷 사이버 닌자 마스크 -->
+            <div id="acc-MASK" class="acc-ninja-mask" title="사이버 닌자 마스크" style="display: {% if 'MASK' in equipped_codes %}block{% else %}none{% endif %};">
+              <svg viewBox="0 0 90 56" class="acc-svg">
+                <defs>
+                  <linearGradient id="maskGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1E293B" />
+                    <stop offset="100%" stop-color="#0B1120" />
+                  </linearGradient>
+                  <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#00F59B" />
+                    <stop offset="100%" stop-color="#38BDF8" />
+                  </linearGradient>
+                </defs>
+                <path d="M4,14 C25,24 65,24 86,14 C82,42 55,54 45,54 C35,54 8,42 4,14 Z" fill="url(#maskGrad)" stroke="#38BDF8" stroke-width="2" stroke-linejoin="round" />
+                <path d="M20,24 Q45,30 70,24" stroke="url(#accentGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" />
+                <rect x="34" y="34" width="22" height="4" rx="2" fill="#00F59B" opacity="0.9" />
+                <line x1="38" y1="42" x2="52" y2="42" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" opacity="0.8" />
+              </svg>
+            </div>
+
+            <!-- 🥋 골드 챔피언 벨트 -->
+            <div id="acc-BELT" class="acc-champion-belt" title="골드 챔피언 벨트" style="display: {% if 'BELT' in equipped_codes %}block{% else %}none{% endif %};">
+              <svg viewBox="0 0 100 44" class="acc-svg">
+                <defs>
+                  <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#FEF08A" />
+                    <stop offset="35%" stop-color="#F59E0B" />
+                    <stop offset="70%" stop-color="#D97706" />
+                    <stop offset="100%" stop-color="#78350F" />
+                  </linearGradient>
+                  <linearGradient id="leatherGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1E293B" />
+                    <stop offset="100%" stop-color="#090E17" />
+                  </linearGradient>
+                </defs>
+                <path d="M2,14 Q50,11 98,13 L96,27 Q50,25 4,27 Z" fill="url(#leatherGrad)" stroke="#D97706" stroke-width="1.2" />
+                <circle cx="14" cy="20" r="3" fill="#FDE047" stroke="#B45309" stroke-width="0.8" />
+                <circle cx="24" cy="20" r="2.5" fill="#FDE047" stroke="#B45309" stroke-width="0.6" />
+                <circle cx="76" cy="20" r="2.5" fill="#FDE047" stroke="#B45309" stroke-width="0.6" />
+                <circle cx="86" cy="20" r="3" fill="#FDE047" stroke="#B45309" stroke-width="0.8" />
+                <polygon points="40,8 60,8 68,20 60,32 40,32 32,20" fill="url(#goldGrad)" stroke="#FEF08A" stroke-width="1.8" />
+                <circle cx="50" cy="20" r="7" fill="#B45309" opacity="0.3" />
+                <text x="50" y="24" font-size="10" text-anchor="middle" fill="#FEF08A" font-weight="900">★</text>
+              </svg>
+            </div>
+
+            <!-- 🥇 골드 빅토리 목걸이 -->
+            <div id="acc-MEDAL" class="acc-victory-medal" title="골드 빅토리 목걸이" style="display: {% if 'MEDAL' in equipped_codes %}block{% else %}none{% endif %};">
+              <div class="ribbon-v"></div>
+              <div class="medal-gold-coin">#1</div>
+            </div>
+
+            <!-- 🥊 파이어 복싱 글러브 -->
+            <div id="acc-GLOVES" style="display: {% if 'GLOVES' in equipped_codes %}contents{% else %}none{% endif %};">
+              <div class="acc-glove left" title="복싱 글러브"></div>
+              <div class="acc-glove right" title="복싱 글러브"></div>
+            </div>
+
+            <!-- ⚔️ 네온 빔세이버 -->
+            <div id="acc-SWORD" class="acc-beamsaber" title="네온 빔세이버" style="display: {% if 'SWORD' in equipped_codes %}block{% else %}none{% endif %};">
+              <div class="saber-light-beam"></div>
+              <div class="saber-grip"></div>
+            </div>
+
+            <!-- 🐲 미니 파이어 펫 -->
+            <div id="acc-DRAGON" class="acc-dragon-pet" title="미니 파이어 펫" style="display: {% if 'DRAGON' in equipped_codes %}block{% else %}none{% endif %};">🐲</div>
+
+            <!-- 🏆 골드 빅토리 트로피 -->
+            <div id="acc-VICTORY" class="acc-trophy-float" title="골드 빅토리 트로피" style="display: {% if 'VICTORY' in equipped_codes %}block{% else %}none{% endif %};">🏆</div>
+
+            <!-- 👑 왕관 착용 시 부가 골드 스파클 -->
+            <div id="acc-CROWN" class="acc-crown-extra" style="display: {% if 'CROWN' in equipped_codes and base_sprite_outfit != 'crown' %}block{% else %}none{% endif %};">👑</div>
+
+          </div>
+        </div>
+        
+        <!-- 하단 착용 장비 요약 (발밑 여백 완벽 확보) -->
+        <div id="stageBottomBadge" style="position: absolute; bottom: 8px; z-index: 10;">
+          {% if equipped_items %}
+            <span style="font-size: 11px; font-weight: 800; background: rgba(11,17,30,0.92); border: 1px solid var(--neon-mint); color: #FFFFFF; padding: 4px 12px; border-radius: 14px; backdrop-filter: blur(6px); box-shadow: 0 0 12px rgba(0,245,155,0.3); display: inline-flex; align-items: center; gap: 6px;">
+              <span style="color: var(--neon-mint);"><i class="fa-solid fa-shirt"></i></span>
+              <span>{{ equipped_items|length }}종 아이템 착용 중</span>
+            </span>
+          {% else %}
+            <span style="font-size: 11px; color: var(--text-dim); background: rgba(11,17,30,0.7); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+              착용 중인 아이템 없음 (기본)
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 🥋 실시간 착용 목록 & 개별 해제 칩 리스트 -->
+      <div style="margin-top: 14px;">
+        <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 8px;">
+          현재 착용 중인 장비 목록 (클릭하여 해제):
+        </span>
+        <div id="equippedChipsContainer" style="display: flex; flex-wrap: wrap; gap: 6px;">
+          {% for it in equipped_items %}
+            <button type="button" onclick="handleShopAction('unequip', '{{ it.code }}')" class="button" style="padding: 4px 9px; font-size: 11px; border-radius: 8px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.35); color: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;" title="{{ it.name }} 벗기">
+              <span>{{ it.icon }}</span>
+              <span>{{ it.name }}</span>
+              <span style="color: #F43F5E; margin-left: 2px; font-size: 12px;">×</span>
+            </button>
+          {% empty %}
+            <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px 0; margin: 0; background: rgba(255,255,255,0.02); border-radius: 10px; width: 100%;">
+              우측 카탈로그에서 아이템을 골라 착용해보세요!
+            </p>
+          {% endfor %}
+        </div>
+      </div>
+    </article>
+
+    <!-- 매일 출석 & 운동 기록 미션 카드 -->
+    <article class="panel" style="padding: 16px; background: #111827; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);">
+      <h3 style="font-size: 13px; margin: 0 0 6px; color: var(--trophy-gold); display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>포인트가 부족한가요?</span>
+      </h3>
+      <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0 0 10px;">
+        매일 운동을 기록하고 일일 퀘스트를 달성하면 대량의 메달 포인트를 무료로 획득할 수 있습니다.
+      </p>
+      <a href="{% url 'activity' %}" class="button btn-mint" style="width: 100%; border-radius: 10px; font-size: 12px; padding: 9px 0; text-align: center; text-decoration: none; display: block; font-weight: 800;">
+        <i class="fa-solid fa-bolt"></i> 오늘 운동 기록하고 메달 받기 ➔
+      </a>
+    </article>
+  </div>
+
+  <!-- ==================== [우측 열: 세로 길이 제어 스크롤 카탈로그] ==================== -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <article class="panel" style="padding: 20px 22px; border-radius: 18px; background: #0E1626; border: 1px solid rgba(255,255,255,0.1);">
+      
+      <!-- 카탈로그 헤더 & 카테고리 필터 탭 바 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-store" style="color: var(--neon-mint);"></i>
+            <span>아이템 상점 카탈로그</span>
+            <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.12); padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(56,189,248,0.3);">총 16종 (다중 착용 지원)</span>
+          </h2>
+          <small style="color: var(--text-muted); margin-top: 3px; display: block;">마음에 드는 아이템들을 여러 개 골라 동시에 착용해 보세요.</small>
+        </div>
+
+        <!-- 🏷️ 카테고리 필터 탭 -->
+        <div class="shop-filter-bar" style="display: flex; gap: 6px; background: #080D18; padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <button type="button" class="filter-btn active" onclick="filterCatalog('all', this)">전체 (16)</button>
+          <button type="button" class="filter-btn" onclick="filterCatalog('head', this)">머리/페이스</button>
+          <button type="button" class="filter-btn" onclick="filterCatalog('body', this)">의상/벨트</button>
+          <button type="button" class="filter-btn" onclick="filterCatalog('special', this)">특수/이펙트</button>
+        </div>
+      </div>
+
+      <!-- 📜 560px 높이 고정 & 프리미엄 네온 스크롤 컨테이너 -->
+      <div id="shopScrollContainer" class="shop-scroll-view" style="max-height: 560px; overflow-y: auto; padding-right: 6px; margin-right: -4px;">
+        <div class="catalog-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 14px;">
+          {% for it in catalog %}
+          <div class="shop-item-card" id="catalog-card-{{ it.code }}" data-code="{{ it.code }}" data-cost="{{ it.cost }}" data-name="{{ it.name }}" data-icon="{{ it.icon }}" data-filter="{{ it.filter_group }}" style="background: #111827; border: 1px solid {% if it.code in equipped_codes %}var(--neon-mint){% elif it.code in owned_outfits %}rgba(56, 189, 248, 0.4){% else %}rgba(255,255,255,0.08){% endif %}; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s; box-shadow: {% if it.code in equipped_codes %}0 0 16px rgba(0,245,155,0.25){% else %}none{% endif %};">
+            <div>
+              <!-- 상단 카테고리 뱃지 & 장착 여부 -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
+                  {{ it.category }}
+                </span>
+                <span id="card-badge-{{ it.code }}">
+                  {% if it.code in equipped_codes %}
+                    <span style="font-size: 11px; font-weight: 900; color: var(--neon-mint); display: inline-flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-circle-check"></i> 착용 중
+                    </span>
+                  {% elif it.code in owned_outfits %}
+                    <span style="font-size: 10.5px; font-weight: 800; color: #38BDF8; display: inline-flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-box-archive"></i> 보유 중
+                    </span>
+                  {% endif %}
+                </span>
+              </div>
+
+              <!-- 아이템 대표 아이콘/그래픽 (착용 모습과 100% 일치) -->
+              <div class="card-item-preview" style="height: 62px; display: flex; align-items: center; justify-content: center; margin: 8px 0; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.12)';" onmouseout="this.style.transform='none';">
+                {% if it.code == 'BAND' %}
+                  <svg viewBox="0 0 100 32" style="width: 82px; filter: drop-shadow(0 4px 12px rgba(0,245,155,0.7));">
+                    <defs>
+                      <linearGradient id="cBandG" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#00F59B"/><stop offset="50%" stop-color="#38BDF8"/><stop offset="100%" stop-color="#00F59B"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M4,16 C25,7 75,7 96,16 C94,27 75,26 25,26 C6,26 4,21 4,16 Z" fill="url(#cBandG)" stroke="#FFFFFF" stroke-width="1.5" />
+                    <path d="M12,17 C32,12 68,12 88,17" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" />
+                    <circle cx="50" cy="16" r="6" fill="#1E293B" stroke="#00F59B" stroke-width="1.2" />
+                    <path d="M51,11 L47,16 L50,16 L49,20 L53,15 L50,15 Z" fill="#00F59B" />
+                  </svg>
+                {% elif it.code == 'GLASS' %}
+                  <svg viewBox="0 0 100 42" style="width: 80px; filter: drop-shadow(0 4px 12px rgba(0,245,155,0.7));">
+                    <defs>
+                      <linearGradient id="cGlassG" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#00F59B" stop-opacity="0.9"/><stop offset="50%" stop-color="#38BDF8" stop-opacity="0.95"/><stop offset="100%" stop-color="#A855F7" stop-opacity="0.9"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M6,10 Q50,4 94,8 Q90,32 73,30 Q58,27 50,18 Q42,27 27,30 Q10,32 6,10 Z" fill="#0B1120" stroke="#00F59B" stroke-width="2.5" stroke-linejoin="round" />
+                    <path d="M11,13 Q32,9 45,18 Q36,27 26,27 Q16,27 11,13 Z" fill="url(#cGlassG)" />
+                    <path d="M55,18 Q68,9 89,12 Q84,27 74,27 Q64,27 55,18 Z" fill="url(#cGlassG)" />
+                    <line x1="18" y1="13" x2="31" y2="25" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+                    <line x1="62" y1="13" x2="75" y2="25" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+                  </svg>
+                {% elif it.code == 'MASK' %}
+                  <svg viewBox="0 0 90 56" style="width: 66px; filter: drop-shadow(0 4px 12px rgba(56,189,248,0.6));">
+                    <defs>
+                      <linearGradient id="cMaskG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1E293B"/><stop offset="100%" stop-color="#0B1120"/></linearGradient>
+                    </defs>
+                    <path d="M4,14 C25,24 65,24 86,14 C82,42 55,54 45,54 C35,54 8,42 4,14 Z" fill="url(#cMaskG)" stroke="#38BDF8" stroke-width="2.2" />
+                    <path d="M20,24 Q45,30 70,24" stroke="#00F59B" stroke-width="2.5" fill="none" stroke-linecap="round" />
+                    <rect x="34" y="34" width="22" height="4" rx="2" fill="#00F59B" />
+                    <line x1="38" y1="42" x2="52" y2="42" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                {% elif it.code == 'BELT' %}
+                  <svg viewBox="0 0 100 44" style="width: 82px; filter: drop-shadow(0 4px 12px rgba(245,158,11,0.6));">
+                    <defs>
+                      <linearGradient id="cBeltG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FEF08A"/><stop offset="50%" stop-color="#F59E0B"/><stop offset="100%" stop-color="#B45309"/></linearGradient>
+                    </defs>
+                    <path d="M2,14 Q50,11 98,13 L96,27 Q50,25 4,27 Z" fill="#111827" stroke="#D97706" stroke-width="1.5" />
+                    <circle cx="14" cy="20" r="3" fill="#FDE047" stroke="#B45309" stroke-width="0.8" />
+                    <circle cx="86" cy="20" r="3" fill="#FDE047" stroke="#B45309" stroke-width="0.8" />
+                    <polygon points="40,8 60,8 68,20 60,32 40,32 32,20" fill="url(#cBeltG)" stroke="#FEF08A" stroke-width="2" />
+                    <text x="50" y="24" font-size="11" text-anchor="middle" fill="#FEF08A" font-weight="900">★</text>
+                  </svg>
+                {% elif it.code == 'HEADSET' %}
+                  <svg viewBox="0 0 100 70" style="width: 60px; filter: drop-shadow(0 4px 12px rgba(56,189,248,0.7));">
+                    <path d="M18,36 C18,8 82,8 82,36" stroke="#1E293B" stroke-width="6" fill="none" stroke-linecap="round" />
+                    <path d="M22,34 C22,12 78,12 78,34" stroke="#38BDF8" stroke-width="2.2" fill="none" />
+                    <rect x="10" y="32" width="14" height="22" rx="7" fill="#0F172A" stroke="#38BDF8" stroke-width="2" />
+                    <circle cx="17" cy="43" r="4" fill="#00F59B" />
+                    <rect x="76" y="32" width="14" height="22" rx="7" fill="#0F172A" stroke="#38BDF8" stroke-width="2" />
+                    <circle cx="83" cy="43" r="4" fill="#00F59B" />
+                    <path d="M17,50 Q17,62 30,62" stroke="#00F59B" stroke-width="2.5" fill="none" stroke-linecap="round" />
+                    <circle cx="31" cy="62" r="2.5" fill="#38BDF8" />
+                  </svg>
+                {% else %}
+                  <div style="font-size: 42px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
+                    {{ it.icon }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- 아이템 명 및 가격 -->
+              <h4 style="font-size: 13.5px; font-weight: 800; color: #FFFFFF; margin: 0 0 4px; text-align: center;">{{ it.name }}</h4>
+              <div style="text-align: center; font-size: 12.5px; font-weight: 900; color: var(--trophy-gold); margin-bottom: 8px;">
+                🥇 {{ it.cost }}점 <small style="color: var(--text-muted); font-size: 10.5px;">({{ it.medals }}개)</small>
+              </div>
+              <p style="font-size: 11px; color: var(--text-dim); line-height: 1.4; margin: 0 0 12px; text-align: center; min-height: 30px;">
+                {{ it.desc }}
+              </p>
+            </div>
+
+            <!-- 하단 액션 버튼 (다중 착용 토글) -->
+            <div id="card-action-{{ it.code }}">
+              {% if it.code in owned_outfits %}
+                {% if it.code in equipped_codes %}
+                  <!-- 이미 착용 중일 때: 개별 해제 버튼 -->
+                  <button type="button" class="button btn-ghost" onclick="handleShopAction('unequip', '{{ it.code }}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; color: #F43F5E; border-color: rgba(244,63,94,0.4); cursor: pointer; font-weight: 800;">
+                    <i class="fa-solid fa-xmark"></i> 착용 해제
+                  </button>
+                {% else %}
+                  <!-- 보유 중일 때: 추가 착용 버튼 -->
+                  <button type="button" class="button btn-mint" onclick="handleShopAction('equip', '{{ it.code }}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; cursor: pointer; font-weight: 800;">
+                    <i class="fa-solid fa-plus"></i> 추가 착용하기
+                  </button>
+                {% endif %}
+              {% else %}
+                {% if badge_summary.available_points < it.cost %}
+                  <!-- 포인트 부족 시 안내 버튼 -->
+                  <button type="button" disabled style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #64748B; border: 1px solid rgba(255,255,255,0.08); cursor: not-allowed; font-weight: 700;">
+                    <i class="fa-solid fa-lock"></i> 포인트 부족 ({{ it.cost }}점)
+                  </button>
+                {% else %}
+                  <!-- 구매 후 즉시 착용 -->
+                  <button type="button" class="button" onclick="handleShopAction('buy', '{{ it.code }}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, #F59E0B, #EA580C); border: none; color: #FFFFFF; font-weight: 800; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">
+                    <i class="fa-solid fa-cart-shopping"></i> {{ it.cost }}점으로 구매 & 착용
+                  </button>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </article>
+  </div>
+
+</div>
+
+<!-- 🎨 스타일 시트: 100% 동기화 애니메이션 & 정밀 인체공학적 아이템 SVG/CSS -->
+<style>
+/* 1. 슬림 네온 스크롤바 */
+.shop-scroll-view::-webkit-scrollbar {
+  width: 6px;
+}
+.shop-scroll-view::-webkit-scrollbar-track {
+  background: rgba(11, 17, 30, 0.7);
+  border-radius: 10px;
+}
+.shop-scroll-view::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00F59B, #38BDF8);
+  border-radius: 10px;
+}
+.shop-scroll-view::-webkit-scrollbar-thumb:hover {
+  background: #00F59B;
+}
+
+/* 2. 카테고리 필터 버튼 */
+.filter-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
+}
+.filter-btn.active {
+  background: rgba(0, 245, 155, 0.15);
+  color: var(--neon-mint);
+  border: 1px solid rgba(0, 245, 155, 0.4);
+}
+
+/* 3. 파이터 피팅 스테이지 & 캐릭터 크기 최적화 */
+.shop-stage-box {
+  --mascot-size: 135px !important;
+}
+.shop-stage-box .stage-pedestal {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0,245,155,0.4) 0%, rgba(56,189,248,0.15) 50%, transparent 75%);
+  border-bottom: 2px solid rgba(0,245,155,0.6);
+  box-shadow: 0 0 16px rgba(0,245,155,0.4);
+  animation: pedestalPulse 3s ease-in-out infinite;
+}
+@keyframes pedestalPulse {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+  50% { transform: translateX(-50%) scale(1.08); opacity: 1; }
+}
+
+.mascot-assembly {
+  position: relative;
+  width: 135px;
+  height: 135px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  --mascot-motion: cuteTigerJog;
+  --mascot-duration: 1.4s;
+}
+.mascot-assembly.style-slim, .mascot-assembly.style-active { --mascot-motion: cuteTigerJog; --mascot-duration: 1.4s; }
+.mascot-assembly.style-muscular { --mascot-motion: cuteBearPump; --mascot-duration: 2.5s; }
+.mascot-assembly.style-soft { --mascot-motion: cuteHamsterHop; --mascot-duration: 1.7s; }
+
+.mascot-assembly .avatar-roster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+}
+
+/* 4. 캐릭터 바운스/회전 애니메이션과 100% 동기화되는 레이어 */
+.mascot-accessories-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  animation: var(--mascot-motion) var(--mascot-duration) ease-in-out infinite;
+  transform-origin: bottom center;
+}
+.mascot-accessories-layer.bg-layer {
+  z-index: 1;
+}
+.mascot-accessories-layer.fg-layer {
+  z-index: 6;
+}
+
+/* =========================================================================
+   정밀 액세서리 디자인: 호랑이 인체공학적 피팅
+   ========================================================================= */
+
+/* 1. ⚡ 스포티 네온 헤어밴드 (BAND) */
+.acc-headband {
+  position: absolute;
+  top: 22px;
+  left: 50.5%;
+  transform: translateX(-50%) rotate(-7deg);
+  width: 55px;
+  filter: drop-shadow(0 2px 6px rgba(0, 245, 155, 0.8));
+}
+.acc-headband .acc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 2. 🕶️ 사이버 네온 선글라스 (GLASS) */
+.acc-sunglasses {
+  position: absolute;
+  top: 39px;
+  left: 51.5%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 53px;
+  filter: drop-shadow(0 3px 8px rgba(0, 245, 155, 0.85));
+}
+.acc-sunglasses .acc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 3. 🎧 사이버 게이밍 헤드셋 (HEADSET) */
+.acc-headset {
+  position: absolute;
+  top: 8px;
+  left: 50.5%;
+  transform: translateX(-50%) rotate(-3deg);
+  width: 68px;
+  filter: drop-shadow(0 2px 8px rgba(56, 189, 248, 0.7));
+}
+.acc-headset .acc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 4. 🥷 사이버 닌자 마스크 (MASK) */
+.acc-ninja-mask {
+  position: absolute;
+  top: 50px;
+  left: 51.5%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 38px;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.8));
+}
+.acc-ninja-mask .acc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 5. 🥋 골드 챔피언 벨트 (BELT) */
+.acc-champion-belt {
+  position: absolute;
+  top: 80px;
+  left: 48%;
+  transform: translateX(-50%) rotate(-6deg);
+  width: 44px;
+  filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.7));
+}
+.acc-champion-belt .acc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 6. 🥇 골드 빅토리 목걸이 (MEDAL) */
+.acc-victory-medal {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ribbon-v {
+  width: 22px;
+  height: 12px;
+  border-left: 3px solid #EF4444;
+  border-right: 3px solid #3B82F6;
+  border-bottom: 3px solid #F59E0B;
+  transform: rotate(45deg);
+}
+.medal-gold-coin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FDE047 30%, #D97706 100%);
+  border: 1.5px solid #FFFFFF;
+  color: #78350F;
+  font-size: 9px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(245,158,11,0.9);
+  margin-top: -6px;
+}
+
+/* 7. 🥊 파이어 복싱 글러브 (GLOVES) */
+.acc-glove {
+  position: absolute;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #F87171, #DC2626);
+  border: 2px solid #FDE047;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+  bottom: 22px;
+}
+.acc-glove.left { left: 16px; }
+.acc-glove.right { right: 16px; }
+
+/* 8. 🦸 다크 히어로 망토 (CLOAK - 배경 레이어) */
+.acc-cloak {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 82px;
+  height: 68px;
+  background: linear-gradient(180deg, #3B0764 0%, #1E1B4B 100%);
+  clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 80% 88%, 50% 100%, 20% 88%, 0% 100%);
+  border-top: 3px solid #A855F7;
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+  animation: cloakFlutter 2.5s ease-in-out infinite alternate;
+}
+@keyframes cloakFlutter {
+  0% { transform: translateX(-50%) rotate(-2deg) scaleX(0.98); }
+  100% { transform: translateX(-50%) rotate(2deg) scaleX(1.02); }
+}
+
+/* 9. ⚔️ 네온 빔세이버 (SWORD) */
+.acc-beamsaber {
+  position: absolute;
+  top: 15px;
+  right: -2px;
+  width: 14px;
+  height: 65px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.saber-light-beam {
+  width: 6px;
+  height: 48px;
+  background: #FFFFFF;
+  border-radius: 4px;
+  box-shadow: 0 0 14px #00F59B, 0 0 24px #00F59B;
+}
+.saber-grip {
+  width: 8px;
+  height: 14px;
+  background: #334155;
+  border-radius: 2px;
+  border: 1px solid #94A3B8;
+  margin-top: 2px;
+}
+
+/* 10. 🪽 사이버 홀로그램 윙 (WING - 배경 레이어) */
+.acc-wing-left, .acc-wing-right {
+  position: absolute;
+  top: 30px;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.8), rgba(168, 85, 247, 0.5));
+  border: 1.5px solid #38BDF8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+  animation: wingBeat 1.8s ease-in-out infinite alternate;
+}
+.acc-wing-left {
+  left: -8px;
+  border-radius: 2px 30px 2px 30px;
+  transform-origin: right bottom;
+}
+.acc-wing-right {
+  right: -8px;
+  border-radius: 30px 2px 30px 2px;
+  transform-origin: left bottom;
+}
+@keyframes wingBeat {
+  0% { transform: rotate(0deg) scale(0.95); }
+  100% { transform: rotate(14deg) scale(1.08); }
+}
+
+/* 11. 🐲 미니 파이어 펫 (DRAGON) */
+.acc-dragon-pet {
+  position: absolute;
+  top: 10px;
+  right: -8px;
+  font-size: 26px;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8));
+  animation: petFloat 2s ease-in-out infinite alternate;
+}
+@keyframes petFloat {
+  0% { transform: translateY(0) rotate(5deg); }
+  100% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+/* 12. 🔥 버닝 파이어 오라 (AURA - 배경 레이어) */
+.acc-aura {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(239,68,68,0.35) 0%, rgba(245,158,11,0.2) 60%, transparent 75%);
+  filter: blur(8px);
+  animation: auraFlicker 1.4s ease-in-out infinite alternate;
+}
+@keyframes auraFlicker {
+  0% { transform: scale(0.96); opacity: 0.7; }
+  100% { transform: scale(1.08); opacity: 1; }
+}
+
+/* 13. 🏆 골드 빅토리 트로피 (VICTORY) */
+.acc-trophy-float {
+  position: absolute;
+  bottom: 22px;
+  left: -6px;
+  font-size: 26px;
+  filter: drop-shadow(0 0 10px rgba(245,158,11,0.9));
+  animation: trophyHover 2.2s ease-in-out infinite alternate;
+}
+@keyframes trophyHover {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-6px); }
+}
+
+/* 14. 👑 왕관 추가 스파클 */
+.acc-crown-extra {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  filter: drop-shadow(0 0 12px rgba(245,158,11,0.9));
+}
+
+@media (max-width: 860px) {
+  .shop-main-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+
+<!-- ⚡ 비동기 장착/해제/구매 처리 & 스크롤 위치 100% 고정 스크립트 -->
+<script>
+// 1. 카테고리 필터링
+function filterCatalog(group, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  const cards = document.querySelectorAll('.shop-item-card');
+  cards.forEach(card => {
+    if (group === 'all' || card.dataset.filter === group) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// 2. CSRF 토큰 추출
+function getCsrfToken() {
+  const input = document.getElementById('csrfTokenShop');
+  if (input && input.value) return input.value;
+  const match = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+  return match ? match[2] : '';
+}
+
+// 3. 비동기 장착/해제/구매 액션 처리 (창이 위로 튀지 않고 100% 가만히 유지)
+let isShopActionPending = false;
+async function handleShopAction(action, code = '') {
+  if (isShopActionPending) return;
+  isShopActionPending = true;
+
+  const formData = new FormData();
+  formData.append('action', action);
+  if (code) formData.append('outfit', code);
+  formData.append('csrfmiddlewaretoken', getCsrfToken());
+  formData.append('ajax', '1');
+
+  try {
+    const resp = await fetch('{% url "outfit_shop" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    if (!resp.ok) {
+      throw new Error('서버 응답 오류');
+    }
+
+    const data = await resp.json();
+    updateShopUI(data);
+    showToast(data.message, data.status);
+  } catch (err) {
+    console.error(err);
+    showToast('요청 처리 중 오류가 발생했습니다.', 'error');
+  } finally {
+    isShopActionPending = false;
+  }
+}
+
+// 4. 세련된 플로팅 알림 토스트 (화면 상단 중앙)
+function showToast(message, type = 'success') {
+  if (!message) return;
+  let toast = document.getElementById('shopToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'shopToast';
+    toast.style.position = 'fixed';
+    toast.style.top = '32px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    toast.style.padding = '10px 24px';
+    toast.style.borderRadius = '30px';
+    toast.style.fontWeight = '800';
+    toast.style.fontSize = '13px';
+    toast.style.zIndex = '99999';
+    toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+    toast.style.transition = 'all 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+    toast.style.pointerEvents = 'none';
+    toast.style.opacity = '0';
+    document.body.appendChild(toast);
+  }
+
+  if (type === 'success') {
+    toast.style.background = 'linear-gradient(135deg, rgba(0,245,155,0.96), rgba(56,189,248,0.96))';
+    toast.style.color = '#0B1120';
+    toast.style.border = '1px solid rgba(255,255,255,0.7)';
+  } else if (type === 'error') {
+    toast.style.background = 'linear-gradient(135deg, rgba(244,63,94,0.96), rgba(225,29,72,0.96))';
+    toast.style.color = '#FFFFFF';
+    toast.style.border = '1px solid rgba(255,255,255,0.5)';
+  } else {
+    toast.style.background = 'linear-gradient(135deg, rgba(56,189,248,0.96), rgba(99,102,241,0.96))';
+    toast.style.color = '#FFFFFF';
+    toast.style.border = '1px solid rgba(255,255,255,0.5)';
+  }
+
+  toast.innerHTML = message;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(-20px)';
+  }, 2200);
+}
+
+// 5. DOM 실시간 갱신 함수 (스크롤 유지 & 즉시 렌더링)
+function updateShopUI(data) {
+  // 1. 포인트 표시 갱신
+  const availEl = document.getElementById('availablePointsValue');
+  if (availEl) availEl.innerHTML = `${data.available_points.toLocaleString()} <span style="font-size: 18px; color: #FBBF24;">점</span>`;
+  
+  const spentEl = document.getElementById('spentPointsValue');
+  if (spentEl) spentEl.innerHTML = `${data.spent_points.toLocaleString()} <span style="font-size: 18px; color: #38BDF8;">점</span>`;
+
+  // 2. 피팅룸 착용 개수 태그 및 전체 해제 버튼
+  const countTag = document.getElementById('equippedCountTag');
+  if (countTag) countTag.textContent = `${data.equipped_items.length}개 착용 중`;
+
+  const unequipAllWrap = document.getElementById('unequipAllBtnWrap');
+  if (unequipAllWrap) {
+    if (data.equipped_items.length > 0) {
+      unequipAllWrap.innerHTML = `
+        <button type="button" class="button btn-ghost" onclick="handleShopAction('unequip_all')" style="padding: 3px 8px; font-size: 10.5px; border-radius: 6px; color: #F43F5E; border-color: rgba(244,63,94,0.3); cursor: pointer;" title="모든 장비 한 번에 벗기">
+          전체 해제
+        </button>
+      `;
+    } else {
+      unequipAllWrap.innerHTML = '';
+    }
+  }
+
+  // 3. 발밑 배지
+  const bottomBadge = document.getElementById('stageBottomBadge');
+  if (bottomBadge) {
+    if (data.equipped_items.length > 0) {
+      bottomBadge.innerHTML = `
+        <span style="font-size: 11px; font-weight: 800; background: rgba(11,17,30,0.92); border: 1px solid var(--neon-mint); color: #FFFFFF; padding: 4px 12px; border-radius: 14px; backdrop-filter: blur(6px); box-shadow: 0 0 12px rgba(0,245,155,0.3); display: inline-flex; align-items: center; gap: 6px;">
+          <span style="color: var(--neon-mint);"><i class="fa-solid fa-shirt"></i></span>
+          <span>${data.equipped_items.length}종 아이템 착용 중</span>
+        </span>
+      `;
+    } else {
+      bottomBadge.innerHTML = `
+        <span style="font-size: 11px; color: var(--text-dim); background: rgba(11,17,30,0.7); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          착용 중인 아이템 없음 (기본)
+        </span>
+      `;
+    }
+  }
+
+  // 4. 캐릭터 원본 스프라이트 갱신
+  const spriteEl = document.getElementById('mascotSprite');
+  if (spriteEl) {
+    spriteEl.classList.remove('outfit-cap', 'outfit-sport', 'outfit-crown');
+    if (data.base_sprite_outfit) {
+      spriteEl.classList.add(`outfit-${data.base_sprite_outfit}`);
+    }
+  }
+
+  // 5. 캐릭터 오버레이 액세서리 토글
+  const accessoryCodes = ['AURA', 'WING', 'CLOAK', 'BAND', 'GLASS', 'HEADSET', 'MASK', 'BELT', 'MEDAL', 'GLOVES', 'SWORD', 'DRAGON', 'VICTORY'];
+  accessoryCodes.forEach(code => {
+    const el = document.getElementById(`acc-${code}`);
+    if (el) {
+      const isEquipped = data.equipped_codes.includes(code);
+      if (code === 'WING' || code === 'GLOVES') {
+        el.style.display = isEquipped ? 'contents' : 'none';
+      } else {
+        el.style.display = isEquipped ? 'block' : 'none';
+      }
+    }
+  });
+  const crownExtra = document.getElementById('acc-CROWN');
+  if (crownExtra) {
+    crownExtra.style.display = (data.equipped_codes.includes('CROWN') && data.base_sprite_outfit !== 'crown') ? 'block' : 'none';
+  }
+
+  // 6. 장비 칩 목록 갱신
+  const chipsContainer = document.getElementById('equippedChipsContainer');
+  if (chipsContainer) {
+    if (data.equipped_items.length > 0) {
+      chipsContainer.innerHTML = data.equipped_items.map(it => `
+        <button type="button" onclick="handleShopAction('unequip', '${it.code}')" class="button" style="padding: 4px 9px; font-size: 11px; border-radius: 8px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.35); color: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;" title="${it.name} 벗기">
+          <span>${it.icon}</span>
+          <span>${it.name}</span>
+          <span style="color: #F43F5E; margin-left: 2px; font-size: 12px;">×</span>
+        </button>
+      `).join('');
+    } else {
+      chipsContainer.innerHTML = `
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px 0; margin: 0; background: rgba(255,255,255,0.02); border-radius: 10px; width: 100%;">
+          우측 카탈로그에서 아이템을 골라 착용해보세요!
+        </p>
+      `;
+    }
+  }
+
+  // 7. 카탈로그 각 카드 UI 갱신
+  document.querySelectorAll('.shop-item-card').forEach(card => {
+    const code = card.dataset.code;
+    const cost = parseInt(card.dataset.cost, 10);
+    const isEquipped = data.equipped_codes.includes(code);
+    const isOwned = data.owned_outfits.includes(code);
+
+    if (isEquipped) {
+      card.style.borderColor = 'var(--neon-mint)';
+      card.style.boxShadow = '0 0 16px rgba(0,245,155,0.25)';
+    } else if (isOwned) {
+      card.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+      card.style.boxShadow = 'none';
+    } else {
+      card.style.borderColor = 'rgba(255,255,255,0.08)';
+      card.style.boxShadow = 'none';
+    }
+
+    const badgeEl = document.getElementById(`card-badge-${code}`);
+    if (badgeEl) {
+      if (isEquipped) {
+        badgeEl.innerHTML = `<span style="font-size: 11px; font-weight: 900; color: var(--neon-mint); display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 착용 중</span>`;
+      } else if (isOwned) {
+        badgeEl.innerHTML = `<span style="font-size: 10.5px; font-weight: 800; color: #38BDF8; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-box-archive"></i> 보유 중</span>`;
+      } else {
+        badgeEl.innerHTML = '';
+      }
+    }
+
+    const actionEl = document.getElementById(`card-action-${code}`);
+    if (actionEl) {
+      if (isOwned) {
+        if (isEquipped) {
+          actionEl.innerHTML = `
+            <button type="button" class="button btn-ghost" onclick="handleShopAction('unequip', '${code}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; color: #F43F5E; border-color: rgba(244,63,94,0.4); cursor: pointer; font-weight: 800;">
+              <i class="fa-solid fa-xmark"></i> 착용 해제
+            </button>
+          `;
+        } else {
+          actionEl.innerHTML = `
+            <button type="button" class="button btn-mint" onclick="handleShopAction('equip', '${code}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; cursor: pointer; font-weight: 800;">
+              <i class="fa-solid fa-plus"></i> 추가 착용하기
+            </button>
+          `;
+        }
+      } else {
+        if (data.available_points < cost) {
+          actionEl.innerHTML = `
+            <button type="button" disabled style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #64748B; border: 1px solid rgba(255,255,255,0.08); cursor: not-allowed; font-weight: 700;">
+              <i class="fa-solid fa-lock"></i> 포인트 부족 (${cost}점)
+            </button>
+          `;
+        } else {
+          actionEl.innerHTML = `
+            <button type="button" class="button" onclick="handleShopAction('buy', '${code}')" style="width: 100%; padding: 8px; font-size: 11.5px; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, #F59E0B, #EA580C); border: none; color: #FFFFFF; font-weight: 800; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">
+              <i class="fa-solid fa-cart-shopping"></i> ${cost}점으로 구매 & 착용
+            </button>
+          `;
+        }
+      }
+    }
+  });
+}
+
+// 6. 브라우저 창 스크롤 및 컨테이너 스크롤 안전 복원 (혹시 모를 강제 새로고침 대비)
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+window.addEventListener('beforeunload', () => {
+  sessionStorage.setItem('netfit_window_scroll_y', window.scrollY);
+  const sc = document.getElementById('shopScrollContainer');
+  if (sc) sessionStorage.setItem('netfit_shop_scroll_y', sc.scrollTop);
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const winY = sessionStorage.getItem('netfit_window_scroll_y');
+  if (winY !== null) {
+    window.scrollTo(0, parseInt(winY, 10));
+    sessionStorage.removeItem('netfit_window_scroll_y');
+  }
+  const sc = document.getElementById('shopScrollContainer');
+  const scY = sessionStorage.getItem('netfit_shop_scroll_y');
+  if (sc && scY !== null) {
+    sc.scrollTop = parseInt(scY, 10);
+    sessionStorage.removeItem('netfit_shop_scroll_y');
+  }
+});
+</script>
 {% endblock %}

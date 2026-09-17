@@ -1,7 +1,60 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<section class="page-intro"><h1>친구</h1><p>같이 운동할 친구를 추가하고 친구 랭킹과 카드 배틀을 즐겨보세요.</p></section>
-<article class="panel" id="friend-add"><h2>친구 추가</h2><p style="color:var(--muted);font-size:13px">현재는 상대방이 회원가입할 때 만든 닉네임을 친구 코드처럼 사용합니다.</p><form method="post" action="{% url 'add_friend' %}" class="row">{% csrf_token %}<div style="flex:1;min-width:220px" class="field">{{ friend_form.friend_code.label_tag }}{{ friend_form.friend_code }}</div><button class="button" style="margin-top:18px">친구 추가</button></form></article>
-<section class="section-head" id="friend-list"><div><h2>내 친구 목록</h2><p>친구는 서로의 친구 랭킹에서 볼 수 있습니다.</p></div><a class="button" href="{% url 'ranking' %}?scope=friends">친구 랭킹 보기</a></section>
-<article class="panel">{% for friend in friends %}<div class="friend-item"><div class="friend-main"><div class="friend-avatar">🏃</div><div>{% if friend.profile.display_name %}<b>{{ friend.profile.display_name }}</b>{% endif %}<small style="display:block;color:var(--muted)">{{ friend.profile.area }} · 레벨 {{ friend.charactercard.level }}</small></div></div><a class="button" href="{% url 'battle' %}">카드 배틀</a></div>{% empty %}<p style="color:var(--muted)">아직 친구가 없어요. 친구의 닉네임을 입력해 추가해보세요.</p>{% endfor %}</article>
+<section class="page-intro">
+  <h1><i class="fa-solid fa-user-group" style="color: var(--indigo-primary); margin-right: 8px;"></i>친구</h1>
+  <p>같이 운동할 친구를 추가하고 친구 랭킹과 카드 배틀을 즐겨보세요.</p>
+</section>
+
+<article class="panel" id="friend-add">
+  <h2><i class="fa-solid fa-user-plus" style="color: var(--neon-mint); margin-right: 8px;"></i>친구 추가</h2>
+  <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">
+    상대방이 회원가입할 때 설정한 아이디 또는 닉네임을 입력하여 친구를 추가할 수 있습니다.
+  </p>
+  <form method="post" action="{% url 'add_friend' %}" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+    {% csrf_token %}
+    <div style="flex: 1; min-width: 240px;" class="field">
+      {{ friend_form.friend_code.label_tag }}
+      {{ friend_form.friend_code }}
+    </div>
+    <button class="button btn-mint" type="submit" style="margin-bottom: 14px;">
+      <i class="fa-solid fa-plus"></i>
+      <span>친구 추가</span>
+    </button>
+  </form>
+</article>
+
+<section class="section-head" id="friend-list">
+  <div>
+    <h2><i class="fa-solid fa-address-book" style="color: #38BDF8; margin-right: 8px;"></i>내 친구 목록</h2>
+    <p>친구는 서로의 친구 랭킹에서 볼 수 있습니다.</p>
+  </div>
+  <a class="button secondary" href="{% url 'ranking' %}?scope=friends">
+    <i class="fa-solid fa-trophy"></i>
+    <span>친구 랭킹 보기</span>
+  </a>
+</section>
+
+<article class="panel">
+  {% for friend in friends %}
+    <div class="friend-item">
+      <div class="friend-main">
+        <div class="friend-avatar">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div>
+          <b>{{ friend.profile.display_name|default:friend.username }}</b>
+          <small style="display: block; color: var(--text-muted); margin-top: 3px;">
+            {{ friend.profile.area }} · <span class="tier-badge" style="padding: 1px 6px; font-size: 10px;">Lv.{{ friend.charactercard.level }}</span>
+          </small>
+        </div>
+      </div>
+      <a class="button" href="{% url 'battle' %}" style="padding: 9px 16px; font-size: 13px;">
+        <i class="fa-solid fa-fire"></i>
+        <span>카드 배틀</span>
+      </a>
+    </div>
+  {% empty %}
+    <p style="color: var(--text-muted); margin: 12px 0;">아직 친구가 없어요. 친구의 닉네임을 입력해 추가해보세요.</p>
+  {% endfor %}
+</article>
 {% endblock %}

@@ -1,23 +1,192 @@
 {% extends "fitness/base.html" %}
+{% load static %}
 {% block content %}
-<section class="auth panel">
-  <div class="logo">NET<b>FIT</b><small>MOVE · GROW · BATTLE</small></div>
-  <h1 style="margin-top:24px">로그인</h1>
-  <p style="color:var(--muted)">운동을 기록하고 내 카드를 성장시켜 보세요.</p>
-  <form method="post" action="{% url 'login' %}">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    {% for error in form.non_field_errors %}<p role="alert" style="color:#fda4af">{{ error }}</p>{% endfor %}
-    {% for field in form %}
-    <div class="field">{{ field.label_tag }}{{ field }}
-      {% for error in field.errors %}<small role="alert" style="color:#fda4af">{{ error }}</small>{% endfor %}
+<div class="landing-container" style="max-width: 1160px; margin: 20px auto 50px; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: stretch;">
+
+  <!-- ==================== [좌측: 플랫폼 소개 & 4종 마스코트 쇼케이스] ==================== -->
+  <div style="display: flex; flex-direction: column; gap: 24px; justify-content: space-between;">
+    
+    <!-- 1. 메인 브랜드 헤더 -->
+    <div>
+      <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.3); border-radius: 30px; font-size: 12px; font-weight: 800; color: var(--neon-mint); margin-bottom: 14px;">
+        <i class="fa-solid fa-bolt"></i> 넥스트 제너레이션 피트니스 게이미피케이션 플랫폼
+      </div>
+      <h1 style="font-size: 34px; font-weight: 900; line-height: 1.25; margin: 0 0 14px; color: #FFFFFF; letter-spacing: -0.5px;">
+        오늘의 땀방울이<br>
+        <span style="background: linear-gradient(90deg, #00F59B 0%, #38BDF8 50%, #818CF8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">최강의 피지컬 카드</span>가 된다!
+      </h1>
+      <p style="font-size: 14px; color: #94A3B8; line-height: 1.6; margin: 0;">
+        러닝·헬스·걷기 등 매일의 운동 기록을 실시간 배지와 스탯으로 환산하고, 나만의 마스코트 파이터를 육성하여 친구들과 흥미진진한 1:1 내기 배틀을 즐겨보세요.
+      </p>
     </div>
-    {% endfor %}
-    <button class="button" type="submit">로그인</button>
-  </form>
-  <p><a href="{% url 'register' %}">처음이라면 회원가입하기</a></p>
-  <p style="text-align:center;color:var(--muted)">또는</p>
-  <a href="{% url 'kakao_login' %}" style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;background:#FEE500;color:#191919;text-decoration:none;font-size:16px;font-weight:600">카카오 로그인</a>
-  <p style="color:var(--muted);font-size:14px">카카오로 처음 로그인하면 계정이 만들어집니다.</p>
-</section>
+
+    <!-- 2. 핵심 서비스 3대 특징 그리드 -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+      <!-- Feature 1 -->
+      <div style="padding: 14px 18px; background: #0E1626; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(0,245,155,0.15); color: var(--neon-mint); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+          <i class="fa-solid fa-person-running"></i>
+        </div>
+        <div>
+          <b style="font-size: 14px; color: #FFFFFF; display: block; margin-bottom: 3px;">운동 데이터 자동 카드화 & 배지 리워드</b>
+          <span style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">운동 시간과 소모 칼로리가 배지와 속도·지구력·의지 스탯으로 즉각 반영되어 새싹에서 마스터까지 진화합니다.</span>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div style="padding: 14px 18px; background: #0E1626; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(244,63,94,0.15); color: #F43F5E; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+          <i class="fa-solid fa-fire"></i>
+        </div>
+        <div>
+          <b style="font-size: 14px; color: #FFFFFF; display: block; margin-bottom: 3px;">친구와 벌이는 1:1 배틀 & 현실 내기</b>
+          <span style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">치킨, 커피, 점심값 등 친구와 함께하는 내기 배틀! 실시간 카드 파워(CP)로 격돌하고 영수증 결과표까지 발급받으세요.</span>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div style="padding: 14px 18px; background: #0E1626; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(56,189,248,0.15); color: #38BDF8; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+          <i class="fa-solid fa-map-location-dot"></i>
+        </div>
+        <div>
+          <b style="font-size: 14px; color: #FFFFFF; display: block; margin-bottom: 3px;">주변 공공 체육시설 지도 & 파티 랭킹</b>
+          <span style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">내 위치 기반 주변 체육시설 탐색과 네이버/카카오 길찾기, 파티원들과의 주간 배지 랭킹 경쟁 시스템을 제공합니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 4종 시그니처 마스코트 파이터 쇼케이스 바 -->
+    <div style="padding: 16px 18px; background: #0B111E; border: 1px solid rgba(56,189,248,0.2); border-radius: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 12px; font-weight: 800; color: #FFFFFF;"><i class="fa-solid fa-paw" style="color: var(--neon-mint); margin-right: 6px;"></i>NetFit 대표 파이터 4총사</span>
+        <span style="font-size: 11px; color: var(--text-muted);">60fps 시그니처 모션 탑재</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+        <div style="text-align: center; padding: 10px 6px; background: #131E30; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <img src="{% static 'images/net-pit.png' %}" class="animate-mascot-tiger" style="height: 48px; object-fit: contain;" alt="백호">
+          <b style="display: block; font-size: 11px; color: #FFFFFF; margin-top: 6px;">1호 백호</b>
+          <small style="font-size: 9px; color: var(--neon-mint);">스피드 러너</small>
+        </div>
+        <div style="text-align: center; padding: 10px 6px; background: #131E30; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <img src="{% static 'images/net-pit-2.png' %}" class="animate-mascot-bear" style="height: 48px; object-fit: contain;" alt="백곰">
+          <b style="display: block; font-size: 11px; color: #FFFFFF; margin-top: 6px;">2호 백곰</b>
+          <small style="font-size: 9px; color: #38BDF8;">파워 리프터</small>
+        </div>
+        <div style="text-align: center; padding: 10px 6px; background: #131E30; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <img src="{% static 'images/net-pit-3.png' %}" class="animate-mascot-hamster" style="height: 48px; object-fit: contain;" alt="햄스터">
+          <b style="display: block; font-size: 11px; color: #FFFFFF; margin-top: 6px;">3호 햄스터</b>
+          <small style="font-size: 9px; color: var(--trophy-gold);">지구력 마스터</small>
+        </div>
+        <div style="text-align: center; padding: 10px 6px; background: #131E30; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+          <img src="{% static 'images/net-pit-4.png' %}" class="animate-mascot-dino" style="height: 48px; object-fit: contain;" alt="아기공룡">
+          <b style="display: block; font-size: 11px; color: #FFFFFF; margin-top: 6px;">4호 공룡</b>
+          <small style="font-size: 9px; color: #A855F7;">올라운더</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== [우측: 글래스모피즘 로그인 & 회원가입 카드] ==================== -->
+  <div style="background: #0E1626; border: 1px solid rgba(0,245,155,0.3); border-radius: 24px; padding: 36px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0,245,155,0.08); display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div class="logo" style="justify-content: center; margin-bottom: 10px;">
+          <i class="fa-solid fa-bolt" style="color: var(--neon-mint); font-size: 26px;"></i>
+          <span style="font-size: 24px;"><b>NetFit</b></span>
+        </div>
+        <h2 style="font-size: 22px; font-weight: 900; margin: 0 0 6px;">파이터 로그인</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">로그인하여 내 운동 기록과 배지 카드를 확인하세요.</p>
+      </div>
+
+      <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        {% for error in form.non_field_errors %}
+          <div class="notice error" style="padding: 10px 14px; font-size: 12px; margin-bottom: 12px;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ error }}</span>
+          </div>
+        {% endfor %}
+
+        {% for field in form %}
+          <div class="field" style="margin: 12px 0;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;">
+              {% if field.name == 'username' %}
+                <i class="fa-solid fa-user" style="color: var(--neon-mint);"></i> 아이디
+              {% elif field.name == 'password' %}
+                <i class="fa-solid fa-lock" style="color: var(--neon-mint);"></i> 비밀번호
+              {% else %}
+                {{ field.label }}
+              {% endif %}
+            </label>
+            {{ field }}
+            {% for error in field.errors %}
+              <small role="alert" style="color: #FDA4AF; display: block; margin-top: 4px; font-size: 11px;">{{ error }}</small>
+            {% endfor %}
+          </div>
+        {% endfor %}
+
+        <button class="button" type="submit" style="width: 100%; margin-top: 16px; padding: 14px; font-size: 15px;">
+          <span>로그인하고 경기장 입장</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+
+      <!-- ⚡ 1초 데모 계정 원클릭 체험 로그인 버튼 -->
+      <div style="margin-top: 12px;">
+        <button type="button" onclick="quickDemoLogin()" class="button btn-ghost" style="width: 100%; padding: 11px; font-size: 12.5px; border-radius: 12px; border: 1px dashed rgba(56,189,248,0.4); background: rgba(56,189,248,0.08); color: #38BDF8; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span><b>체험 계정(wnsqja)</b>으로 1초 즉시 입장하기</span>
+        </button>
+      </div>
+
+      <!-- 구분선 -->
+      <div style="display: flex; align-items: center; gap: 12px; margin: 20px 0;">
+        <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+        <span style="font-size: 11px; color: var(--text-dim); font-weight: 700;">또는</span>
+        <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+      </div>
+
+      <!-- 카카오 로그인 -->
+      <a href="{% url 'kakao_login' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 14px; background: #FEE500; color: #191919; text-decoration: none; font-size: 14px; font-weight: 800; transition: transform 0.2s, filter 0.2s; box-shadow: 0 4px 14px rgba(254, 229, 0, 0.25);" onmouseover="this.style.filter='brightness(0.95)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.filter='none'; this.style.transform='none';">
+        <i class="fa-solid fa-comment" style="font-size: 16px;"></i>
+        <span>카카오 1초 간편 로그인</span>
+      </a>
+      <p style="text-align: center; color: var(--text-dim); font-size: 11px; margin: 8px 0 0;">카카오로 처음 로그인하면 파이터 계정이 자동 생성됩니다.</p>
+    </div>
+
+    <!-- 하단 회원가입 안내 링크 -->
+    <div style="text-align: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08);">
+      <span style="color: var(--text-muted); font-size: 13px;">아직 계정이 없으신가요?</span>
+      <a href="{% url 'register' %}" style="color: var(--neon-mint); font-weight: 800; font-size: 13px; margin-left: 8px;">
+        회원가입하고 카드 만들기 <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<style>
+@media (max-width: 900px) {
+  .landing-container {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+}
+</style>
+
+<script>
+function quickDemoLogin() {
+  const userField = document.querySelector('input[name="username"]');
+  const passField = document.querySelector('input[name="password"]');
+  const form = document.querySelector('form');
+  if (userField && passField && form) {
+    userField.value = 'wnsqja';
+    passField.value = '1234';
+    form.submit();
+  }
+}
+</script>
 {% endblock %}

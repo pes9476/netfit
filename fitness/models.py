@@ -1,3 +1,4 @@
+import urllib.parse
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -69,10 +70,32 @@ class Profile(models.Model):
         max_length=12, choices=ACCESSIBILITY_CHOICES, default="NON_DISABLED",
     )
     equipped_outfit = models.CharField(
-        max_length=10,
-        choices=[("NONE", "기본"), ("CAP", "운동 모자"), ("SPORT", "스포츠 유니폼"), ("CROWN", "챔피언 왕관")],
+        max_length=120,
+        blank=True,
         default="NONE",
     )
+
+    @property
+    def equipped_outfits_list(self):
+        if not self.equipped_outfit or self.equipped_outfit == "NONE":
+            return []
+        return [c.strip() for c in self.equipped_outfit.split(",") if c.strip() and c.strip() != "NONE"]
+
+    def is_outfit_equipped(self, code):
+        return code in self.equipped_outfits_list
+
+    def equip_outfit(self, code):
+        current = self.equipped_outfits_list
+        if code not in current:
+            current.append(code)
+        self.equipped_outfit = ",".join(current) if current else "NONE"
+
+    def unequip_outfit(self, code=None):
+        if not code:
+            self.equipped_outfit = "NONE"
+        else:
+            current = [c for c in self.equipped_outfits_list if c != code]
+            self.equipped_outfit = ",".join(current) if current else "NONE"
 
     @property
     def recommended_course(self):
@@ -201,6 +224,10 @@ class WorkoutRecord(models.Model):
             return "산책"
         return self.get_workout_type_display()
 
+    @property
+    def calories_burned(self):
+        return int(self.minutes * 8.5) if self.minutes else 0
+
 
 class BadgeAward(models.Model):
     BRONZE = "BRONZE"
@@ -254,8 +281,42 @@ class BadgeAward(models.Model):
 
 
 class OutfitPurchase(models.Model):
-    OUTFIT_CHOICES = [("CAP", "운동 모자"), ("SPORT", "스포츠 유니폼"), ("CROWN", "챔피언 왕관")]
-    COSTS = {"CAP": 150, "SPORT": 250, "CROWN": 400}
+    OUTFIT_CHOICES = [
+        ("BAND", "스포티 네온 헤어밴드"),
+        ("GLASS", "사이버 네온 선글라스"),
+        ("HEADSET", "사이버 게이밍 헤드셋"),
+        ("MASK", "사이버 닌자 마스크"),
+        ("BELT", "골드 챔피언 벨트"),
+        ("CAP", "운동 모자"),
+        ("MEDAL", "골드 빅토리 목걸이"),
+        ("GLOVES", "파이어 복싱 글러브"),
+        ("SPORT", "스포츠 유니폼"),
+        ("CLOAK", "다크 히어로 망토"),
+        ("SWORD", "네온 빔세이버"),
+        ("CROWN", "챔피언 왕관"),
+        ("WING", "사이버 홀로그램 윙"),
+        ("DRAGON", "미니 파이어 펫"),
+        ("AURA", "불꽃 버닝 파이어 오라"),
+        ("VICTORY", "골드 빅토리 트로피"),
+    ]
+    COSTS = {
+        "BAND": 50,
+        "GLASS": 80,
+        "HEADSET": 100,
+        "MASK": 110,
+        "BELT": 120,
+        "CAP": 150,
+        "MEDAL": 180,
+        "GLOVES": 200,
+        "SPORT": 250,
+        "CLOAK": 300,
+        "SWORD": 350,
+        "CROWN": 400,
+        "WING": 500,
+        "DRAGON": 550,
+        "AURA": 650,
+        "VICTORY": 800,
+    }
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="outfit_purchases")
     outfit = models.CharField(max_length=10, choices=OUTFIT_CHOICES)
     cost = models.PositiveIntegerField()
@@ -280,6 +341,38 @@ class Facility(models.Model):
 
     class Meta:
         ordering = ["name"]
+
+    @property
+    def naver_map_url(self):
+        if hasattr(self, "_naver_map_url"):
+            return self._naver_map_url
+        if hasattr(self, "naver_directions_url"):
+            return self.naver_directions_url
+        if self.latitude and self.longitude:
+            encoded_name = urllib.parse.quote(self.name)
+            return f"https://map.naver.com/p/directions/-/{self.longitude},{self.latitude},{encoded_name},PLACE_POI/-/transit"
+        if self.address:
+            return f"https://map.naver.com/p/search/{urllib.parse.quote(self.address)}"
+        return f"https://map.naver.com/p/search/{urllib.parse.quote(self.name)}"
+
+    @naver_map_url.setter
+    def naver_map_url(self, value):
+        self._naver_map_url = value
+
+    @property
+    def kakao_map_url(self):
+        if hasattr(self, "_kakao_map_url"):
+            return self._kakao_map_url
+        if self.latitude and self.longitude:
+            encoded_name = urllib.parse.quote(self.name)
+            return f"https://map.kakao.com/link/to/{encoded_name},{self.latitude},{self.longitude}"
+        if self.address:
+            return f"https://map.kakao.com/link/search/{urllib.parse.quote(self.address)}"
+        return f"https://map.kakao.com/link/search/{urllib.parse.quote(self.name)}"
+
+    @kakao_map_url.setter
+    def kakao_map_url(self, value):
+        self._kakao_map_url = value
 
 class Party(models.Model):
     name = models.CharField(max_length=100)

@@ -1,16 +1,163 @@
 {% extends "fitness/base.html" %}
+{% load static %}
 {% block content %}
-<section class="page-intro"><h1>카드 배틀</h1><p>운동량을 직접 비교하지 않고, 지금까지 성장시킨 카드의 능력치와 카드 파워로 승부합니다.</p></section>
+<section class="page-intro">
+  <h1><i class="fa-solid fa-hand-fist" style="color: var(--fire-orange); margin-right: 8px;"></i>페이스오프 배틀 아레나</h1>
+  <p>운동량을 직접 비교하지 않고, 지금까지 성장시킨 카드의 능력치와 카드 파워로 승부합니다.</p>
+</section>
+
 <section class="battle-stage">
   <div class="battle-cards">
-    <article class="battle-card card-{{ card.card_tier }}"><div class="card-title">{% if user.profile.display_name %}{{ user.profile.display_name }}의 카드{% else %}내 카드{% endif %}<small style="float:right;font-size:12px">레벨 {{ card.level }}</small></div><div class="card-character background-sprite scene-{{ own_scene }}"><div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }}"></div></div><div class="card-stats"><div>속도<b>{{ stats.speed }}</b></div><div>지구력<b>{{ stats.stamina }}</b></div><div>의지<b>{{ stats.motivation }}</b></div></div></article>
-    <div class="battle-vs">대결</div>
-    <article class="battle-card opponent"><div class="card-title">{{ battle.opponent_name }}<small style="float:right;font-size:12px">레벨 {{ battle.opponent_level }}</small></div><div class="card-character background-sprite scene-{{ opponent.scene }}"><div class="avatar-roster avatar-{{ opponent.sprite_gender }} age-{{ opponent.age_group }} style-{{ opponent.body_style|lower }}"></div></div><div class="card-stats"><div>카드<b>상대</b></div><div>파워<b>{{ battle.opponent_power }}</b></div><div>등급<b>도전</b></div></div></article>
+    <!-- 내 카드 -->
+    <article class="battle-card card-{{ card.card_tier }}" id="myBattleCard">
+      <div class="card-title">
+        <span><i class="fa-solid fa-user-ninja" style="color: var(--neon-mint); margin-right: 6px;"></i>{% if user.profile.display_name %}{{ user.profile.display_name }}{% else %}{{ user.username }}{% endif %}</span>
+        <span class="tier-badge">Lv.{{ card.level }}</span>
+      </div>
+      <div class="card-character background-sprite scene-{{ own_scene }}">
+        <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }}"></div>
+      </div>
+      <div class="card-stats">
+        <div>속도<b>{{ stats.speed }}</b></div>
+        <div>지구력<b>{{ stats.stamina }}</b></div>
+        <div>의지<b>{{ stats.motivation }}</b></div>
+      </div>
+    </article>
+
+    <!-- 중앙 VS 엠블럼 -->
+    <div class="battle-vs">VS</div>
+
+    <!-- 상대 카드 -->
+    <article class="battle-card opponent" id="opponentBattleCard">
+      <div class="card-title">
+        <span><i class="fa-solid fa-robot" style="color: #38BDF8; margin-right: 6px;"></i>{{ battle.opponent_name }}</span>
+        <span class="tier-badge" style="background: rgba(56,189,248,0.15); color: #38BDF8; border-color: rgba(56,189,248,0.3);">Lv.{{ battle.opponent_level }}</span>
+      </div>
+      <div class="card-character background-sprite scene-{{ opponent.scene }}">
+        <div class="avatar-roster avatar-{{ opponent.sprite_gender }} age-{{ opponent.age_group }} style-{{ opponent.body_style|lower }}"></div>
+      </div>
+      <div class="card-stats">
+        <div>카드<b>상대</b></div>
+        <div>파워<b style="color: #38BDF8;">{{ battle.opponent_power }}</b></div>
+        <div>등급<b>도전</b></div>
+      </div>
+    </article>
   </div>
-  <div class="battle-motion">두 카드가 각자의 운동 장면에서 <strong>카드 파워</strong>를 모으고 있어요.</div>
-  <button class="button battle-action" id="showResult">대결 결과 보기</button>
-  <div class="result-reveal" id="battleResult">{% if battle.challenger_power >= battle.opponent_power %}🏆 {% if user.profile.display_name %}{{ user.profile.display_name }} 카드{% else %}내 카드{% endif %} 승리!<br><small>내 카드 파워 {{ battle.challenger_power }} · 상대 카드 파워 {{ battle.opponent_power }}<br>보상: {{ battle.reward_label }}</small>{% else %}💪 아쉽게 패배했어요.<br><small>내 카드 파워 {{ battle.challenger_power }} · 상대 카드 파워 {{ battle.opponent_power }}<br>운동 기록으로 경험치를 모아 다시 도전해보세요.</small>{% endif %}</div>
+
+  <div class="battle-motion">
+    <i class="fa-solid fa-bolt-lightning" style="color: var(--trophy-gold); margin-right: 4px;"></i>
+    두 파이터가 각자의 운동 영역에서 <strong>카드 파워</strong>를 풀 충전하고 있어요!
+  </div>
+
+  <button class="button battle-action" id="showResult">
+    <i class="fa-solid fa-trophy"></i>
+    <span>판정 결과 공개 & 영수증 발행 ➔</span>
+  </button>
+
+  <!-- 대결 판정 결과 배너 & 디지털 영수증 -->
+  <div class="result-reveal" id="battleResult">
+    {% if battle.challenger_power >= battle.opponent_power %}
+      <div class="animate-victory" style="display: inline-block; font-size: 38px; margin-bottom: 8px;">👑</div>
+      <div style="color: var(--neon-mint); font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">
+        VICTORY! {% if user.profile.display_name %}{{ user.profile.display_name }}{% else %}{{ user.username }}{% endif %} 파이터 대승리!
+      </div>
+      <p style="margin: 10px 0; font-size: 15px; color: #E2E8F0;">
+        내 카드 파워 <b style="color: var(--neon-mint);">{{ battle.challenger_power }} CP</b> vs 상대 파워 <b>{{ battle.opponent_power }} CP</b>
+      </p>
+      <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; background: rgba(245,158,11,0.2); border: 1px solid var(--trophy-gold); color: var(--trophy-gold); font-size: 14px; font-weight: 800;">
+        🎁 획득 보상: {{ battle.reward_label }}
+      </div>
+    {% else %}
+      <div style="font-size: 38px; margin-bottom: 8px;">😭</div>
+      <div style="color: var(--penalty-red); font-size: 24px; font-weight: 900;">
+        DEFEAT! 아쉽게 패배했어요.
+      </div>
+      <p style="margin: 10px 0; font-size: 15px; color: #E2E8F0;">
+        내 카드 파워 <b>{{ battle.challenger_power }} CP</b> vs 상대 파워 <b style="color: #38BDF8;">{{ battle.opponent_power }} CP</b>
+      </p>
+      <small style="color: var(--text-muted); font-size: 13px;">운동 기록으로 경험치를 모아 능력치를 올린 후 다시 도전해보세요!</small>
+    {% endif %}
+
+    <!-- 🧾 빈티지 디지털 스포츠 영수증 -->
+    <div class="receipt-paper" style="margin-top: 24px; text-align: left;">
+      <div style="text-align: center; border-bottom: 2px dashed #CBD5E1; padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #0F172A;">NETFIT OFFICIAL RECEIPT</div>
+        <div style="font-size: 11px; color: #64748B; margin-top: 2px;">대한민국 공인 피지컬 대결 공식 결과지</div>
+      </div>
+      
+      <div style="font-size: 12px; color: #475569; line-height: 1.8;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>대결 일시:</span>
+          <b>{{ battle.created_at|date:"Y-m-d H:i:s" }}</b>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>대결 매치:</span>
+          <b>{{ user.username }} VS {{ battle.opponent_name }}</b>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>대결 스코프:</span>
+          <b>{{ battle.get_scope_display }}</b>
+        </div>
+        {% if battle.region_name %}
+        <div style="display: flex; justify-content: space-between;">
+          <span>대결 지역:</span>
+          <b>{{ battle.region_name }}</b>
+        </div>
+        {% endif %}
+        <div style="display: flex; justify-content: space-between;">
+          <span>공식 내기 보상:</span>
+          <b style="color: #EA580C;">{{ battle.reward_label }}</b>
+        </div>
+      </div>
+
+      <div style="border-top: 2px dashed #CBD5E1; margin: 12px 0; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 11px; color: #64748B;">최종 판정 결과</div>
+          <div style="font-size: 18px; font-weight: 900; color: {% if battle.challenger_power >= battle.opponent_power %}#059669{% else %}#DC2626{% endif %};">
+            {% if battle.challenger_power >= battle.opponent_power %}승리 (WIN){% else %}패배 (LOSE){% endif %}
+          </div>
+        </div>
+        <div class="stamp-seal" style="border-color: {% if battle.challenger_power >= battle.opponent_power %}#059669{% else %}#DC2626{% endif %}; color: {% if battle.challenger_power >= battle.opponent_power %}#059669{% else %}#DC2626{% endif %};">
+          {% if battle.challenger_power >= battle.opponent_power %}승리 공인{% else %}공식 판정{% endif %}
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 10px; color: #94A3B8; margin-top: 10px;">
+        *** NETFIT PHYSICAL BATTLE ENGINE VERIFIED ***
+      </div>
+    </div>
+  </div>
 </section>
-<div class="grid2" style="margin-top:22px"><article class="panel"><h2>카드 배틀 정보</h2><p>대결 범위: <b>{{ battle.get_scope_display }}</b></p><p>보상: <b>{{ battle.reward_label }}</b></p>{% if battle.region_name %}<p>대결 지역: <b>{{ battle.region_name }}</b></p>{% endif %}</article><article class="panel"><h2>다음 성장 목표</h2><p>운동 기록으로 경험치를 모아 레벨을 올리면 카드 프레임과 캐릭터 장식이 더 화려해집니다.</p><a class="button" href="{% url 'activity' %}">운동 기록하러 가기</a></article></div>
-<script>document.getElementById("showResult").addEventListener("click",function(){document.getElementById("battleResult").classList.add("show");this.hidden=true})</script>
+
+<!-- 하단 정보 카드 -->
+<div class="grid2" style="margin-top: 24px;">
+  <article class="panel">
+    <h2><i class="fa-solid fa-circle-info" style="color: var(--neon-mint); margin-right: 8px;"></i>카드 배틀 정보</h2>
+    <div style="margin-top: 14px; line-height: 1.8;">
+      <p style="margin: 6px 0; color: var(--text-muted);">대결 범위: <b style="color: #FFFFFF;">{{ battle.get_scope_display }}</b></p>
+      <p style="margin: 6px 0; color: var(--text-muted);">약속된 보상: <b style="color: var(--trophy-gold);">{{ battle.reward_label }}</b></p>
+      {% if battle.region_name %}
+        <p style="margin: 6px 0; color: var(--text-muted);">대결 지역: <b style="color: #FFFFFF;">{{ battle.region_name }}</b></p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2><i class="fa-solid fa-chart-line" style="color: #38BDF8; margin-right: 8px;"></i>다음 성장 목표</h2>
+    <p style="color: var(--text-muted); line-height: 1.6; margin: 14px 0 20px;">
+      운동 기록으로 경험치와 배지를 모아 레벨을 올리면 카드 프레임과 캐릭터 장식이 더욱 강력하고 화려해집니다.
+    </p>
+    <a class="button btn-mint" href="{% url 'activity' %}">
+      <i class="fa-solid fa-person-running"></i>
+      <span>운동 기록하러 가기</span>
+    </a>
+  </article>
+</div>
+
+<script>
+document.getElementById("showResult").addEventListener("click", function() {
+  document.getElementById("battleResult").classList.add("show");
+  this.style.display = "none";
+});
+</script>
 {% endblock %}
