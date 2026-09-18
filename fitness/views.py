@@ -1,12 +1,14 @@
-import random
 import math
+import logging
+import random
 from datetime import date, timedelta
 from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
-from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -20,6 +22,19 @@ from django.utils import timezone
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
 from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord
 from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, get_weather_data, total_card_xp
+from .validators import validate_proof_image
+
+logger = logging.getLogger(__name__)
+
+
+def _delete_uploaded_file_safely(field_file):
+    """DB 처리는 유지하되, 일시적인 파일 잠금 때문에 요청 전체가 실패하지 않게 한다."""
+    if not field_file:
+        return
+    try:
+        field_file.delete(save=False)
+    except OSError:
+        logger.warning("업로드 파일 삭제 실패: %s", field_file.name, exc_info=True)
 
 DEMO_OPPONENTS = [
     {"name": "민수 · 파워 트레이너", "level": 3, "power": 58, "reward": "치킨 사기 🍗"},
@@ -309,33 +324,44 @@ def record_workout(request):
 
 
 @login_required
+@transaction.atomic
 def complete_daily_quest(request, quest_kind, quest_id):
     if request.method != "POST":
         return redirect("dashboard")
     action = request.POST.get("action", "complete")
     proof_image = request.FILES.get("proof_image")
+    if action not in {"complete", "delete_proof"}:
+        messages.error(request, "올바르지 않은 미션 요청입니다.")
+        return redirect("dashboard")
+    if proof_image:
+        try:
+            validate_proof_image(proof_image)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect("dashboard")
+
     if quest_kind == "personal":
         quest = get_object_or_404(PersonalDailyQuest, pk=quest_id, user=request.user, is_active=True)
-        award, created = BadgeAward.objects.get_or_create(
-            user=request.user, personal_quest=quest,
-            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
-        )
-    else:
+        award_lookup = {"user": request.user, "personal_quest": quest}
+    elif quest_kind == "group":
         quest = get_object_or_404(
             DailyQuest.objects.filter(
                 Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())
             ),
             pk=quest_id, party__members=request.user, is_active=True,
         )
-        award, created = BadgeAward.objects.get_or_create(
-            user=request.user, daily_quest=quest,
-            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
-        )
+        award_lookup = {"user": request.user, "daily_quest": quest}
+    else:
+        messages.error(request, "올바르지 않은 미션 종류입니다.")
+        return redirect("dashboard")
 
-    # 1. 인증 사진 삭제 액션
     if action == "delete_proof":
+        award = BadgeAward.objects.filter(**award_lookup).select_related("workout_record").first()
+        if award is None:
+            messages.info(request, "완료되지 않은 미션에는 삭제할 인증 사진이 없습니다.")
+            return redirect("dashboard")
         if award.proof_image:
-            award.proof_image.delete(save=False)
+            _delete_uploaded_file_safely(award.proof_image)
             award.proof_image = None
             award.save(update_fields=["proof_image"])
             if hasattr(award, "workout_record") and award.workout_record:
@@ -346,7 +372,11 @@ def complete_daily_quest(request, quest_kind, quest_id):
             messages.info(request, "삭제할 인증 사진이 없습니다.")
         return redirect("dashboard")
 
-    # 2. 최초 완료 시 (최근 운동 기록에 자동 등록)
+    award, created = BadgeAward.objects.get_or_create(
+        **award_lookup,
+        defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
+    )
+
     if created:
         if proof_image:
             award.proof_image = proof_image
@@ -365,14 +395,16 @@ def complete_daily_quest(request, quest_kind, quest_id):
         award.save(update_fields=["workout_record"])
         messages.success(request, f"일일미션 완료! {award.get_badge_type_display()} 배지와 {award.points}점을 받았어요. (최근 운동기록 자동 등록)")
     else:
-        # 3. 이미 완료된 미션의 사진 변경/수정 또는 신규 등록
         if proof_image:
             is_update = bool(award.proof_image)
+            old_proof = award.proof_image
             award.proof_image = proof_image
             award.save(update_fields=["proof_image"])
             if hasattr(award, "workout_record") and award.workout_record:
                 award.workout_record.proof_image = award.proof_image
                 award.workout_record.save(update_fields=["proof_image"])
+            if old_proof:
+                _delete_uploaded_file_safely(old_proof)
             if is_update:
                 messages.success(request, "인증 사진이 새로운 사진으로 성공적으로 변경되었습니다!")
             else:
@@ -722,45 +754,80 @@ def add_friend(request):
             elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
                 fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
                 fr.status = "ACCEPTED"
-                fr.save(update_fields=["status"])
+                fr.responded_at = timezone.now()
+                fr.save(update_fields=["status", "responded_at"])
                 FriendLink.objects.get_or_create(user=request.user, friend=friend)
                 FriendLink.objects.get_or_create(user=friend, friend=request.user)
                 messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
             else:
-                FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
-                messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+                try:
+                    FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
+                    messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+                except IntegrityError:
+                    messages.info(request, f"{friend.username}님에게 이미 처리 대기 중인 요청이 있습니다.")
     return redirect(request.POST.get("next") or "friends")
 
 
 @login_required
+@transaction.atomic
 def respond_friend_request(request, request_id, action):
     if request.method == "POST":
-        freq = get_object_or_404(FriendRequest, pk=request_id, to_user=request.user, status="PENDING")
+        if action not in {"accept", "reject"}:
+            messages.error(request, "올바르지 않은 친구 요청 처리입니다.")
+            return redirect("dashboard")
+        freq = get_object_or_404(
+            FriendRequest.objects.select_for_update(),
+            pk=request_id, to_user=request.user, status="PENDING",
+        )
         if action == "accept":
             freq.status = "ACCEPTED"
-            freq.save(update_fields=["status"])
+            freq.responded_at = timezone.now()
+            freq.save(update_fields=["status", "responded_at"])
             FriendLink.objects.get_or_create(user=request.user, friend=freq.from_user)
             FriendLink.objects.get_or_create(user=freq.from_user, friend=request.user)
             messages.success(request, f"{freq.from_user.username}님의 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.")
         elif action == "reject":
             freq.status = "REJECTED"
-            freq.save(update_fields=["status"])
+            freq.responded_at = timezone.now()
+            freq.save(update_fields=["status", "responded_at"])
             messages.info(request, f"{freq.from_user.username}님의 친구 요청을 거절했습니다.")
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
 @login_required
+@transaction.atomic
 def respond_party_invitation(request, invitation_id, action):
     if request.method == "POST":
-        inv = get_object_or_404(PartyInvitation, pk=invitation_id, invitee=request.user, status="PENDING")
+        if action not in {"accept", "reject"}:
+            messages.error(request, "올바르지 않은 파티 초대 처리입니다.")
+            return redirect("dashboard")
+        inv = get_object_or_404(
+            PartyInvitation.objects.select_for_update().select_related("party"),
+            pk=invitation_id, invitee=request.user, status="PENDING",
+        )
         if action == "accept":
+            party = Party.objects.select_for_update().get(pk=inv.party_id)
+            if party.challenge_end and party.challenge_end < timezone.localdate():
+                messages.error(request, "이미 종료된 파티의 초대는 수락할 수 없습니다.")
+                return redirect(request.POST.get("next") or "dashboard")
+            if party.members.filter(pk=request.user.pk).exists():
+                inv.status = "ACCEPTED"
+                inv.responded_at = timezone.now()
+                inv.save(update_fields=["status", "responded_at"])
+                messages.info(request, f"이미 '{party.name}' 파티에 참여하고 있습니다.")
+                return redirect(request.POST.get("next") or "dashboard")
+            if party.members.count() >= party.max_members:
+                messages.error(request, "파티 정원이 가득 차 초대를 수락할 수 없습니다.")
+                return redirect(request.POST.get("next") or "dashboard")
             inv.status = "ACCEPTED"
-            inv.save(update_fields=["status"])
-            inv.party.members.add(request.user)
-            messages.success(request, f"'{inv.party.name}' 파티 초대를 수락했습니다! 파티 일일미션에 참여해보세요.")
+            inv.responded_at = timezone.now()
+            inv.save(update_fields=["status", "responded_at"])
+            party.members.add(request.user)
+            messages.success(request, f"'{party.name}' 파티 초대를 수락했습니다! 파티 일일미션에 참여해보세요.")
         elif action == "reject":
             inv.status = "REJECTED"
-            inv.save(update_fields=["status"])
+            inv.responded_at = timezone.now()
+            inv.save(update_fields=["status", "responded_at"])
             messages.info(request, f"'{inv.party.name}' 파티 초대를 거절했습니다.")
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
@@ -1081,13 +1148,17 @@ def onboarding_group(request):
         elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
             fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
             fr.status = "ACCEPTED"
-            fr.save(update_fields=["status"])
+            fr.responded_at = timezone.now()
+            fr.save(update_fields=["status", "responded_at"])
             FriendLink.objects.get_or_create(user=request.user, friend=friend)
             FriendLink.objects.get_or_create(user=friend, friend=request.user)
             messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
         else:
-            FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
-            messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+            try:
+                FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
+                messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+            except IntegrityError:
+                messages.info(request, f"{friend.username}님에게 이미 처리 대기 중인 요청이 있습니다.")
         return redirect("onboarding_group")
     if request.method == "POST" and request.POST.get("action") == "create_room":
         room_name = request.POST.get("room_name", "").strip()[:100]
@@ -1115,9 +1186,9 @@ def onboarding_group(request):
                 for inv_user in User.objects.filter(id__in=invited_ids):
                     PartyInvitation.objects.get_or_create(
                         party=party,
-                        inviter=request.user,
                         invitee=inv_user,
-                        defaults={"status": "PENDING"}
+                        status="PENDING",
+                        defaults={"inviter": request.user},
                     )
                 profile = request.user.profile
                 profile.workout_mode = "GROUP"

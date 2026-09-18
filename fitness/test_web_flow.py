@@ -1,12 +1,22 @@
+from io import BytesIO
 from datetime import timedelta
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 from .models import (
     BadgeAward, DailyQuest, Facility, FriendLink, FriendRequest,
     OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord,
 )
+
+
+def proof_image(name="proof.png"):
+    content = BytesIO()
+    Image.new("RGB", (2, 2), "green").save(content, format="PNG")
+    return SimpleUploadedFile(name, content.getvalue(), content_type="image/png")
 
 
 class WebFlowTests(TestCase):
@@ -98,13 +108,12 @@ class WebFlowTests(TestCase):
         self.assertContains(dashboard, "완료")
 
     def test_daily_quest_with_proof_image_serves_media_and_renders_modal_btn(self):
-        from django.core.files.uploadedfile import SimpleUploadedFile
         user = User.objects.create_user(username="photo-runner", password=None)
         quest = PersonalDailyQuest.objects.create(
             user=user, title="30분 산책", workout_type="산책", target_minutes=30,
         )
         self.client.force_login(user)
-        test_image = SimpleUploadedFile(name="test_proof.jpg", content=b"\x47\x49\x46\x38\x39\x61", content_type="image/jpeg")
+        test_image = proof_image("test_proof.png")
         url = reverse("complete_daily_quest", args=["personal", quest.id])
         resp = self.client.post(url, {"proof_image": test_image})
         self.assertRedirects(resp, reverse("dashboard"))
@@ -119,7 +128,7 @@ class WebFlowTests(TestCase):
         self.assertEqual(media_resp.status_code, 200)
 
         # 2. 사진 변경 테스트
-        new_image = SimpleUploadedFile(name="updated_proof.jpg", content=b"\x47\x49\x46\x38\x39\x61_updated", content_type="image/jpeg")
+        new_image = proof_image("updated_proof.png")
         resp2 = self.client.post(url, {"proof_image": new_image})
         self.assertRedirects(resp2, reverse("dashboard"))
         award.refresh_from_db()
@@ -249,6 +258,7 @@ class WebFlowTests(TestCase):
 
         freq.refresh_from_db()
         self.assertEqual(freq.status, "ACCEPTED")
+        self.assertIsNotNone(freq.responded_at)
         self.assertTrue(FriendLink.objects.filter(user=user1, friend=user2).exists())
         self.assertTrue(FriendLink.objects.filter(user=user2, friend=user1).exists())
 
@@ -283,6 +293,8 @@ class WebFlowTests(TestCase):
         # guest 수락
         accept_res = self.client.post(reverse("respond_party_invitation", args=[inv.id, "accept"]))
         self.assertRedirects(accept_res, reverse("dashboard"))
+        inv.refresh_from_db()
+        self.assertIsNotNone(inv.responded_at)
         self.assertIn(guest, party.members.all())
 
         # 호스트 대시보드에서 파티원 모니터링 확인
@@ -310,3 +322,55 @@ class WebFlowTests(TestCase):
         # 3. 파티 온보딩 버튼 문구 확인
         group = self.client.get(reverse("onboarding_group"))
         self.assertContains(group, "파티미션설정 →")
+
+    def test_invalid_proof_image_is_rejected_without_completing_quest(self):
+        user = User.objects.create_user(username="invalid-photo", password=None)
+        quest = PersonalDailyQuest.objects.create(
+            user=user, title="사진 검증", workout_type="러닝", target_minutes=30,
+        )
+        self.client.force_login(user)
+        invalid = SimpleUploadedFile("proof.txt", b"not an image", content_type="text/plain")
+        response = self.client.post(
+            reverse("complete_daily_quest", args=["personal", quest.id]),
+            {"proof_image": invalid},
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertFalse(BadgeAward.objects.filter(user=user, personal_quest=quest).exists())
+        self.assertFalse(WorkoutRecord.objects.filter(user=user, location="일일미션 달성").exists())
+
+    def test_friend_request_database_constraints(self):
+        user1 = User.objects.create_user(username="constraint-a", password=None)
+        user2 = User.objects.create_user(username="constraint-b", password=None)
+        FriendRequest.objects.create(from_user=user1, to_user=user2)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            FriendRequest.objects.create(from_user=user1, to_user=user2)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            FriendRequest.objects.create(from_user=user1, to_user=user1)
+
+    def test_party_invitation_rejects_full_or_expired_party(self):
+        owner = User.objects.create_user(username="party-owner", password=None)
+        guest = User.objects.create_user(username="party-guest", password=None)
+        full_party = Party.objects.create(name="정원 마감", owner=owner, max_members=1)
+        full_party.members.add(owner)
+        full_invitation = PartyInvitation.objects.create(
+            party=full_party, inviter=owner, invitee=guest,
+        )
+        self.client.force_login(guest)
+        self.client.post(reverse("respond_party_invitation", args=[full_invitation.id, "accept"]))
+        full_invitation.refresh_from_db()
+        self.assertEqual(full_invitation.status, "PENDING")
+        self.assertNotIn(guest, full_party.members.all())
+
+        expired_party = Party.objects.create(
+            name="종료 파티", owner=owner, max_members=4,
+            challenge_start=timezone.localdate() - timedelta(days=2),
+            challenge_end=timezone.localdate() - timedelta(days=1),
+        )
+        expired_party.members.add(owner)
+        expired_invitation = PartyInvitation.objects.create(
+            party=expired_party, inviter=owner, invitee=guest,
+        )
+        self.client.post(reverse("respond_party_invitation", args=[expired_invitation.id, "accept"]))
+        expired_invitation.refresh_from_db()
+        self.assertEqual(expired_invitation.status, "PENDING")
+        self.assertNotIn(guest, expired_party.members.all())

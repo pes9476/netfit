@@ -3,6 +3,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from .validators import validate_proof_image
+
 REGION_CHOICES = [
     ("서울특별시", "서울특별시"), ("부산광역시", "부산광역시"),
     ("대구광역시", "대구광역시"), ("인천광역시", "인천광역시"),
@@ -213,7 +215,10 @@ class WorkoutRecord(models.Model):
     distance_km = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     location = models.CharField(max_length=120, blank=True)
     with_party = models.BooleanField(default=False)
-    proof_image = models.ImageField(upload_to="workout_proofs/", blank=True, null=True)
+    proof_image = models.ImageField(
+        upload_to="workout_proofs/", blank=True, null=True,
+        validators=[validate_proof_image],
+    )
     earned_xp = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -251,7 +256,10 @@ class BadgeAward(models.Model):
     personal_quest = models.ForeignKey(
         "PersonalDailyQuest", null=True, blank=True, on_delete=models.CASCADE, related_name="badge_awards",
     )
-    proof_image = models.ImageField(upload_to="quest_proofs/", blank=True, null=True)
+    proof_image = models.ImageField(
+        upload_to="quest_proofs/", blank=True, null=True,
+        validators=[validate_proof_image],
+    )
     awarded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -542,9 +550,21 @@ class FriendRequest(models.Model):
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_friend_requests")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(from_user=models.F("to_user")),
+                name="friend_request_not_self",
+            ),
+            models.UniqueConstraint(
+                fields=["from_user", "to_user"],
+                condition=models.Q(status="PENDING"),
+                name="unique_pending_friend_request",
+            ),
+        ]
 
 
 class PartyInvitation(models.Model):
@@ -554,7 +574,15 @@ class PartyInvitation(models.Model):
     invitee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_party_invitations")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["party", "invitee"],
+                condition=models.Q(status="PENDING"),
+                name="unique_pending_party_invitation",
+            ),
+        ]
 
