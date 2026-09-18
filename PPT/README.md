@@ -1,1 +1,1 @@
-![img_Main](/PPT/img/img_main.jpg)
+![img_Main](img/img_main.jpg)
