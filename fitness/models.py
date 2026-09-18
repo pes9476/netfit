@@ -213,6 +213,7 @@ class WorkoutRecord(models.Model):
     distance_km = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     location = models.CharField(max_length=120, blank=True)
     with_party = models.BooleanField(default=False)
+    proof_image = models.ImageField(upload_to="workout_proofs/", blank=True, null=True)
     earned_xp = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -250,6 +251,7 @@ class BadgeAward(models.Model):
     personal_quest = models.ForeignKey(
         "PersonalDailyQuest", null=True, blank=True, on_delete=models.CASCADE, related_name="badge_awards",
     )
+    proof_image = models.ImageField(upload_to="quest_proofs/", blank=True, null=True)
     awarded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -269,10 +271,12 @@ class BadgeAward(models.Model):
 
     @classmethod
     def badge_for_minutes(cls, minutes):
-        if minutes >= 60:
+        if minutes >= 90:
             return cls.GOLD
-        if minutes >= 30:
+        if minutes >= 60:
             return cls.SILVER
+        if minutes >= 30:
+            return cls.BRONZE
         return cls.BRONZE
 
     def save(self, *args, **kwargs):
@@ -530,3 +534,27 @@ class CardBattle(models.Model):
     @property
     def reward_label(self):
         return self.custom_reward if self.reward == "CUSTOM" else self.get_reward_display()
+
+
+class FriendRequest(models.Model):
+    STATUS_CHOICES = [("PENDING", "대기중"), ("ACCEPTED", "수락됨"), ("REJECTED", "거절됨")]
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_friend_requests")
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_friend_requests")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PartyInvitation(models.Model):
+    STATUS_CHOICES = [("PENDING", "대기중"), ("ACCEPTED", "수락됨"), ("REJECTED", "거절됨")]
+    party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="invitations")
+    inviter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_party_invitations")
+    invitee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_party_invitations")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+

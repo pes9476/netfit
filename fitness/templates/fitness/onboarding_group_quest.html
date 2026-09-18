@@ -5,7 +5,106 @@
   <header class="onboarding-heading"><span>PARTY DAILY MISSION</span><h1>{{ party.name }} 일일미션</h1><p>파티원이 함께 할 운동을 직접 입력해 주세요.</p></header>
   <div class="onboarding-group-grid">
     <aside class="panel group-members"><h2>참여 멤버</h2>{% for member in members %}<p>👤 {{ member.profile.display_name|default:member.username }}</p>{% endfor %}</aside>
-    <form method="post" class="panel quest-form">{% csrf_token %}<label for="questTitle">일일미션 직접 입력</label><input class="input" id="questTitle" name="title" maxlength="100" required placeholder="예: 러닝 30분 또는 저녁 산책"><label for="workoutType">운동 종류</label><select class="input custom-workout-select" id="workoutType" name="workout_type"><option value="러닝">🏃 러닝</option><option value="걷기">🚶 산책</option><option value="수영">🏊 수영</option><option value="배드민턴">🏸 배드민턴</option><option value="자전거">🚲 자전거</option><option value="헬스">🏋️ 헬스</option><option value="등산">🥾 등산</option><option value="축구">⚽ 축구</option><option value="농구">🏀 농구</option><option value="요가">🧘 요가</option><option value="기타">✍️ 직접입력</option></select><div class="custom-workout-field" hidden><label for="customWorkoutName">직접 입력할 운동</label><input class="input" id="customWorkoutName" name="custom_workout_name" maxlength="50" placeholder="예: 필라테스, 탁구, 복싱"></div><label for="targetMinutes">목표 시간</label><div class="minute-input"><input class="input" id="targetMinutes" name="target_minutes" type="number" min="5" max="300" value="30" required><span>분</span></div><button class="button onboarding-next" type="submit">파티 일일미션 저장하고 시작 →</button></form>
+    <form method="post" class="panel quest-form" id="groupQuestForm">
+      {% csrf_token %}
+      <label for="questTitle">일일미션 직접 입력</label>
+      <input class="input" id="questTitle" name="title" maxlength="100" required placeholder="예: 러닝 30분 또는 저녁 산책">
+      
+      <label for="workoutType">운동 종류</label>
+      <select class="input custom-workout-select" id="workoutType" name="workout_type">
+        <option value="러닝">🏃 러닝</option>
+        <option value="걷기">🚶 산책</option>
+        <option value="수영">🏊 수영</option>
+        <option value="배드민턴">🏸 배드민턴</option>
+        <option value="자전거">🚲 자전거</option>
+        <option value="헬스">🏋️ 헬스</option>
+        <option value="등산">🥾 등산</option>
+        <option value="축구">⚽ 축구</option>
+        <option value="농구">🏀 농구</option>
+        <option value="요가">🧘 요가</option>
+        <option value="기타">✍️ 직접입력</option>
+      </select>
+      <div class="custom-workout-field" hidden>
+        <label for="customWorkoutName">직접 입력할 운동</label>
+        <input class="input" id="customWorkoutName" name="custom_workout_name" maxlength="50" placeholder="예: 필라테스, 탁구, 복싱">
+      </div>
+
+      <label style="display: block; margin-top: 14px; margin-bottom: 8px;">목표 시간</label>
+      <div class="time-category-chips" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+        <button type="button" class="time-chip active" data-mins="30">30분</button>
+        <button type="button" class="time-chip" data-mins="60">1시간</button>
+        <button type="button" class="time-chip" data-mins="90">1시간 30분</button>
+        <button type="button" class="time-chip" data-mins="custom">직접입력</button>
+      </div>
+      <div class="custom-time-wrapper" style="display: none; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input class="input custom-time-input" type="number" min="5" max="300" value="30" placeholder="5~300분" style="max-width: 160px;">
+          <span style="font-weight: 600; color: #94a3b8;">분</span>
+        </div>
+        <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">최소 5분에서 최대 300분까지 입력할 수 있어요.</small>
+      </div>
+      <input type="hidden" name="target_minutes" id="targetMinutesField" value="30">
+
+      <button class="button onboarding-next" type="submit" style="margin-top: 16px;">파티 일일미션 저장하고 시작 →</button>
+    </form>
   </div>
-</section><script>document.querySelectorAll('.custom-workout-select').forEach(select=>{const field=select.parentElement.querySelector('.custom-workout-field'),input=field.querySelector('input');const toggle=()=>{const show=select.value==='기타';field.hidden=!show;input.required=show;if(show)input.focus()};select.addEventListener('change',toggle);toggle()});</script>
+</section>
+
+<style>
+.time-chip {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.time-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.time-chip.active {
+  background: var(--neon-mint, #00f59b);
+  border-color: var(--neon-mint, #00f59b);
+  color: #0f172a;
+  font-weight: 700;
+}
+</style>
+
+<script>
+document.querySelectorAll('.custom-workout-select').forEach(select=>{
+  const field=select.parentElement.querySelector('.custom-workout-field'),input=field.querySelector('input');
+  const toggle=()=>{const show=select.value==='기타';field.hidden=!show;input.required=show;if(show)input.focus()};
+  select.addEventListener('change',toggle);
+  toggle();
+});
+
+const chips = document.querySelectorAll('#groupQuestForm .time-chip');
+const customWrapper = document.querySelector('#groupQuestForm .custom-time-wrapper');
+const customInput = document.querySelector('#groupQuestForm .custom-time-input');
+const targetField = document.getElementById('targetMinutesField');
+
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const mins = chip.getAttribute('data-mins');
+    if (mins === 'custom') {
+      customWrapper.style.display = 'block';
+      customInput.focus();
+      targetField.value = customInput.value || '30';
+    } else {
+      customWrapper.style.display = 'none';
+      targetField.value = mins;
+    }
+  });
+});
+
+customInput.addEventListener('input', () => {
+  targetField.value = customInput.value;
+});
+</script>
 {% endblock %}

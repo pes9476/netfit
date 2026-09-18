@@ -2,30 +2,85 @@
 {% block content %}
 <section class="page-intro">
   <h1><i class="fa-solid fa-user-group" style="color: var(--indigo-primary); margin-right: 8px;"></i>친구</h1>
-  <p>같이 운동할 친구를 추가하고 친구 랭킹과 카드 배틀을 즐겨보세요.</p>
+  <p>같이 운동할 친구를 추가하고 함께 파티 미션과 친구 랭킹을 즐겨보세요.</p>
 </section>
+
+<!-- 🔔 받은 친구 요청 목록 -->
+{% if pending_received_requests %}
+<article class="panel" style="border: 1px solid rgba(0, 245, 155, 0.4); background: rgba(16, 24, 39, 0.85); margin-bottom: 20px;">
+  <h2><i class="fa-solid fa-envelope-open-text" style="color: var(--neon-mint); margin-right: 8px;"></i>받은 친구 요청 ({{ pending_received_requests|length }}건)</h2>
+  <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">
+    나에게 친구를 요청한 사용자입니다. 수락하면 서로의 친구 목록에 추가됩니다.
+  </p>
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    {% for freq in pending_received_requests %}
+      <div class="friend-item" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 0;">
+        <div class="friend-avatar" style="background: rgba(0, 245, 155, 0.15); border-color: var(--neon-mint); color: var(--neon-mint);">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div>
+          <b style="font-size: 14px; color: #FFFFFF;">{{ freq.from_user.profile.display_name|default:freq.from_user.username }}</b>
+          <small style="display: block; color: var(--text-muted); margin-top: 3px;">
+            @{{ freq.from_user.username }} · {{ freq.from_user.profile.area }} · <span class="tier-badge" style="padding: 1px 6px; font-size: 10px;">Lv.{{ freq.from_user.charactercard.level|default:1 }}</span>
+          </small>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" style="margin: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="friends">
+            <button class="button btn-mint" type="submit" style="padding: 8px 16px; font-size: 12.5px; font-weight: 800;">
+              <i class="fa-solid fa-check"></i> 수락
+            </button>
+          </form>
+          <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" style="margin: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="friends">
+            <button class="button secondary" type="submit" style="padding: 8px 16px; font-size: 12.5px; font-weight: 800; color: #EF4444; border-color: rgba(239, 68, 68, 0.3);">
+              <i class="fa-solid fa-xmark"></i> 거절
+            </button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</article>
+{% endif %}
 
 <article class="panel" id="friend-add">
   <h2><i class="fa-solid fa-user-plus" style="color: var(--neon-mint); margin-right: 8px;"></i>친구 추가</h2>
   <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">
-    상대방이 회원가입할 때 설정한 아이디 또는 닉네임을 입력하여 친구를 추가할 수 있습니다.
+    상대방의 아이디 또는 닉네임을 입력하여 친구 요청을 보낼 수 있습니다. 상대방이 수락하면 연결됩니다.
   </p>
   <form method="post" action="{% url 'add_friend' %}" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
     {% csrf_token %}
+    <input type="hidden" name="next" value="friends">
     <div style="flex: 1; min-width: 240px;" class="field">
       {{ friend_form.friend_code.label_tag }}
       {{ friend_form.friend_code }}
     </div>
     <button class="button btn-mint" type="submit" style="margin-bottom: 14px;">
-      <i class="fa-solid fa-plus"></i>
-      <span>친구 추가</span>
+      <i class="fa-solid fa-paper-plane"></i>
+      <span>친구 요청 보내기</span>
     </button>
   </form>
+
+  {% if pending_sent_requests %}
+    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255, 255, 255, 0.1);">
+      <small style="color: #94A3B8; font-weight: 700; display: block; margin-bottom: 6px;">수락 대기 중인 요청:</small>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        {% for sreq in pending_sent_requests %}
+          <span style="font-size: 11.5px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 4px 10px; border-radius: 20px; color: #E2E8F0;">
+            <b>{{ sreq.to_user.profile.display_name|default:sreq.to_user.username }}</b> <span style="color: #38BDF8;">(대기 중 ⏱️)</span>
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
 </article>
 
 <section class="section-head" id="friend-list">
   <div>
-    <h2><i class="fa-solid fa-address-book" style="color: #38BDF8; margin-right: 8px;"></i>내 친구 목록</h2>
+    <h2><i class="fa-solid fa-address-book" style="color: #38BDF8; margin-right: 8px;"></i>내 친구 목록 ({{ friends|length }}명)</h2>
     <p>친구는 서로의 친구 랭킹에서 볼 수 있습니다.</p>
   </div>
   <a class="button secondary" href="{% url 'ranking' %}?scope=friends">
@@ -48,10 +103,6 @@
           </small>
         </div>
       </div>
-      <a class="button" href="{% url 'battle' %}" style="padding: 9px 16px; font-size: 13px;">
-        <i class="fa-solid fa-fire"></i>
-        <span>카드 배틀</span>
-      </a>
     </div>
   {% empty %}
     <p style="color: var(--text-muted); margin: 12px 0;">아직 친구가 없어요. 친구의 닉네임을 입력해 추가해보세요.</p>

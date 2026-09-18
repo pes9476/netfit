@@ -4,9 +4,113 @@
   <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 솔로·파티</span><i></i><span class="active">4 솔로 설정</span></div>
   <header class="onboarding-heading"><span>SOLO MISSION</span><h1>솔로 운동을 어떻게 시작할까요?</h1><p>직접 일일미션을 만들거나 AI 추천을 받고, 내 주변 운동시설도 찾아볼 수 있어요.</p></header>
   <div class="solo-options">
-    <details class="panel solo-option" open><summary><span>✍️</span><strong>일일미션 직접 입력</strong><small>운동과 목표 시간을 직접 정해요</small></summary><form method="post">{% csrf_token %}<input type="hidden" name="action" value="direct"><label>일일미션 이름</label><input class="input" name="title" required placeholder="예: 저녁 러닝"><label>운동 종류</label><select class="input custom-workout-select" name="workout_type"><option value="러닝">🏃 러닝</option><option value="걷기">🚶 산책</option><option value="수영">🏊 수영</option><option value="배드민턴">🏸 배드민턴</option><option value="자전거">🚲 자전거</option><option value="헬스">🏋️ 헬스</option><option value="등산">🥾 등산</option><option value="축구">⚽ 축구</option><option value="농구">🏀 농구</option><option value="요가">🧘 요가</option><option value="기타">✍️ 직접입력</option></select><div class="custom-workout-field" hidden><label>직접 입력할 운동</label><input class="input" name="custom_workout_name" maxlength="50" placeholder="예: 필라테스, 탁구, 복싱"></div><label>목표 시간</label><input class="input" type="number" name="target_minutes" min="5" max="300" value="30" required><button class="button" type="submit">일일미션 만들기</button></form></details>
+    <details class="panel solo-option" open>
+      <summary><span>✍️</span><strong>일일미션 직접 입력</strong><small>운동과 목표 시간을 직접 정해요</small></summary>
+      <form method="post" id="soloQuestForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="direct">
+        <label>일일미션 이름</label>
+        <input class="input" name="title" required placeholder="예: 저녁 러닝">
+        
+        <label>운동 종류</label>
+        <select class="input custom-workout-select" name="workout_type">
+          <option value="러닝">🏃 러닝</option>
+          <option value="걷기">🚶 산책</option>
+          <option value="수영">🏊 수영</option>
+          <option value="배드민턴">🏸 배드민턴</option>
+          <option value="자전거">🚲 자전거</option>
+          <option value="헬스">🏋️ 헬스</option>
+          <option value="등산">🥾 등산</option>
+          <option value="축구">⚽ 축구</option>
+          <option value="농구">🏀 농구</option>
+          <option value="요가">🧘 요가</option>
+          <option value="기타">✍️ 직접입력</option>
+        </select>
+        <div class="custom-workout-field" hidden>
+          <label>직접 입력할 운동</label>
+          <input class="input" name="custom_workout_name" maxlength="50" placeholder="예: 필라테스, 탁구, 복싱">
+        </div>
+
+        <label style="display: block; margin-top: 14px; margin-bottom: 8px;">목표 시간</label>
+        <div class="time-category-chips" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+          <button type="button" class="time-chip active" data-mins="30">30분</button>
+          <button type="button" class="time-chip" data-mins="60">1시간</button>
+          <button type="button" class="time-chip" data-mins="90">1시간 30분</button>
+          <button type="button" class="time-chip" data-mins="custom">직접입력</button>
+        </div>
+        <div class="custom-time-wrapper" style="display: none; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input class="input custom-time-input" type="number" min="5" max="300" value="30" placeholder="5~300분" style="max-width: 160px;">
+            <span style="font-weight: 600; color: #94a3b8;">분</span>
+          </div>
+          <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">최소 5분에서 최대 300분까지 입력할 수 있어요.</small>
+        </div>
+        <input type="hidden" name="target_minutes" id="targetMinutesField" value="30">
+
+        <button class="button" type="submit" style="margin-top: 16px;">일일미션 만들기</button>
+      </form>
+    </details>
     <form method="post" class="panel solo-action">{% csrf_token %}<input type="hidden" name="action" value="ai"><span>✨</span><h2>AI 추천</h2><p>프로필을 참고해 오늘 할 운동을 추천해요.</p><button class="button" type="submit">AI 일일미션 받기</button></form>
     <form method="post" class="panel solo-action">{% csrf_token %}<input type="hidden" name="action" value="facility"><span>📍</span><h2>주변시설 추천</h2><p>내 지역의 운동시설을 종목별로 찾아봐요.</p><button class="button" type="submit">주변시설 보기</button></form>
   </div>
-</section><script>document.querySelectorAll('.custom-workout-select').forEach(select=>{const field=select.parentElement.querySelector('.custom-workout-field'),input=field.querySelector('input');const toggle=()=>{const show=select.value==='기타';field.hidden=!show;input.required=show;if(show)input.focus()};select.addEventListener('change',toggle);toggle()});</script>
+</section>
+
+<style>
+.time-chip {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.time-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.time-chip.active {
+  background: var(--neon-mint, #00f59b);
+  border-color: var(--neon-mint, #00f59b);
+  color: #0f172a;
+  font-weight: 700;
+}
+</style>
+
+<script>
+document.querySelectorAll('.custom-workout-select').forEach(select=>{
+  const field=select.parentElement.querySelector('.custom-workout-field'),input=field.querySelector('input');
+  const toggle=()=>{const show=select.value==='기타';field.hidden=!show;input.required=show;if(show)input.focus()};
+  select.addEventListener('change',toggle);
+  toggle();
+});
+
+// 시간 카테고리 선택 로직
+const chips = document.querySelectorAll('#soloQuestForm .time-chip');
+const customWrapper = document.querySelector('#soloQuestForm .custom-time-wrapper');
+const customInput = document.querySelector('#soloQuestForm .custom-time-input');
+const targetField = document.getElementById('targetMinutesField');
+
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const mins = chip.getAttribute('data-mins');
+    if (mins === 'custom') {
+      customWrapper.style.display = 'block';
+      customInput.focus();
+      targetField.value = customInput.value || '30';
+    } else {
+      customWrapper.style.display = 'none';
+      targetField.value = mins;
+    }
+  });
+});
+
+customInput.addEventListener('input', () => {
+  targetField.value = customInput.value;
+});
+</script>
 {% endblock %}

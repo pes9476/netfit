@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
-from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, OutfitPurchase, Party, PersonalDailyQuest, WorkoutRecord
+from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord
 from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, get_weather_data, total_card_xp
 
 DEMO_OPPONENTS = [
@@ -116,6 +116,61 @@ def dashboard(request):
     ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party")[:3]
     completed_personal_ids = set(BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests).values_list("personal_quest_id", flat=True))
     completed_group_ids = set(BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests).values_list("daily_quest_id", flat=True))
+
+    today = timezone.localdate()
+    today_records = list(records.filter(created_at__date=today))
+
+    personal_badge_map = {
+        award.personal_quest_id: award
+        for award in BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests)
+    }
+    group_badge_map = {
+        award.daily_quest_id: award
+        for award in BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests)
+    }
+
+    for quest in personal_quests:
+        is_done = quest.id in completed_personal_ids
+        quest.is_completed = is_done
+        quest.badge_award = personal_badge_map.get(quest.id)
+        if is_done:
+            quest.progress_percent = 100
+            quest.done_minutes = quest.target_minutes
+            quest.remaining_minutes = 0
+        else:
+            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
+            quest.done_minutes = min(done_mins, quest.target_minutes)
+            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
+            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
+
+    for quest in group_quests:
+        is_done = quest.id in completed_group_ids
+        quest.is_completed = is_done
+        quest.badge_award = group_badge_map.get(quest.id)
+        if is_done:
+            quest.progress_percent = 100
+            quest.done_minutes = quest.target_minutes
+            quest.remaining_minutes = 0
+        else:
+            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
+            quest.done_minutes = min(done_mins, quest.target_minutes)
+            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
+            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
+
+        # 👥 파티원 참여자 모니터링 (각 파티원의 오늘 미션 달성 여부)
+        members_status = []
+        party_members = quest.party.members.all().select_related("profile", "charactercard")
+        for m in party_members:
+            has_done = BadgeAward.objects.filter(user=m, daily_quest=quest, awarded_at__date=today).exists()
+            members_status.append({
+                "user": m,
+                "name": m.profile.display_name or m.username,
+                "level": getattr(getattr(m, "charactercard", None), "level", 1),
+                "is_done": has_done,
+                "is_me": (m == request.user),
+            })
+        quest.members_monitoring = members_status
+
     party_challenges = []
     for party in request.user.parties.all():
         if not party.challenge_start or not party.challenge_end:
@@ -129,6 +184,15 @@ def dashboard(request):
             rows.append({"name": member.profile.display_name or member.username, "points": points, "is_me": member == request.user})
         rows.sort(key=lambda row: row["points"], reverse=True)
         party_challenges.append({"party": party, "rows": rows})
+
+    # 🔔 대기 중인 친구 요청 및 파티 초대
+    pending_friend_requests = FriendRequest.objects.filter(
+        to_user=request.user, status="PENDING"
+    ).select_related("from_user__profile", "from_user__charactercard")
+    pending_party_invitations = PartyInvitation.objects.filter(
+        invitee=request.user, status="PENDING"
+    ).select_related("party", "inviter__profile")
+
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
@@ -139,6 +203,8 @@ def dashboard(request):
         "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
         "badge_summary": badge_summary(request.user),
         "party_challenges": party_challenges, "weather_latitude": latitude, "weather_longitude": longitude,
+        "pending_friend_requests": pending_friend_requests,
+        "pending_party_invitations": pending_party_invitations,
     })
 
 
@@ -227,7 +293,7 @@ def activity_view(request):
 @login_required
 def record_workout(request):
     if request.method == "POST":
-        form = WorkoutForm(request.POST)
+        form = WorkoutForm(request.POST, request.FILES)
         if form.is_valid():
             record = form.save(commit=False)
             record.user = request.user
@@ -236,6 +302,7 @@ def record_workout(request):
             badge_type = BadgeAward.badge_for_minutes(record.minutes)
             award = BadgeAward.objects.create(
                 user=request.user, badge_type=badge_type, source="WORKOUT", workout_record=record,
+                proof_image=record.proof_image,
             )
             messages.success(request, f"운동 기록 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
     return redirect(request.POST.get("next", "activity"))
@@ -245,6 +312,8 @@ def record_workout(request):
 def complete_daily_quest(request, quest_kind, quest_id):
     if request.method != "POST":
         return redirect("dashboard")
+    action = request.POST.get("action", "complete")
+    proof_image = request.FILES.get("proof_image")
     if quest_kind == "personal":
         quest = get_object_or_404(PersonalDailyQuest, pk=quest_id, user=request.user, is_active=True)
         award, created = BadgeAward.objects.get_or_create(
@@ -262,10 +331,54 @@ def complete_daily_quest(request, quest_kind, quest_id):
             user=request.user, daily_quest=quest,
             defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
         )
+
+    # 1. 인증 사진 삭제 액션
+    if action == "delete_proof":
+        if award.proof_image:
+            award.proof_image.delete(save=False)
+            award.proof_image = None
+            award.save(update_fields=["proof_image"])
+            if hasattr(award, "workout_record") and award.workout_record:
+                award.workout_record.proof_image = None
+                award.workout_record.save(update_fields=["proof_image"])
+            messages.success(request, "등록된 인증 사진이 삭제되었습니다.")
+        else:
+            messages.info(request, "삭제할 인증 사진이 없습니다.")
+        return redirect("dashboard")
+
+    # 2. 최초 완료 시 (최근 운동 기록에 자동 등록)
     if created:
-        messages.success(request, f"일일미션 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
+        if proof_image:
+            award.proof_image = proof_image
+            award.save(update_fields=["proof_image"])
+        w_type = quest.workout_type if quest.workout_type in dict(WorkoutRecord.WORKOUT_CHOICES) else "기타"
+        custom_name = getattr(quest, "custom_workout_name", "") or (quest.title if w_type == "기타" else "")
+        rec = WorkoutRecord.objects.create(
+            user=request.user,
+            workout_type=w_type,
+            custom_workout_name=custom_name,
+            minutes=quest.target_minutes,
+            location="일일미션 달성",
+            proof_image=award.proof_image,
+        )
+        award.workout_record = rec
+        award.save(update_fields=["workout_record"])
+        messages.success(request, f"일일미션 완료! {award.get_badge_type_display()} 배지와 {award.points}점을 받았어요. (최근 운동기록 자동 등록)")
     else:
-        messages.info(request, "이미 완료하고 배지를 받은 일일미션이에요.")
+        # 3. 이미 완료된 미션의 사진 변경/수정 또는 신규 등록
+        if proof_image:
+            is_update = bool(award.proof_image)
+            award.proof_image = proof_image
+            award.save(update_fields=["proof_image"])
+            if hasattr(award, "workout_record") and award.workout_record:
+                award.workout_record.proof_image = award.proof_image
+                award.workout_record.save(update_fields=["proof_image"])
+            if is_update:
+                messages.success(request, "인증 사진이 새로운 사진으로 성공적으로 변경되었습니다!")
+            else:
+                messages.success(request, "인증 사진이 성공적으로 등록되었습니다!")
+        else:
+            messages.info(request, "이미 완료하고 배지를 받은 일일미션이에요.")
     return redirect("dashboard")
 
 
@@ -581,7 +694,14 @@ def outfit_shop(request):
 @login_required
 def friends_view(request):
     friends = User.objects.filter(received_friend_links__user=request.user).select_related("profile", "charactercard")
-    return render(request, "fitness/friends.html", {"friend_form": FriendForm(), "friends": friends})
+    pending_received_requests = FriendRequest.objects.filter(to_user=request.user, status="PENDING").select_related("from_user__profile", "from_user__charactercard")
+    pending_sent_requests = FriendRequest.objects.filter(from_user=request.user, status="PENDING").select_related("to_user__profile")
+    return render(request, "fitness/friends.html", {
+        "friend_form": FriendForm(),
+        "friends": friends,
+        "pending_received_requests": pending_received_requests,
+        "pending_sent_requests": pending_sent_requests,
+    })
 
 
 @login_required
@@ -596,12 +716,53 @@ def add_friend(request):
             elif friend == request.user:
                 messages.error(request, "본인은 친구로 추가할 수 없어요.")
             elif FriendLink.objects.filter(user=request.user, friend=friend).exists():
-                messages.error(request, "이미 추가한 친구예요.")
-            else:
+                messages.info(request, f"{friend.username}님과는 이미 친구예요.")
+            elif FriendRequest.objects.filter(from_user=request.user, to_user=friend, status="PENDING").exists():
+                messages.info(request, f"{friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
+            elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
+                fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
+                fr.status = "ACCEPTED"
+                fr.save(update_fields=["status"])
                 FriendLink.objects.get_or_create(user=request.user, friend=friend)
                 FriendLink.objects.get_or_create(user=friend, friend=request.user)
-                messages.success(request, f"{friend.username}님을 친구로 추가했어요!")
-    return redirect("friends")
+                messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
+            else:
+                FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
+                messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+    return redirect(request.POST.get("next") or "friends")
+
+
+@login_required
+def respond_friend_request(request, request_id, action):
+    if request.method == "POST":
+        freq = get_object_or_404(FriendRequest, pk=request_id, to_user=request.user, status="PENDING")
+        if action == "accept":
+            freq.status = "ACCEPTED"
+            freq.save(update_fields=["status"])
+            FriendLink.objects.get_or_create(user=request.user, friend=freq.from_user)
+            FriendLink.objects.get_or_create(user=freq.from_user, friend=request.user)
+            messages.success(request, f"{freq.from_user.username}님의 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.")
+        elif action == "reject":
+            freq.status = "REJECTED"
+            freq.save(update_fields=["status"])
+            messages.info(request, f"{freq.from_user.username}님의 친구 요청을 거절했습니다.")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def respond_party_invitation(request, invitation_id, action):
+    if request.method == "POST":
+        inv = get_object_or_404(PartyInvitation, pk=invitation_id, invitee=request.user, status="PENDING")
+        if action == "accept":
+            inv.status = "ACCEPTED"
+            inv.save(update_fields=["status"])
+            inv.party.members.add(request.user)
+            messages.success(request, f"'{inv.party.name}' 파티 초대를 수락했습니다! 파티 일일미션에 참여해보세요.")
+        elif action == "reject":
+            inv.status = "REJECTED"
+            inv.save(update_fields=["status"])
+            messages.info(request, f"'{inv.party.name}' 파티 초대를 거절했습니다.")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
 PRESET_LOCATIONS = {
@@ -914,11 +1075,19 @@ def onboarding_group(request):
         elif friend == request.user:
             messages.error(request, "본인은 친구로 추가할 수 없어요.")
         elif FriendLink.objects.filter(user=request.user, friend=friend).exists():
-            messages.info(request, "이미 친구 목록에 있어요.")
-        else:
+            messages.info(request, f"{friend.username}님과는 이미 친구예요.")
+        elif FriendRequest.objects.filter(from_user=request.user, to_user=friend, status="PENDING").exists():
+            messages.info(request, f"{friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
+        elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
+            fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
+            fr.status = "ACCEPTED"
+            fr.save(update_fields=["status"])
             FriendLink.objects.get_or_create(user=request.user, friend=friend)
             FriendLink.objects.get_or_create(user=friend, friend=request.user)
-            messages.success(request, f"{friend.username}님을 친구로 추가했어요.")
+            messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
+        else:
+            FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
+            messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
         return redirect("onboarding_group")
     if request.method == "POST" and request.POST.get("action") == "create_room":
         room_name = request.POST.get("room_name", "").strip()[:100]
@@ -942,10 +1111,21 @@ def onboarding_group(request):
                     challenge_start=challenge_start, challenge_end=challenge_end,
                     challenge_reward=challenge_reward,
                 )
-                party.members.add(request.user, *User.objects.filter(id__in=invited_ids))
+                party.members.add(request.user)
+                for inv_user in User.objects.filter(id__in=invited_ids):
+                    PartyInvitation.objects.get_or_create(
+                        party=party,
+                        inviter=request.user,
+                        invitee=inv_user,
+                        defaults={"status": "PENDING"}
+                    )
                 profile = request.user.profile
                 profile.workout_mode = "GROUP"
                 profile.save(update_fields=["workout_mode"])
+            if invited_ids:
+                messages.success(request, f"'{party.name}' 파티를 만들고 {len(invited_ids)}명의 친구에게 초대를 보냈어요!")
+            else:
+                messages.success(request, f"'{party.name}' 파티를 만들었어요!")
             return redirect("onboarding_group_quest", party_id=party.id)
     return render(request, "fitness/onboarding_group.html", {
         "friends": friends, "friend_form": FriendForm(),

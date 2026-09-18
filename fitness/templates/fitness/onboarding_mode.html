@@ -4,8 +4,132 @@
   <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="active">3 솔로·파티</span><i></i><span>4 세부 설정</span></div>
   <header class="onboarding-heading"><span>STEP 3</span><h1>솔로 또는 파티를 선택하세요</h1><p>나에게 맞는 방식으로 시작하고 나중에도 새 파티를 만들 수 있어요.</p></header>
   <form method="post" class="mode-picker">{% csrf_token %}
-    <button name="mode" value="SOLO" type="submit"><span class="mode-mascot mode-mascot-solo" aria-hidden="true"></span><strong>솔로</strong><small>일일미션 직접 입력·AI 추천<br>주변시설 추천을 받아요.</small><b>솔로 선택 →</b></button>
-    <button name="mode" value="GROUP" type="submit"><span class="mode-mascot mode-mascot-party" aria-hidden="true"><i class="tiger"></i><i class="bear"></i><i class="hamster"></i><i class="dino"></i></span><strong>파티</strong><small>친구를 초대하고<br>파티 일일미션을 만들어요.</small><b>파티 만들기 →</b></button>
+    <button name="mode" value="SOLO" type="submit" class="mode-card">
+      <div class="mode-mascot-box solo-box">
+        <div class="avatar-roster style-active" role="img" aria-label="달리는 백호"></div>
+      </div>
+      <strong>솔로</strong>
+      <small>일일미션 직접 입력·AI 추천<br>주변시설 추천을 받아요.</small>
+      <b>솔로 선택 →</b>
+    </button>
+    <button name="mode" value="GROUP" type="submit" class="mode-card">
+      <div class="mode-mascot-box party-box">
+        <div class="avatar-roster style-muscular" role="img" aria-label="백곰"></div>
+        <div class="avatar-roster style-active" role="img" aria-label="백호"></div>
+        <div class="avatar-roster style-soft" role="img" aria-label="햄스터"></div>
+        <div class="avatar-roster style-balanced" role="img" aria-label="아기공룡"></div>
+      </div>
+      <strong>파티</strong>
+      <small>친구를 초대하고<br>파티 일일미션을 만들어요.</small>
+      <b>파티 만들기 →</b>
+    </button>
   </form>
 </section>
+
+<style>
+.mode-mascot-box {
+  width: 100%;
+  height: 145px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  background: transparent;
+  border: none;
+}
+
+/* 🐯 솔로: 백호 단독 캐릭터 */
+.mode-mascot-box.solo-box {
+  position: relative;
+}
+.mode-mascot-box.solo-box::after {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 245, 155, 0.35) 0%, rgba(0, 245, 155, 0.05) 55%, transparent 70%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+.mode-mascot-box.solo-box .avatar-roster {
+  position: relative;
+  inset: 0;
+  width: 135px;
+  height: 135px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mode-mascot-box.solo-box .avatar-roster::before {
+  width: 132px;
+  max-width: 100%;
+}
+
+/* 👥 파티: 4명 마스코트 군단 */
+.mode-mascot-box.party-box {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 10px;
+}
+.mode-mascot-box.party-box::after {
+  content: "";
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 250px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.32) 0%, rgba(99, 102, 241, 0.1) 60%, transparent 75%);
+  filter: blur(3px);
+  pointer-events: none;
+}
+.mode-mascot-box.party-box .avatar-roster {
+  position: relative;
+  inset: 0;
+  width: 80px;
+  height: 120px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0 -3px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mode-mascot-box.party-box .avatar-roster::before {
+  width: 80px;
+  max-width: 100%;
+}
+.mode-mascot-box.party-box .avatar-roster.style-active {
+  z-index: 3;
+  transform: scale(1.06);
+}
+.mode-mascot-box.party-box .avatar-roster.style-muscular {
+  z-index: 1;
+}
+.mode-mascot-box.party-box .avatar-roster.style-soft {
+  z-index: 4;
+}
+.mode-mascot-box.party-box .avatar-roster.style-balanced {
+  z-index: 2;
+}
+
+.mode-picker button:hover .mode-mascot-box.solo-box .avatar-roster {
+  transform: scale(1.08);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mode-picker button:hover .mode-mascot-box.party-box .avatar-roster {
+  transform: translateY(-4px);
+}
+.mode-picker button:hover .mode-mascot-box.party-box .avatar-roster.style-active {
+  transform: translateY(-4px) scale(1.08);
+}
+</style>
 {% endblock %}

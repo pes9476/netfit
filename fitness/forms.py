@@ -20,7 +20,7 @@ class RegisterForm(UserCreationForm):
 class WorkoutForm(forms.ModelForm):
     class Meta:
         model = WorkoutRecord
-        fields = ("workout_type", "custom_workout_name", "minutes", "distance_km", "location", "with_party")
+        fields = ("workout_type", "custom_workout_name", "minutes", "distance_km", "location", "with_party", "proof_image")
         widgets = {
             "workout_type": forms.Select(attrs={"class": "input"}),
             "custom_workout_name": forms.TextInput(attrs={
@@ -28,9 +28,10 @@ class WorkoutForm(forms.ModelForm):
                 "placeholder": "예: 필라테스, 농구, 등산",
                 "maxlength": 50,
             }),
-            "minutes": forms.NumberInput(attrs={"class": "input", "min": 1}),
-            "distance_km": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1"}),
-            "location": forms.TextInput(attrs={"class": "input", "placeholder": "예: OO 체육공원"}),
+            "minutes": forms.NumberInput(attrs={"class": "input", "min": 1, "placeholder": "예: 30"}),
+            "distance_km": forms.NumberInput(attrs={"class": "input", "min": 0, "step": "0.1", "placeholder": "예: 3.5"}),
+            "location": forms.TextInput(attrs={"class": "input", "placeholder": "예: OO 체육공원 (미입력 가능)"}),
+            "proof_image": forms.FileInput(attrs={"class": "input", "accept": "image/*"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -51,6 +52,15 @@ class WorkoutForm(forms.ModelForm):
         self.fields["workout_type"].label = "운동 종류"
         self.fields["custom_workout_name"].label = "직접 입력할 운동"
         self.fields["custom_workout_name"].required = False
+        self.fields["minutes"].label = "운동 시간 (분)"
+        self.fields["distance_km"].label = "거리 (km)"
+        self.fields["distance_km"].required = False
+        self.fields["location"].label = "운동 장소 (선택)"
+        self.fields["location"].required = False
+        self.fields["with_party"].label = "파티와 함께 운동"
+        self.fields["with_party"].required = False
+        self.fields["proof_image"].label = "인증 사진 추가 (선택)"
+        self.fields["proof_image"].required = False
 
     def clean(self):
         cleaned_data = super().clean()
