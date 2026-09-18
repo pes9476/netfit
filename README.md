@@ -1,18 +1,22 @@
 <div align="center">
 
 ![title](PPT/img/img_Main.png)
+
 <div align="center" style="width: 10%; margin: 0 auto;">
 
 ---
 
 </div>
+
 KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문 
 # Team NetFit<br><br>
 
+<div align="center" style="width: 50%; margin: 0 auto;">
+
+---
+
 </div>
 <br><br>
-
-<div align="center" style="width: 50%; margin: 0 auto;">
 
 ---
 
