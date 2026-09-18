@@ -1,3 +1,5 @@
+import logging
+import re
 import secrets
 import time
 import uuid
@@ -14,6 +16,8 @@ from django.views.decorators.debug import sensitive_variables
 from django.views.decorators.http import require_GET
 
 from .models import KakaoAccount, needs_kakao_nickname
+
+logger = logging.getLogger(__name__)
 
 
 def fail(request, message):
@@ -67,12 +71,16 @@ def kakao_callback(request):
     }
     if settings.KAKAO_CLIENT_SECRET:
         payload["client_secret"] = settings.KAKAO_CLIENT_SECRET
+    stage = "token"
+    response = None
     try:
         response = requests.post("https://kauth.kakao.com/oauth/token", data=payload, timeout=10)
         response.raise_for_status()
         token = response.json()["access_token"]
         if not isinstance(token, str) or not token:
             raise ValueError("Missing token")
+        stage = "user_info"
+        response = None
         response = requests.get(
             "https://kapi.kakao.com/v2/user/me",
             headers={"Authorization": f"Bearer {token}"}, timeout=10,
@@ -82,7 +90,21 @@ def kakao_callback(request):
         kakao_id = data["id"]
         if type(kakao_id) is not int or kakao_id <= 0:
             raise ValueError("Invalid user ID")
-    except (requests.RequestException, ValueError, KeyError, TypeError):
+    except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
+        status = getattr(response, "status_code", None)
+        error_code = None
+        if response is not None:
+            try:
+                body = response.json()
+                candidate = body.get("error_code", body.get("code")) if isinstance(body, dict) else None
+                if isinstance(candidate, (str, int)) and re.fullmatch(r"(?:KOE[0-9]{3}|-?[0-9]{1,6})", str(candidate)):
+                    error_code = candidate
+            except (ValueError, TypeError):
+                pass
+        logger.warning(
+            "Kakao login failed: stage=%s status=%s code=%s exception=%s",
+            stage, status if isinstance(status, int) else None, error_code, type(exc).__name__,
+        )
         return fail(request, "카카오 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.")
 
     account = KakaoAccount.objects.select_related("user").filter(kakao_id=str(kakao_id)).first()
