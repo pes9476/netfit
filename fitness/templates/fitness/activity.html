@@ -2,21 +2,119 @@
 {% block content %}
 <section class="page-intro">
   <h1><i class="fa-solid fa-person-running" style="color: var(--neon-mint); margin-right: 8px;"></i>운동 기록</h1>
-  <p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다.</p>
+  <p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다. (30분 동메달 · 60분 은메달 · 90분 금메달)</p>
 </section>
+
+<!-- ⏱️ 실시간 운동 타이머 위젯 -->
+<article class="panel workout-timer-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(16, 26, 44, 0.95) 0%, rgba(10, 18, 32, 0.98) 100%); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 18px; padding: 20px 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 10px; background: rgba(0,245,155,0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; color: var(--neon-mint); font-size: 15px;">
+        <i class="fa-solid fa-stopwatch"></i>
+      </span>
+      <div>
+        <h2 style="font-size: 16px; margin: 0; color: #FFFFFF; font-weight: 900;">실시간 운동 타이머</h2>
+        <span style="font-size: 11px; color: var(--text-muted);">운동 시간을 측정하고 기록 폼에 바로 적용해보세요.</span>
+      </div>
+    </div>
+    
+    <!-- 모드 선택 탭 -->
+    <div class="timer-mode-pills" style="display: inline-flex; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 3px; gap: 4px;">
+      <button type="button" id="btnModeCountup" onclick="setTimerMode('countup')" style="cursor: pointer; padding: 5px 12px; border-radius: 7px; border: none; font-size: 11.5px; font-weight: 800; background: var(--neon-mint); color: #070B12; transition: all 0.2s;">
+        ⏱️ 스톱워치
+      </button>
+      <button type="button" id="btnModeCountdown" onclick="setTimerMode('countdown')" style="cursor: pointer; padding: 5px 12px; border-radius: 7px; border: none; font-size: 11.5px; font-weight: 800; background: transparent; color: #94A3B8; transition: all 0.2s;">
+        ⏳ 목표 타이머
+      </button>
+    </div>
+  </div>
+
+  <!-- 목표 타이머 빠른 선택 프리셋 버튼들 (목표 모드일 때 활성화) -->
+  <div id="targetPresetRow" style="display: none; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+    <span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">목표 시간 선택:</span>
+    <button type="button" class="preset-btn" onclick="setTargetMinutes(30)" style="cursor: pointer; background: rgba(205,127,50,0.15); border: 1px solid rgba(205,127,50,0.5); color: #FFA07A; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
+      🥉 30분 (동 배지)
+    </button>
+    <button type="button" class="preset-btn" onclick="setTargetMinutes(60)" style="cursor: pointer; background: rgba(192,192,192,0.15); border: 1px solid rgba(192,192,192,0.5); color: #E2E8F0; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
+      🥈 60분 (은 배지)
+    </button>
+    <button type="button" class="preset-btn" onclick="setTargetMinutes(90)" style="cursor: pointer; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.5); color: var(--trophy-gold); font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
+      🥇 90분 (금 배지)
+    </button>
+    <div style="display: inline-flex; align-items: center; gap: 4px;">
+      <input type="number" id="customTargetInput" min="1" max="600" placeholder="직접 분 입력" style="width: 90px; padding: 4px 8px; font-size: 11.5px; background: #162032; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #FFFFFF;" onchange="setTargetMinutes(this.value)">
+      <span style="font-size: 11.5px; color: var(--text-muted);">분</span>
+    </div>
+  </div>
+
+  <!-- 타이머 메인 디스플레이 & 컨트롤러 -->
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; background: rgba(8, 14, 24, 0.75); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 22px;">
+    <div>
+      <div style="display: flex; align-items: baseline; gap: 10px;">
+        <span id="timerDisplay" style="font-family: 'Courier New', Courier, monospace; font-size: clamp(32px, 5vw, 44px); font-weight: 900; color: var(--neon-mint); letter-spacing: 2px; text-shadow: 0 0 20px rgba(0,245,155,0.4);">00:00</span>
+        <span id="timerStatusLabel" style="font-size: 12px; font-weight: 800; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">대기 중</span>
+      </div>
+      <div id="timerProgressContainer" style="width: 220px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 8px; overflow: hidden; display: none;">
+        <div id="timerProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); transition: width 0.3s;"></div>
+      </div>
+    </div>
+
+    <!-- 타이머 조작 버튼 그룹 -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button type="button" id="btnTimerStart" onclick="startTimer()" style="cursor: pointer; background: var(--neon-mint); color: #070B12; border: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 900; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(0,245,155,0.3);">
+        <i class="fa-solid fa-play"></i> <span>시작</span>
+      </button>
+      <button type="button" id="btnTimerPause" onclick="pauseTimer()" style="cursor: pointer; display: none; background: #F59E0B; color: #070B12; border: none; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 900; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-pause"></i> <span>일시정지</span>
+      </button>
+      <button type="button" id="btnTimerReset" onclick="resetTimer()" style="cursor: pointer; background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px;">
+        <i class="fa-solid fa-rotate-left"></i> <span>초기화</span>
+      </button>
+      <button type="button" id="btnTimerApply" onclick="applyTimerToForm()" style="cursor: pointer; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.4); padding: 10px 16px; border-radius: 10px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-check-to-slot"></i> <span>기록 폼에 시간 적용</span>
+      </button>
+    </div>
+  </div>
+</article>
 
 <div class="grid2 activity-entry-grid">
   <!-- 운동 입력 폼 -->
   <article class="panel">
     <h2><i class="fa-solid fa-pen-to-square" style="color: var(--neon-mint); margin-right: 8px;"></i>오늘 한 운동 입력</h2>
-    <form method="post" action="{% url 'record_workout' %}" style="margin-top: 16px;">
+    <form method="post" action="{% url 'record_workout' %}" enctype="multipart/form-data" style="margin-top: 16px;">
       {% csrf_token %}
       <input type="hidden" name="next" value="activity">
       <div class="form-grid">
         {% for field in workout_form %}
           <div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
-            {{ field.label_tag }}
-            {{ field }}
+            {% if field.name == 'proof_image' %}
+              {{ field.label_tag }}
+              <div style="display: none;">
+                {{ field }}
+              </div>
+              <label for="{{ field.id_for_label }}" class="logout-style-file-label" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; font-weight: 700; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease; transform-origin: left center; width: fit-content; margin-top: 6px; border: none; background: transparent; padding: 0; box-shadow: none;" onmouseover="this.style.transform='scale(1.08)'; this.style.color='#FFFFFF';" onmouseout="this.style.transform='scale(1)'; this.style.color='var(--text-muted)';">
+                <i class="fa-solid fa-camera" style="color: var(--neon-mint); font-size: 13px;"></i>
+                <span>파일</span>
+              </label>
+
+              <!-- 사진 미리보기 컨테이너 (우측 상단 대각선 ✕ 버튼 탑재) -->
+              <div id="proofImagePreviewContainer" style="display: none; margin-top: 10px; align-items: center; gap: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; width: fit-content; max-width: 100%;">
+                <!-- 썸네일 & 우측 대각선 상단 ✕ 닫기 버튼 -->
+                <div style="position: relative; display: inline-block; flex-shrink: 0;">
+                  <img id="proofImagePreview" src="" alt="인증 사진 미리보기" style="width: 52px; height: 52px; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--neon-mint); display: block;">
+                  <button type="button" onclick="removeSelectedProofImage()" style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; background: #EF4444; color: #FFFFFF; border: 2px solid #10192A; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.5); padding: 0; transition: transform 0.15s ease, background 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'; this.style.background='#DC2626';" onmouseout="this.style.transform='scale(1)'; this.style.background='#EF4444';" title="사진 삭제">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div style="min-width: 0;">
+                  <span style="font-size: 12.5px; font-weight: 800; color: #FFFFFF; display: block; margin-bottom: 2px;">인증 사진 선택됨</span>
+                  <small id="proofImageName" style="color: var(--text-muted); font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px;"></small>
+                </div>
+              </div>
+            {% else %}
+              {{ field.label_tag }}
+              {{ field }}
+            {% endif %}
             {{ field.errors }}
           </div>
         {% endfor %}
@@ -82,6 +180,11 @@
           기존 기록
         {% endif %}
       </span>
+      {% if record.proof_image %}
+        <a href="{{ record.proof_image.url }}" target="_blank" title="인증 사진 보기" style="margin-left: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.3); color: var(--neon-mint); font-size: 11px; text-decoration: none; font-weight: 700;">
+          <i class="fa-solid fa-camera"></i> 사진
+        </a>
+      {% endif %}
     </div>
   {% empty %}
     <p style="color: var(--text-muted); margin: 8px 0;">첫 운동을 기록해보세요.</p>
@@ -91,7 +194,8 @@
 <script>
 const workoutSelect = document.getElementById("id_workout_type"),
       customWorkout = document.getElementById("id_custom_workout_name"),
-      customField = customWorkout ? customWorkout.closest(".custom-workout-field") : null;
+      customField = customWorkout ? customWorkout.closest(".custom-workout-field") : null,
+      minutesInput = document.getElementById("id_minutes");
 
 function toggleCustomWorkout() {
   if (!workoutSelect || !customField || !customWorkout) return;
@@ -103,6 +207,230 @@ if (workoutSelect) {
   workoutSelect.addEventListener("change", toggleCustomWorkout);
   toggleCustomWorkout();
 }
+
+// 📸 사진 업로드 즉시 미리보기
+const proofInput = document.getElementById("id_proof_image");
+if (proofInput) {
+  proofInput.addEventListener("change", function() {
+    const file = this.files && this.files[0];
+    const previewContainer = document.getElementById("proofImagePreviewContainer");
+    const previewImg = document.getElementById("proofImagePreview");
+    const nameLabel = document.getElementById("proofImageName");
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (nameLabel) nameLabel.textContent = file.name;
+        if (previewContainer) previewContainer.style.display = "flex";
+      };
+      reader.readAsDataURL(file);
+    } else {
+      if (previewContainer) previewContainer.style.display = "none";
+    }
+  });
+}
+
+// ✕ 선택한 사진 빼기 / 취소
+function removeSelectedProofImage() {
+  const proofInput = document.getElementById("id_proof_image");
+  const previewContainer = document.getElementById("proofImagePreviewContainer");
+  const previewImg = document.getElementById("proofImagePreview");
+  const nameLabel = document.getElementById("proofImageName");
+  if (proofInput) proofInput.value = "";
+  if (previewImg) previewImg.src = "";
+  if (nameLabel) nameLabel.textContent = "";
+  if (previewContainer) previewContainer.style.display = "none";
+}
+
+// ⏱️ 스마트 운동 타이머 로직
+let timerMode = 'countup'; // 'countup' | 'countdown'
+let timerSeconds = 0;
+let targetSeconds = 0;
+let timerInterval = null;
+let isTimerRunning = false;
+
+function updateTimerDisplay() {
+  const display = document.getElementById("timerDisplay");
+  const statusLabel = document.getElementById("timerStatusLabel");
+  const progressContainer = document.getElementById("timerProgressContainer");
+  const progressBar = document.getElementById("timerProgressBar");
+  
+  let currentSec = timerSeconds;
+  if (timerMode === 'countdown') {
+    currentSec = Math.max(0, targetSeconds - timerSeconds);
+    if (progressContainer) progressContainer.style.display = "block";
+    if (progressBar && targetSeconds > 0) {
+      const pct = Math.min(100, (timerSeconds / targetSeconds) * 100);
+      progressBar.style.width = pct + "%";
+    }
+  } else {
+    if (progressContainer) progressContainer.style.display = "none";
+  }
+
+  const mins = Math.floor(currentSec / 60);
+  const secs = currentSec % 60;
+  const formatted = String(mins).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
+  if (display) display.textContent = formatted;
+
+  if (isTimerRunning) {
+    if (statusLabel) {
+      statusLabel.textContent = "운동 중 🔥";
+      statusLabel.style.color = "var(--neon-mint)";
+      statusLabel.style.background = "rgba(0,245,155,0.15)";
+    }
+  } else if (timerSeconds > 0) {
+    if (statusLabel) {
+      statusLabel.textContent = "일시정지 ⏸";
+      statusLabel.style.color = "#F59E0B";
+      statusLabel.style.background = "rgba(245,158,11,0.15)";
+    }
+  } else {
+    if (statusLabel) {
+      statusLabel.textContent = "대기 중";
+      statusLabel.style.color = "#94A3B8";
+      statusLabel.style.background = "rgba(255,255,255,0.08)";
+    }
+  }
+
+  // localStorage 동기화 (대시보드 실시간 연동 지원)
+  saveTimerState();
+}
+
+function setTimerMode(mode) {
+  timerMode = mode;
+  const btnCountup = document.getElementById("btnModeCountup");
+  const btnCountdown = document.getElementById("btnModeCountdown");
+  const presetRow = document.getElementById("targetPresetRow");
+
+  if (mode === 'countup') {
+    btnCountup.style.background = "var(--neon-mint)";
+    btnCountup.style.color = "#070B12";
+    btnCountdown.style.background = "transparent";
+    btnCountdown.style.color = "#94A3B8";
+    if (presetRow) presetRow.style.display = "none";
+  } else {
+    btnCountdown.style.background = "var(--neon-mint)";
+    btnCountdown.style.color = "#070B12";
+    btnCountup.style.background = "transparent";
+    btnCountup.style.color = "#94A3B8";
+    if (presetRow) presetRow.style.display = "flex";
+    if (targetSeconds === 0) setTargetMinutes(30);
+  }
+  updateTimerDisplay();
+}
+
+function setTargetMinutes(mins) {
+  const m = parseInt(mins, 10);
+  if (isNaN(m) || m <= 0) return;
+  targetSeconds = m * 60;
+  if (!isTimerRunning) {
+    timerSeconds = 0;
+  }
+  updateTimerDisplay();
+}
+
+function startTimer() {
+  if (isTimerRunning) return;
+  isTimerRunning = true;
+  document.getElementById("btnTimerStart").style.display = "none";
+  document.getElementById("btnTimerPause").style.display = "inline-flex";
+
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    if (timerMode === 'countdown' && timerSeconds >= targetSeconds) {
+      pauseTimer();
+      alert("🎉 목표 운동 시간(" + Math.floor(targetSeconds / 60) + "분)을 달성했습니다! 오늘 한 운동을 기록하세요.");
+      applyTimerToForm();
+    }
+    updateTimerDisplay();
+  }, 1000);
+  updateTimerDisplay();
+}
+
+function pauseTimer() {
+  if (!isTimerRunning) return;
+  isTimerRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById("btnTimerStart").style.display = "inline-flex";
+  document.getElementById("btnTimerPause").style.display = "none";
+  updateTimerDisplay();
+}
+
+function resetTimer() {
+  pauseTimer();
+  timerSeconds = 0;
+  updateTimerDisplay();
+  localStorage.removeItem("netfit_active_workout_timer");
+}
+
+function applyTimerToForm() {
+  const totalMins = Math.max(1, Math.round(timerSeconds / 60));
+  if (minutesInput) {
+    minutesInput.value = totalMins;
+    minutesInput.style.borderColor = "var(--neon-mint)";
+    minutesInput.style.boxShadow = "0 0 12px rgba(0,245,155,0.4)";
+    setTimeout(() => {
+      minutesInput.style.boxShadow = "";
+    }, 1500);
+  }
+  // 입력 폼으로 부드럽게 스크롤
+  minutesInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function saveTimerState() {
+  try {
+    const state = {
+      mode: timerMode,
+      timerSeconds: timerSeconds,
+      targetSeconds: targetSeconds,
+      isTimerRunning: isTimerRunning,
+      updatedAt: Date.now(),
+      workoutType: workoutSelect ? workoutSelect.value : ""
+    };
+    localStorage.setItem("netfit_active_workout_timer", JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadSavedTimerOrParams() {
+  // URL 파라미터 확인: ?workout_type=러닝&target=30
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramWorkout = urlParams.get('workout_type');
+  const paramTarget = urlParams.get('target');
+
+  if (paramWorkout && workoutSelect) {
+    workoutSelect.value = paramWorkout;
+    toggleCustomWorkout();
+  }
+
+  if (paramTarget) {
+    const targetMins = parseInt(paramTarget, 10);
+    if (!isNaN(targetMins) && targetMins > 0) {
+      setTimerMode('countdown');
+      setTargetMinutes(targetMins);
+      const customInput = document.getElementById("customTargetInput");
+      if (customInput) customInput.value = targetMins;
+      return;
+    }
+  }
+
+  // localStorage 상태 복원
+  try {
+    const saved = localStorage.getItem("netfit_active_workout_timer");
+    if (saved) {
+      const data = JSON.parse(saved);
+      // 12시간 이내의 타이머만 복원
+      if (Date.now() - data.updatedAt < 12 * 3600 * 1000) {
+        timerMode = data.mode || 'countup';
+        targetSeconds = data.targetSeconds || 0;
+        timerSeconds = data.timerSeconds || 0;
+        setTimerMode(timerMode);
+        updateTimerDisplay();
+      }
+    }
+  } catch(e) {}
+}
+
+loadSavedTimerOrParams();
 
 document.getElementById('activityLocationButton')?.addEventListener('click', () => {
   const status = document.getElementById('activityLocationStatus');

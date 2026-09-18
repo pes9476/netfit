@@ -20,7 +20,7 @@ class WebFlowTests(TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertTrue(response.url.startswith("/login/?next="))
 
-    def test_workout_awards_silver_badge_and_session_persists(self):
+    def test_workout_awards_bronze_badge_and_session_persists(self):
         user = User.objects.create_user(username="runner", password=None)
         self.client.force_login(user)
         response = self.client.post(reverse("record_workout"), {
@@ -30,10 +30,14 @@ class WebFlowTests(TestCase):
         self.assertRedirects(response, reverse("activity"))
         record = user.workoutrecord_set.get()
         self.assertEqual(record.earned_xp, 0)
-        self.assertEqual(record.badge_award.badge_type, BadgeAward.SILVER)
-        self.assertEqual(record.badge_award.points, 50)
+        self.assertEqual(record.badge_award.badge_type, BadgeAward.BRONZE)
+        self.assertEqual(record.badge_award.points, 30)
         self.assertEqual(self.client.get(reverse("dashboard")).status_code, 200)
         self.assertEqual(self.client.session["_auth_user_id"], str(user.pk))
+
+        # 60분 은메달 & 90분 금메달 테스트
+        self.assertEqual(BadgeAward.badge_for_minutes(60), BadgeAward.SILVER)
+        self.assertEqual(BadgeAward.badge_for_minutes(90), BadgeAward.GOLD)
 
     def test_custom_workout_name_can_be_recorded(self):
         user = User.objects.create_user(username="custom-runner", password=None)
@@ -63,7 +67,7 @@ class WebFlowTests(TestCase):
         self.client.force_login(user)
         for _ in range(2):
             self.client.post(reverse("record_workout"), {
-                "workout_type": "러닝", "minutes": 60, "distance_km": "5", "next": "activity",
+                "workout_type": "러닝", "minutes": 90, "distance_km": "5", "next": "activity",
             })
         response = self.client.post(reverse("outfit_shop"), {"action": "buy", "outfit": "CAP"})
         self.assertRedirects(response, reverse("outfit_shop"))
@@ -76,7 +80,7 @@ class WebFlowTests(TestCase):
     def test_daily_quest_badge_is_awarded_only_once(self):
         user = User.objects.create_user(username="quest-runner", password=None)
         quest = PersonalDailyQuest.objects.create(
-            user=user, title="한 시간 러닝", workout_type="러닝", target_minutes=60,
+            user=user, title="1시간 30분 러닝", workout_type="러닝", target_minutes=90,
         )
         self.client.force_login(user)
         url = reverse("complete_daily_quest", args=["personal", quest.id])
@@ -87,8 +91,47 @@ class WebFlowTests(TestCase):
         self.assertEqual(award.points, 100)
         self.assertEqual(BadgeAward.objects.filter(user=user, personal_quest=quest).count(), 1)
         dashboard = self.client.get(reverse("dashboard"))
-        self.assertContains(dashboard, "한 시간 러닝")
+        self.assertContains(dashboard, "1시간 30분 러닝")
         self.assertContains(dashboard, "완료")
+
+    def test_daily_quest_with_proof_image_serves_media_and_renders_modal_btn(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        user = User.objects.create_user(username="photo-runner", password=None)
+        quest = PersonalDailyQuest.objects.create(
+            user=user, title="30분 산책", workout_type="산책", target_minutes=30,
+        )
+        self.client.force_login(user)
+        test_image = SimpleUploadedFile(name="test_proof.jpg", content=b"\x47\x49\x46\x38\x39\x61", content_type="image/jpeg")
+        url = reverse("complete_daily_quest", args=["personal", quest.id])
+        resp = self.client.post(url, {"proof_image": test_image})
+        self.assertRedirects(resp, reverse("dashboard"))
+        award = BadgeAward.objects.get(user=user, personal_quest=quest)
+        self.assertTrue(award.proof_image)
+        self.assertTrue(award.proof_image.name.startswith("quest_proofs/"))
+        dashboard = self.client.get(reverse("dashboard"))
+        self.assertContains(dashboard, "등록된 인증 사진 보기")
+        self.assertContains(dashboard, f"openProofModal('{award.proof_image.url}', 'personal', '{quest.id}')")
+        # Check media URL serving
+        media_resp = self.client.get(award.proof_image.url)
+        self.assertEqual(media_resp.status_code, 200)
+
+        # 2. 사진 변경 테스트
+        new_image = SimpleUploadedFile(name="updated_proof.jpg", content=b"\x47\x49\x46\x38\x39\x61_updated", content_type="image/jpeg")
+        resp2 = self.client.post(url, {"proof_image": new_image})
+        self.assertRedirects(resp2, reverse("dashboard"))
+        award.refresh_from_db()
+        self.assertTrue("updated_proof" in award.proof_image.name)
+
+        # 3. 사진 삭제(X) 테스트
+        resp3 = self.client.post(url, {"action": "delete_proof"})
+        self.assertRedirects(resp3, reverse("dashboard"))
+        award.refresh_from_db()
+        self.assertFalse(bool(award.proof_image))
+        # 점수와 배지는 그대로 보존됨
+        self.assertEqual(award.badge_type, BadgeAward.BRONZE)
+        dashboard_after_del = self.client.get(reverse("dashboard"))
+        self.assertContains(dashboard_after_del, "인증 사진 추가하기")
+
 
     def test_profile_contains_workout_analytics(self):
         user = User.objects.create_user(username="analytics", password=None)

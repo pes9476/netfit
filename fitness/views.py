@@ -116,6 +116,47 @@ def dashboard(request):
     ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party")[:3]
     completed_personal_ids = set(BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests).values_list("personal_quest_id", flat=True))
     completed_group_ids = set(BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests).values_list("daily_quest_id", flat=True))
+
+    today = timezone.localdate()
+    today_records = list(records.filter(created_at__date=today))
+
+    personal_badge_map = {
+        award.personal_quest_id: award
+        for award in BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests)
+    }
+    group_badge_map = {
+        award.daily_quest_id: award
+        for award in BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests)
+    }
+
+    for quest in personal_quests:
+        is_done = quest.id in completed_personal_ids
+        quest.is_completed = is_done
+        quest.badge_award = personal_badge_map.get(quest.id)
+        if is_done:
+            quest.progress_percent = 100
+            quest.done_minutes = quest.target_minutes
+            quest.remaining_minutes = 0
+        else:
+            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
+            quest.done_minutes = min(done_mins, quest.target_minutes)
+            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
+            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
+
+    for quest in group_quests:
+        is_done = quest.id in completed_group_ids
+        quest.is_completed = is_done
+        quest.badge_award = group_badge_map.get(quest.id)
+        if is_done:
+            quest.progress_percent = 100
+            quest.done_minutes = quest.target_minutes
+            quest.remaining_minutes = 0
+        else:
+            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
+            quest.done_minutes = min(done_mins, quest.target_minutes)
+            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
+            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
+
     party_challenges = []
     for party in request.user.parties.all():
         if not party.challenge_start or not party.challenge_end:
@@ -227,7 +268,7 @@ def activity_view(request):
 @login_required
 def record_workout(request):
     if request.method == "POST":
-        form = WorkoutForm(request.POST)
+        form = WorkoutForm(request.POST, request.FILES)
         if form.is_valid():
             record = form.save(commit=False)
             record.user = request.user
@@ -236,6 +277,7 @@ def record_workout(request):
             badge_type = BadgeAward.badge_for_minutes(record.minutes)
             award = BadgeAward.objects.create(
                 user=request.user, badge_type=badge_type, source="WORKOUT", workout_record=record,
+                proof_image=record.proof_image,
             )
             messages.success(request, f"운동 기록 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
     return redirect(request.POST.get("next", "activity"))
@@ -245,6 +287,8 @@ def record_workout(request):
 def complete_daily_quest(request, quest_kind, quest_id):
     if request.method != "POST":
         return redirect("dashboard")
+    action = request.POST.get("action", "complete")
+    proof_image = request.FILES.get("proof_image")
     if quest_kind == "personal":
         quest = get_object_or_404(PersonalDailyQuest, pk=quest_id, user=request.user, is_active=True)
         award, created = BadgeAward.objects.get_or_create(
@@ -262,10 +306,36 @@ def complete_daily_quest(request, quest_kind, quest_id):
             user=request.user, daily_quest=quest,
             defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
         )
+
+    # 1. 인증 사진 삭제 액션
+    if action == "delete_proof":
+        if award.proof_image:
+            award.proof_image.delete(save=False)
+            award.proof_image = None
+            award.save(update_fields=["proof_image"])
+            messages.success(request, "등록된 인증 사진이 삭제되었습니다.")
+        else:
+            messages.info(request, "삭제할 인증 사진이 없습니다.")
+        return redirect("dashboard")
+
+    # 2. 최초 완료 시
     if created:
+        if proof_image:
+            award.proof_image = proof_image
+            award.save(update_fields=["proof_image"])
         messages.success(request, f"일일미션 완료! {award.get_badge_type_display()} 배지 {award.points}점을 받았어요.")
     else:
-        messages.info(request, "이미 완료하고 배지를 받은 일일미션이에요.")
+        # 3. 이미 완료된 미션의 사진 변경/수정 또는 신규 등록
+        if proof_image:
+            is_update = bool(award.proof_image)
+            award.proof_image = proof_image
+            award.save(update_fields=["proof_image"])
+            if is_update:
+                messages.success(request, "인증 사진이 새로운 사진으로 성공적으로 변경되었습니다!")
+            else:
+                messages.success(request, "인증 사진이 성공적으로 등록되었습니다!")
+        else:
+            messages.info(request, "이미 완료하고 배지를 받은 일일미션이에요.")
     return redirect("dashboard")
 
 

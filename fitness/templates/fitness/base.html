@@ -122,7 +122,7 @@
           <i class="fa-solid fa-house"></i> 대시보드
         </a>
         <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
-          <i class="fa-solid fa-address-card"></i> 프로필·인바디
+          <i class="fa-solid fa-address-card"></i> 마이페이지
         </a>
         <a href="{% url 'activity' %}" class="{% if request.resolver_match.url_name == 'activity' %}active{% endif %}" {% if request.resolver_match.url_name == 'activity' %}aria-current="page"{% endif %}>
           <i class="fa-solid fa-person-running"></i> 운동 기록
@@ -148,9 +148,10 @@
   <main class="wrap">
     {% if messages %}
       {% for message in messages %}
-        <div class="notice {% if message.tags == 'error' %}error{% endif %}">
+        <div class="notice flash-notice {% if message.tags == 'error' %}error{% endif %}">
           <i class="fa-solid {% if message.tags == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
-          <span>{{ message }}</span>
+          <span style="flex: 1;">{{ message }}</span>
+          <button type="button" class="notice-close-btn" onclick="dismissNotice(this.closest('.notice'))" title="닫기">×</button>
         </div>
       {% endfor %}
     {% endif %}
@@ -176,6 +177,25 @@
       });
       menus.forEach(menu => menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false; })));
     }
+
+    // ⏳ 알림 배너 5초 후 자동 페이드아웃 및 닫기 핸들러
+    window.dismissNotice = function(el) {
+      if (!el || el.classList.contains('fade-out')) return;
+      el.classList.add('fade-out');
+      setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, 500);
+    };
+
+    const notices = document.querySelectorAll('.flash-notice');
+    notices.forEach(notice => {
+      let timer = setTimeout(() => {
+        window.dismissNotice(notice);
+      }, 5000);
+
+      notice.addEventListener('mouseenter', () => clearTimeout(timer));
+      notice.addEventListener('mouseleave', () => {
+        timer = setTimeout(() => window.dismissNotice(notice), 2000);
+      });
+    });
   })();
   </script>
 </body>

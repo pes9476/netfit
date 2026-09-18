@@ -213,6 +213,7 @@ class WorkoutRecord(models.Model):
     distance_km = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     location = models.CharField(max_length=120, blank=True)
     with_party = models.BooleanField(default=False)
+    proof_image = models.ImageField(upload_to="workout_proofs/", blank=True, null=True)
     earned_xp = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -250,6 +251,7 @@ class BadgeAward(models.Model):
     personal_quest = models.ForeignKey(
         "PersonalDailyQuest", null=True, blank=True, on_delete=models.CASCADE, related_name="badge_awards",
     )
+    proof_image = models.ImageField(upload_to="quest_proofs/", blank=True, null=True)
     awarded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -269,10 +271,12 @@ class BadgeAward(models.Model):
 
     @classmethod
     def badge_for_minutes(cls, minutes):
-        if minutes >= 60:
+        if minutes >= 90:
             return cls.GOLD
-        if minutes >= 30:
+        if minutes >= 60:
             return cls.SILVER
+        if minutes >= 30:
+            return cls.BRONZE
         return cls.BRONZE
 
     def save(self, *args, **kwargs):
