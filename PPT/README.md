@@ -1,1 +1,1 @@
-!(img/img_main.png)
+!([.]img/img_main.png)
