@@ -1,1 +1,1 @@
-!([.]img/img_main.png)
+![title](img/img_main.png)
