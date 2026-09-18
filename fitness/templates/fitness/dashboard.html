@@ -30,6 +30,73 @@
   </div>
 </article>
 
+<!-- 🔔 대기 중인 친구 요청 및 파티 초대 알림 -->
+{% if pending_friend_requests or pending_party_invitations %}
+<section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  {% for freq in pending_friend_requests %}
+    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">👋</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청</span>
+            <span style="color: #94A3B8; font-size: 11px;">새로운 친구 요청이 도착했습니다</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: var(--neon-mint);">{{ freq.from_user.profile.display_name|default:freq.from_user.username }}</b> (@{{ freq.from_user.username }})님이 친구 추가를 요청했어요!
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 수락
+          </button>
+        </form>
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+            <i class="fa-solid fa-xmark"></i> 거절
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% for inv in pending_party_invitations %}
+    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4);">⚔️</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.2); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대</span>
+            <span style="color: #94A3B8; font-size: 11px;">파티 참여 요청</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: #38BDF8;">{{ inv.inviter.profile.display_name|default:inv.inviter.username }}</b>님이 <b style="color: #FFFFFF;">'{{ inv.party.name }}'</b> 파티에 초대했습니다! 함께 참여하시겠습니까?
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'accept' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #0B1120; padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 수락
+          </button>
+        </form>
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'reject' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+            <i class="fa-solid fa-xmark"></i> 거절
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 <section class="dash">
   <div class="dashboard-left">
     <!-- 캐릭터 카드 -->
@@ -222,11 +289,11 @@
               <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">주변 시설</span>
             </a>
 
-            <a href="{% url 'ranking' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--trophy-gold)'; this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
+            <a href="{% url 'ranking' %}?scope=region" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--trophy-gold)'; this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
               <span style="width: 24px; height: 24px; border-radius: 6px; background: rgba(245,158,11,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 <i class="fa-solid fa-trophy" style="color: var(--trophy-gold); font-size: 11px;"></i>
               </span>
-              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">전국 랭킹</span>
+              <span style="font-size: 11.5px; font-weight: 800; color: #FFFFFF; white-space: nowrap;">지역 랭킹</span>
             </a>
 
             <a href="{% url 'friends' %}" style="padding: 9px 12px; background: #162032; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--indigo-primary)'; this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='#162032'">
@@ -366,6 +433,41 @@
                     <i class="fa-solid fa-bolt"></i> 타이머 측정 중: <span class="timer-countdown-val"></span>
                   </div>
                 </div>
+
+                <!-- 👥 파티 참여자 실시간 모니터링 -->
+                {% if quest.members_monitoring %}
+                  <div class="party-members-monitoring" style="margin: 8px 0 12px; background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                      <span style="font-size: 11.5px; font-weight: 800; color: #94A3B8; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 오늘 미션 현황
+                      </span>
+                      <span style="font-size: 11px; color: #64748B; font-weight: 700;">총 {{ quest.members_monitoring|length }}명</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                      {% for member in quest.members_monitoring %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.03);">
+                          <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 11.5px; color: #CBD5E1; font-weight: 700;">
+                              {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
+                            </span>
+                            <span style="font-size: 10px; background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 4px; color: #94A3B8;">Lv.{{ member.level }}</span>
+                          </div>
+                          <div>
+                            {% if member.is_done %}
+                              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.3); padding: 2px 8px; border-radius: 6px;">
+                                <i class="fa-solid fa-medal"></i> 완료 🏅
+                              </span>
+                            {% else %}
+                              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #94A3B8; background: rgba(255, 255, 255, 0.05); padding: 2px 8px; border-radius: 6px;">
+                                <i class="fa-regular fa-clock"></i> 도전 중 ⏱️
+                              </span>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
               </div>
 
               {% if quest.is_completed %}

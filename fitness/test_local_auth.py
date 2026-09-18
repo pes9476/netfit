@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
 from django.urls import reverse
-from .models import DailyQuest, FriendLink, Party
+from .models import DailyQuest, FriendLink, Party, PartyInvitation
 
 
 class LocalAuthTests(TestCase):
@@ -94,7 +94,12 @@ class LocalAuthTests(TestCase):
         })
         party = Party.objects.get(name="아침 운동방")
         self.assertRedirects(response, reverse("onboarding_group_quest", args=[party.id]))
+        invitation = PartyInvitation.objects.get(party=party, invitee=friend)
+        self.assertEqual(invitation.status, "PENDING")
+        self.client.force_login(friend)
+        self.client.post(reverse("respond_party_invitation", args=[invitation.id, "accept"]))
         self.assertEqual(set(party.members.values_list("id", flat=True)), {user.id, friend.id})
+        self.client.force_login(user)
         self.assertRedirects(self.client.post(reverse("onboarding_group_quest", args=[party.id]), {
             "title": "오늘 30분 걷기", "workout_type": "걷기", "target_minutes": "30",
         }), reverse("dashboard"))
