@@ -11,7 +11,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         count = 0
         region_map = {
-            "전남광주통합특별시": "광주광역시",
             "강원도": "강원특별자치도",
             "전라북도": "전북특별자치도",
             "제주도": "제주특별자치도",
