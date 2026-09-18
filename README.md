@@ -3,7 +3,7 @@
 ![title](PPT/img/img_Main.png)
 
 KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문 
-<h3>Team NetFit<h3> <br><br>
+<h1>Team NetFit<h1> <br><br>
 
 </div>
 <br><br>
