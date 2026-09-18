@@ -8,6 +8,11 @@ KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문
 </div>
 <br><br>
 
+<div align="center" style="width: 50%; margin: 0 auto;">
+
+---
+
+</div>
 ## 🎮 NetFit은 뭔가요?
 
 체형분석 데이터를 기반으로 운동 미션과 그룹챌린지를 통해 성장하는 **그룹 피트니스 게임 서비스**입니다.
