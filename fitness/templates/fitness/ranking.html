@@ -2,7 +2,7 @@
 {% block content %}
 <section class="page-intro">
   <h1><i class="fa-solid fa-trophy" style="color: var(--trophy-gold); margin-right: 8px;"></i>랭킹</h1>
-  <p>누적 배지 점수 기준입니다. 동점이면 같은 점수로 표시됩니다.</p>
+  <p>일일 미션 클리어 점수 기준입니다. 동점이면 같은 점수로 표시됩니다.</p>
 </section>
 
 <div class="rank-filter">
@@ -24,8 +24,7 @@
         <th style="width: 80px;">순위</th>
         <th>닉네임</th>
         <th>지역</th>
-        <th>레벨</th>
-        <th style="text-align: right;">누적 배지 점수</th>
+        <th style="text-align: right;">미션 클리어 점수</th>
       </tr>
     </thead>
     <tbody>
@@ -53,12 +52,11 @@
             {% endif %}
           </td>
           <td style="color: var(--text-muted);">{{ item.area }}</td>
-          <td><span class="tier-badge" style="padding: 2px 8px; font-size: 11px;">Lv.{{ item.level }}</span></td>
           <td style="text-align: right;"><b style="color: var(--trophy-gold); font-size: 15px;">{{ item.total_score }}점</b></td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">
             표시할 사용자가 없어요. 프로필에서 랭킹 참여를 선택해주세요.
           </td>
         </tr>

@@ -5,9 +5,40 @@
   <p>같이 운동할 친구를 추가하고 함께 파티 미션과 친구 랭킹을 즐겨보세요.</p>
 </section>
 
+<!-- 🎉 수락 완료된 친구 요청 알림 -->
+{% if accepted_requests %}
+<article class="panel" style="border: 1px solid rgba(0, 245, 155, 0.45); background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); margin-bottom: 20px;">
+  <h2><i class="fa-solid fa-circle-check" style="color: var(--neon-mint); margin-right: 8px;"></i>친구 요청 수락 알림 ({{ accepted_requests|length }}건)</h2>
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+    {% for acc in accepted_requests %}
+      <div class="friend-item" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 0; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="friend-avatar" style="background: rgba(0, 245, 155, 0.15); border-color: var(--neon-mint); color: var(--neon-mint);">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <div>
+            <b style="font-size: 14px; color: #FFFFFF;">{{ acc.to_user.profile.display_name|default:acc.to_user.username }}</b>
+            <small style="display: block; color: var(--neon-mint); font-weight: 700; margin-top: 3px;">
+              @{{ acc.to_user.username }} · {{ acc.to_user.profile.area }}님이 친구 요청을 수락했습니다!
+            </small>
+          </div>
+        </div>
+        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" style="margin: 0;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="friends">
+          <button class="button btn-mint" type="submit" style="padding: 7px 16px; font-size: 12px; font-weight: 800;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</article>
+{% endif %}
+
 <!-- 🔔 받은 친구 요청 목록 -->
 {% if pending_received_requests %}
-<article class="panel" style="border: 1px solid rgba(0, 245, 155, 0.4); background: rgba(16, 24, 39, 0.85); margin-bottom: 20px;">
+<article id="received-requests" class="panel" style="border: 1px solid rgba(0, 245, 155, 0.4); background: rgba(16, 24, 39, 0.85); margin-bottom: 20px;">
   <h2><i class="fa-solid fa-envelope-open-text" style="color: var(--neon-mint); margin-right: 8px;"></i>받은 친구 요청 ({{ pending_received_requests|length }}건)</h2>
   <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">
     나에게 친구를 요청한 사용자입니다. 수락하면 서로의 친구 목록에 추가됩니다.
@@ -21,7 +52,7 @@
         <div>
           <b style="font-size: 14px; color: #FFFFFF;">{{ freq.from_user.profile.display_name|default:freq.from_user.username }}</b>
           <small style="display: block; color: var(--text-muted); margin-top: 3px;">
-            @{{ freq.from_user.username }} · {{ freq.from_user.profile.area }} · <span class="tier-badge" style="padding: 1px 6px; font-size: 10px;">Lv.{{ freq.from_user.charactercard.level|default:1 }}</span>
+            @{{ freq.from_user.username }} · {{ freq.from_user.profile.area }}
           </small>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -99,7 +130,7 @@
         <div>
           <b>{{ friend.profile.display_name|default:friend.username }}</b>
           <small style="display: block; color: var(--text-muted); margin-top: 3px;">
-            {{ friend.profile.area }} · <span class="tier-badge" style="padding: 1px 6px; font-size: 10px;">Lv.{{ friend.charactercard.level }}</span>
+            {{ friend.profile.area }}
           </small>
         </div>
       </div>

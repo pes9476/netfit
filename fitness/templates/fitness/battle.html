@@ -28,7 +28,7 @@
   <article class="panel card-{{ card.card_tier }}" style="border-radius: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
       <h2 style="margin: 0;"><i class="fa-solid fa-id-badge" style="color: var(--neon-mint); margin-right: 8px;"></i>내 배틀 카드</h2>
-      <span class="tier-badge">{{ card.card_tier }} 등급 · Lv.{{ card.level }}</span>
+      <span class="tier-badge">{{ card.card_tier }} 등급</span>
     </div>
     
     <div style="text-align: center; margin: 10px 0 16px;">
@@ -63,7 +63,7 @@
   {% for opponent in demo_opponents %}
     <article class="sample-opponent">
       <b>{{ opponent.name }}</b>
-      <small>레벨 {{ opponent.level }} · 파워 {{ opponent.power }} CP<br>보상 예시: {{ opponent.reward }}</small>
+      <small>파워 {{ opponent.power }} CP<br>보상 예시: {{ opponent.reward }}</small>
       <form method="post" action="{% url 'demo_battle' %}">
         {% csrf_token %}
         <input type="hidden" name="opponent_index" value="{{ forloop.counter0 }}">
@@ -73,10 +73,10 @@
   {% endfor %}
 </div>
 
-<!-- 최근 카드 배틀 -->
+<!-- 이전 대결 목록 -->
 <section class="section-head">
   <div>
-    <h2><i class="fa-solid fa-clock-rotate-left" style="color: #38BDF8; margin-right: 8px;"></i>최근 카드 배틀</h2>
+    <h2><i class="fa-solid fa-clock-rotate-left" style="color: #38BDF8; margin-right: 8px;"></i>이전 대결 목록</h2>
     <p>이미 진행한 카드 대결의 결과 화면을 다시 볼 수 있습니다.</p>
   </div>
 </section>
@@ -86,12 +86,12 @@
     <div class="battle">
       <div class="fighter">
         {% if user.profile.display_name %}{{ user.profile.display_name }} 카드{% else %}내 카드{% endif %}
-        <small>레벨 {{ card.level }} · 파워 {{ battle.challenger_power }} CP</small>
+        <small>파워 {{ battle.challenger_power }} CP</small>
       </div>
       <span class="vs">{{ battle.get_scope_display }}<br>대결</span>
       <div class="fighter">
         {{ battle.opponent_name }}
-        <small>레벨 {{ battle.opponent_level }} · 파워 {{ battle.opponent_power }} CP</small>
+        <small>파워 {{ battle.opponent_power }} CP</small>
       </div>
     </div>
     <div class="chips">

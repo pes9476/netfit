@@ -12,7 +12,6 @@
     <article class="battle-card card-{{ card.card_tier }}" id="myBattleCard">
       <div class="card-title">
         <span><i class="fa-solid fa-user-ninja" style="color: var(--neon-mint); margin-right: 6px;"></i>{% if user.profile.display_name %}{{ user.profile.display_name }}{% else %}{{ user.username }}{% endif %}</span>
-        <span class="tier-badge">Lv.{{ card.level }}</span>
       </div>
       <div class="card-character background-sprite scene-{{ own_scene }}">
         <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }}"></div>
@@ -31,7 +30,6 @@
     <article class="battle-card opponent" id="opponentBattleCard">
       <div class="card-title">
         <span><i class="fa-solid fa-robot" style="color: #38BDF8; margin-right: 6px;"></i>{{ battle.opponent_name }}</span>
-        <span class="tier-badge" style="background: rgba(56,189,248,0.15); color: #38BDF8; border-color: rgba(56,189,248,0.3);">Lv.{{ battle.opponent_level }}</span>
       </div>
       <div class="card-character background-sprite scene-{{ opponent.scene }}">
         <div class="avatar-roster avatar-{{ opponent.sprite_gender }} age-{{ opponent.age_group }} style-{{ opponent.body_style|lower }}"></div>
@@ -145,7 +143,7 @@
   <article class="panel">
     <h2><i class="fa-solid fa-chart-line" style="color: #38BDF8; margin-right: 8px;"></i>다음 성장 목표</h2>
     <p style="color: var(--text-muted); line-height: 1.6; margin: 14px 0 20px;">
-      운동 기록으로 경험치와 배지를 모아 레벨을 올리면 카드 프레임과 캐릭터 장식이 더욱 강력하고 화려해집니다.
+      운동 기록으로 배지와 점수를 모으면 카드 프레임과 캐릭터 장식이 더욱 강력하고 화려해집니다.
     </p>
     <a class="button btn-mint" href="{% url 'activity' %}">
       <i class="fa-solid fa-person-running"></i>

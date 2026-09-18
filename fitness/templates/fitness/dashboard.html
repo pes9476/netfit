@@ -30,9 +30,34 @@
   </div>
 </article>
 
-<!-- 🔔 대기 중인 친구 요청 및 파티 초대 알림 -->
-{% if pending_friend_requests or pending_party_invitations %}
+<!-- 🔔 대기 중인 친구 요청, 수락 알림 및 파티 초대 알림 -->
+{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests %}
 <section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  {% for acc in accepted_friend_requests %}
+    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">🎉</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.25); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청 수락</span>
+            <span style="color: #94A3B8; font-size: 11px;">상대방이 요청을 수락했습니다</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: var(--neon-mint);">{{ acc.to_user.profile.display_name|default:acc.to_user.username }}</b> (@{{ acc.to_user.username }})님이 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button btn-mint" style="padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
   {% for freq in pending_friend_requests %}
     <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -103,7 +128,6 @@
     <article class="card card-새싹">
       <div class="card-title">
         <span><i class="fa-solid fa-id-card-clip" style="color: var(--neon-mint); margin-right: 6px;"></i>{{ user.profile.display_name|default:"내 캐릭터" }}</span>
-        <span class="tier-badge">Lv.{{ user.profile.level|default:1 }}</span>
       </div>
       <div class="card-character dashboard-character-stage">
         <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }} outfit-{{ user.profile.equipped_outfit|lower }}"></div>
@@ -116,16 +140,39 @@
     <!-- 나의 솔로 일일미션 (좌측 컬럼: 캐릭터 카드 바로 아래) -->
     {% if personal_quests %}
       <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 20px;">
-        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
           <div>
             <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">SOLO DAILY MISSION</span>
-            <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일미션</h2>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일미션</h2>
+              {% if personal_quests|length > 2 %}
+                <span style="font-size: 10.5px; font-weight: 800; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 1px 6px;">총 {{ personal_quests|length }}개</span>
+              {% endif %}
+            </div>
           </div>
-          <a class="button secondary" href="{% url 'onboarding_solo' %}" style="padding: 6px 12px; font-size: 11px;">새 일일미션</a>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            {% if personal_quests|length > 2 %}
+              <!-- 페이지 넘기기 컨트롤 < 1 / 2 > -->
+              <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
+                <button type="button" id="soloPrevBtn" onclick="changeSoloPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="soloPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 24px; text-align: center;">1/2</span>
+                <button type="button" id="soloNextBtn" onclick="changeSoloPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+              <button type="button" onclick="openSoloQuestListModal()" class="button secondary" style="padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 일일미션 목록보기">
+                <i class="fa-solid fa-list-ul"></i>
+                <span>목록보기</span>
+              </button>
+            {% endif %}
+            <a class="button secondary" href="{% url 'onboarding_solo' %}" style="padding: 6px 12px; font-size: 11px;">새 일일미션</a>
+          </div>
         </div>
         <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px;">
           {% for quest in personal_quests %}
-            <article style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+            <article class="solo-quest-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.counter0 < 2 %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <small style="color: var(--neon-mint); font-weight: 700;">{{ quest.get_source_display }}</small>
@@ -395,16 +442,39 @@
     <!-- 우리 파티 일일미션 (우측 컬럼: 스포츠 뉴스 바로 아래! - 솔로 미션과 바닥 라인 완벽 일치) -->
     {% if group_quests %}
       <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
           <div>
             <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY DAILY MISSION</span>
-            <h2>우리 파티 일일미션</h2>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <h2>우리 파티 일일미션</h2>
+              {% if group_quests|length > 2 %}
+                <span style="font-size: 10.5px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 1px 6px;">총 {{ group_quests|length }}개</span>
+              {% endif %}
+            </div>
           </div>
-          <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 8px 14px; font-size: 12px;">새 파티 만들기</a>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            {% if group_quests|length > 2 %}
+              <!-- 페이지 넘기기 컨트롤 < 1 / 2 > -->
+              <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
+                <button type="button" id="groupPrevBtn" onclick="changeGroupPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="groupPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 24px; text-align: center;">1/2</span>
+                <button type="button" id="groupNextBtn" onclick="changeGroupPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+              <button type="button" onclick="openGroupQuestListModal()" class="button secondary" style="padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 파티 미션 목록보기">
+                <i class="fa-solid fa-list-ul"></i>
+                <span>목록보기</span>
+              </button>
+            {% endif %}
+            <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 8px 14px; font-size: 12px;">새 파티 만들기</a>
+          </div>
         </div>
         <div class="quest-cards" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
           {% for quest in group_quests %}
-            <article style="display: flex; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+            <article class="group-quest-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.counter0 < 2 %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <small style="color: #38BDF8; font-weight: 700;">{{ quest.party.name }}</small>
@@ -450,7 +520,6 @@
                             <span style="font-size: 11.5px; color: #CBD5E1; font-weight: 700;">
                               {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
                             </span>
-                            <span style="font-size: 10px; background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 4px; color: #94A3B8;">Lv.{{ member.level }}</span>
                           </div>
                           <div>
                             {% if member.is_done %}
@@ -1134,7 +1203,243 @@ function confirmDeleteProof() {
     if (form) form.submit();
   }
 }
+
+// 📑 일일미션 최대 2개 페이징 및 목록보기 로직
+let currentSoloPage = 0;
+const soloPageSize = 2;
+function renderSoloQuestPage() {
+  const cards = document.querySelectorAll('.solo-quest-card');
+  if (!cards.length) return;
+  const totalPages = Math.ceil(cards.length / soloPageSize);
+  if (currentSoloPage >= totalPages) currentSoloPage = totalPages - 1;
+  if (currentSoloPage < 0) currentSoloPage = 0;
+
+  cards.forEach((card, idx) => {
+    const pIdx = Math.floor(idx / soloPageSize);
+    if (pIdx === currentSoloPage) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const ind = document.getElementById('soloPageIndicator');
+  if (ind) ind.textContent = `${currentSoloPage + 1}/${totalPages}`;
+
+  const prevBtn = document.getElementById('soloPrevBtn');
+  const nextBtn = document.getElementById('soloNextBtn');
+  if (prevBtn) {
+    prevBtn.disabled = (currentSoloPage === 0);
+    prevBtn.style.opacity = (currentSoloPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentSoloPage === 0) ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentSoloPage === totalPages - 1);
+    nextBtn.style.opacity = (currentSoloPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentSoloPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+  }
+}
+
+function changeSoloPage(delta) {
+  currentSoloPage += delta;
+  renderSoloQuestPage();
+}
+
+function openSoloQuestListModal() {
+  const modal = document.getElementById('soloQuestListModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeSoloQuestListModal() {
+  const modal = document.getElementById('soloQuestListModal');
+  if (modal) modal.style.display = 'none';
+}
+
+let currentGroupPage = 0;
+const groupPageSize = 2;
+function renderGroupQuestPage() {
+  const cards = document.querySelectorAll('.group-quest-card');
+  if (!cards.length) return;
+  const totalPages = Math.ceil(cards.length / groupPageSize);
+  if (currentGroupPage >= totalPages) currentGroupPage = totalPages - 1;
+  if (currentGroupPage < 0) currentGroupPage = 0;
+
+  cards.forEach((card, idx) => {
+    const pIdx = Math.floor(idx / groupPageSize);
+    if (pIdx === currentGroupPage) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const ind = document.getElementById('groupPageIndicator');
+  if (ind) ind.textContent = `${currentGroupPage + 1}/${totalPages}`;
+
+  const prevBtn = document.getElementById('groupPrevBtn');
+  const nextBtn = document.getElementById('groupNextBtn');
+  if (prevBtn) {
+    prevBtn.disabled = (currentGroupPage === 0);
+    prevBtn.style.opacity = (currentGroupPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentGroupPage === 0) ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentGroupPage === totalPages - 1);
+    nextBtn.style.opacity = (currentGroupPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentGroupPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+  }
+}
+
+function changeGroupPage(delta) {
+  currentGroupPage += delta;
+  renderGroupQuestPage();
+}
+
+function openGroupQuestListModal() {
+  const modal = document.getElementById('groupQuestListModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeGroupQuestListModal() {
+  const modal = document.getElementById('groupQuestListModal');
+  if (modal) modal.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSoloQuestPage();
+  renderGroupQuestPage();
+});
 </script>
+
+<!-- 📋 나의 솔로 일일미션 전체 목록보기 팝업 모달 -->
+<div id="soloQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeSoloQuestListModal();">
+  <div style="background: #111A2C; border: 1px solid rgba(0,245,155,0.4); border-radius: 18px; max-width: 520px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-list-check" style="color: var(--neon-mint); font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">나의 솔로 일일미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ personal_quests|length }}개</span>
+      </div>
+      <button type="button" onclick="closeSoloQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
+      {% for quest in personal_quests %}
+        <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11.5px; font-weight: 800; color: var(--neon-mint);">{{ quest.get_source_display }}</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              {% if quest.is_completed %}
+                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-circle-check"></i> 완료
+                </span>
+              {% else %}
+                <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
+                </span>
+              {% endif %}
+              <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                <i class="fa-solid fa-stopwatch"></i> 타이머
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분 (달성률 {{ quest.progress_percent }}%)</p>
+          </div>
+
+          <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+            <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
+          </div>
+
+          {% if quest.is_completed and quest.badge_award and quest.badge_award.proof_image %}
+            <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'personal', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11px; font-weight: 800; cursor: pointer; width: fit-content;">
+              <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
+            </button>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <button type="button" onclick="closeSoloQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📋 우리 파티 일일미션 전체 목록보기 팝업 모달 -->
+<div id="groupQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeGroupQuestListModal();">
+  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 520px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-users" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">우리 파티 일일미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ group_quests|length }}개</span>
+      </div>
+      <button type="button" onclick="closeGroupQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
+      {% for quest in group_quests %}
+        <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11.5px; font-weight: 800; color: #38BDF8;">{{ quest.party.name }}</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              {% if quest.is_completed %}
+                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-circle-check"></i> 완료
+                </span>
+              {% else %}
+                <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
+                </span>
+              {% endif %}
+              <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                <i class="fa-solid fa-stopwatch"></i> 타이머
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분 (달성률 {{ quest.progress_percent }}%)</p>
+          </div>
+
+          <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+            <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
+          </div>
+
+          {% if quest.members_monitoring %}
+            <div style="background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 8px 10px; margin-top: 4px;">
+              <span style="font-size: 11px; color: #94A3B8; font-weight: 800; display: block; margin-bottom: 6px;">파티원 달성 현황</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                {% for m in quest.members_monitoring %}
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                    <span style="color: #CBD5E1;">{% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}</span>
+                    {% if m.is_done %}
+                      <span style="color: var(--neon-mint); font-weight: 800;">완료 🏅</span>
+                    {% else %}
+                      <span style="color: #94A3B8;">도전 중 ⏱️</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <button type="button" onclick="closeGroupQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- 📸 인증 사진 팝업 모달 (우측 상단 ✕ 사진 삭제 & 사진 변경 기능 탑재) -->
 <div id="questProofModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeProofModal();">
