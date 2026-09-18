@@ -18,8 +18,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
-from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord
-from .services import add_xp, battle_power, calculate_workout_xp, card_stats, get_sports_news, get_weather_data, total_card_xp
+from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord, needs_kakao_nickname
+from .services import (
+    add_xp, battle_power, calculate_workout_xp, card_stats,
+    check_in_daily_attendance, get_sports_news, get_weather_data,
+    sync_mission_progress, sync_party_mission_progress, total_card_xp,
+)
 
 DEMO_OPPONENTS = [
     {"name": "민수 · 파워 트레이너", "level": 3, "power": 58, "reward": "치킨 사기 🍗"},
@@ -110,66 +114,43 @@ def dashboard(request):
     stats = card_stats(request.user)
     latest_record = records.order_by("-created_at").first()
     latitude, longitude = weather_coordinates(request.user.profile.area)
-    personal_quests = list(PersonalDailyQuest.objects.filter(user=request.user, is_active=True))
-    group_quests = list(DailyQuest.objects.filter(
-        party__members=request.user, is_active=True,
-    ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party"))
-    completed_personal_ids = set(BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests).values_list("personal_quest_id", flat=True))
-    completed_group_ids = set(BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests).values_list("daily_quest_id", flat=True))
+    
+    # 🎯 일일 미션(3개) & 주간 미션(10개) 동기화 및 진행률 계산
+    mission_data = sync_mission_progress(request.user)
+    daily_missions = mission_data["daily_missions"]
+    weekly_missions = mission_data["weekly_missions"]
+    today_attended = mission_data["today_attended"]
+    week_attendances = mission_data["week_attendances"]
+    personal_quests = daily_missions
+    completed_personal_ids = {q.id for q in daily_missions if q.is_completed}
 
-    today = timezone.localdate()
-    today_records = list(records.filter(created_at__date=today))
+    # 👥 파티 미션 허브 (일일 3개 + 주간 10개 순수 파티 협동 미션)
+    active_party = request.user.parties.filter(
+        Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
+    ).first() or request.user.parties.first()
 
-    personal_badge_map = {
-        award.personal_quest_id: award
-        for award in BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests)
+    if not active_party and not needs_kakao_nickname(request.user):
+        # 가입된 파티가 없는 경우 기본 파티('팀 넷핏 러너스')에 자동 가입하여 솔로와 1:1 대칭으로 즉시 일일(3개)/주간(10개) 파티 미션 허브 및 목록보기 제공
+        default_party = Party.objects.filter(name="팀 넷핏 러너스").first() or Party.objects.first()
+        if not default_party:
+            default_party = Party.objects.create(name="팀 넷핏 러너스", owner=request.user)
+        default_party.members.add(request.user)
+        active_party = default_party
+
+    party_daily_missions = []
+    party_weekly_missions = []
+    if active_party:
+        party_data = sync_party_mission_progress(active_party, request.user)
+        party_daily_missions = party_data["daily_missions"]
+        party_weekly_missions = party_data["weekly_missions"]
+        group_quests = party_daily_missions
+    else:
+        group_quests = []
+
+    completed_group_ids = {
+        q.id for q in (party_daily_missions + party_weekly_missions)
+        if getattr(q, 'is_completed', False)
     }
-    group_badge_map = {
-        award.daily_quest_id: award
-        for award in BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests)
-    }
-
-    for quest in personal_quests:
-        is_done = quest.id in completed_personal_ids
-        quest.is_completed = is_done
-        quest.badge_award = personal_badge_map.get(quest.id)
-        if is_done:
-            quest.progress_percent = 100
-            quest.done_minutes = quest.target_minutes
-            quest.remaining_minutes = 0
-        else:
-            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
-            quest.done_minutes = min(done_mins, quest.target_minutes)
-            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
-            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
-
-    for quest in group_quests:
-        is_done = quest.id in completed_group_ids
-        quest.is_completed = is_done
-        quest.badge_award = group_badge_map.get(quest.id)
-        if is_done:
-            quest.progress_percent = 100
-            quest.done_minutes = quest.target_minutes
-            quest.remaining_minutes = 0
-        else:
-            done_mins = sum(r.minutes for r in today_records if r.workout_type == quest.workout_type or quest.workout_type == "기타")
-            quest.done_minutes = min(done_mins, quest.target_minutes)
-            quest.remaining_minutes = max(0, quest.target_minutes - done_mins)
-            quest.progress_percent = min(100, int((done_mins / quest.target_minutes * 100))) if quest.target_minutes else 0
-
-        # 👥 파티원 참여자 모니터링 (각 파티원의 오늘 미션 달성 여부)
-        members_status = []
-        party_members = quest.party.members.all().select_related("profile", "charactercard")
-        for m in party_members:
-            has_done = BadgeAward.objects.filter(user=m, daily_quest=quest, awarded_at__date=today).exists()
-            members_status.append({
-                "user": m,
-                "name": m.profile.display_name or m.username,
-                "level": getattr(getattr(m, "charactercard", None), "level", 1),
-                "is_done": has_done,
-                "is_me": (m == request.user),
-            })
-        quest.members_monitoring = members_status
 
     party_challenges = []
     for party in request.user.parties.all():
@@ -204,6 +185,13 @@ def dashboard(request):
         "latest_record": latest_record,
         "scene_class": SCENE_MAP.get(latest_record.workout_type if latest_record else "", "run"),
         "friend_count": FriendLink.objects.filter(user=request.user).count(),
+        "daily_missions": daily_missions,
+        "weekly_missions": weekly_missions,
+        "today_attended": today_attended,
+        "week_attendances": week_attendances,
+        "active_party": active_party,
+        "party_daily_missions": party_daily_missions,
+        "party_weekly_missions": party_weekly_missions,
         "group_quests": group_quests, "personal_quests": personal_quests,
         "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
         "badge_summary": badge_summary(request.user),
@@ -315,16 +303,39 @@ def record_workout(request):
 
 
 @login_required
+def check_in_attendance(request):
+    if request.method != "POST":
+        return redirect("dashboard")
+    is_first, count = check_in_daily_attendance(request.user)
+    if is_first:
+        messages.success(request, f"🎉 출석 체크 완료! 30점을 획득했습니다. (이번 주 누적 출석: {count}일)")
+    else:
+        messages.info(request, f"오늘 이미 출석 체크를 완료했습니다. (이번 주 누적 출석: {count}일)")
+    return redirect("dashboard")
+
+
+@login_required
 def complete_daily_quest(request, quest_kind, quest_id):
     if request.method != "POST":
         return redirect("dashboard")
     action = request.POST.get("action", "complete")
     proof_image = request.FILES.get("proof_image")
-    if quest_kind == "personal":
+    if quest_kind in ["personal", "daily", "weekly"]:
         quest = get_object_or_404(PersonalDailyQuest, pk=quest_id, user=request.user, is_active=True)
+        if quest.target_minutes and quest.target_minutes > 0:
+            b_type = BadgeAward.badge_for_minutes(quest.target_minutes)
+            pts = BadgeAward.POINTS[b_type]
+        else:
+            pts = quest.reward_points or 30
+            if pts >= 100:
+                b_type = BadgeAward.GOLD
+            elif pts >= 50:
+                b_type = BadgeAward.SILVER
+            else:
+                b_type = BadgeAward.BRONZE
         award, created = BadgeAward.objects.get_or_create(
             user=request.user, personal_quest=quest,
-            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
+            defaults={"badge_type": b_type, "points": pts, "source": "DAILY_QUEST"},
         )
     else:
         quest = get_object_or_404(
@@ -333,9 +344,20 @@ def complete_daily_quest(request, quest_kind, quest_id):
             ),
             pk=quest_id, party__members=request.user, is_active=True,
         )
+        if quest.target_minutes and quest.target_minutes > 0:
+            b_type = BadgeAward.badge_for_minutes(quest.target_minutes)
+            pts = BadgeAward.POINTS[b_type]
+        else:
+            pts = quest.reward_points or 30
+            if pts >= 100:
+                b_type = BadgeAward.GOLD
+            elif pts >= 50:
+                b_type = BadgeAward.SILVER
+            else:
+                b_type = BadgeAward.BRONZE
         award, created = BadgeAward.objects.get_or_create(
             user=request.user, daily_quest=quest,
-            defaults={"badge_type": BadgeAward.badge_for_minutes(quest.target_minutes), "source": "DAILY_QUEST"},
+            defaults={"badge_type": b_type, "points": pts, "source": "DAILY_QUEST"},
         )
 
     # 1. 인증 사진 삭제 액션
@@ -359,17 +381,19 @@ def complete_daily_quest(request, quest_kind, quest_id):
             award.save(update_fields=["proof_image"])
         w_type = quest.workout_type if quest.workout_type in dict(WorkoutRecord.WORKOUT_CHOICES) else "기타"
         custom_name = getattr(quest, "custom_workout_name", "") or (quest.title if w_type == "기타" else "")
+        is_party = hasattr(quest, "party")
+        mission_prefix = ("파티 주간" if getattr(quest, "period_type", "DAILY") == "WEEKLY" else "파티 일일") if is_party else ("주간" if getattr(quest, "period_type", "DAILY") == "WEEKLY" else "일일")
         rec = WorkoutRecord.objects.create(
             user=request.user,
             workout_type=w_type,
             custom_workout_name=custom_name,
-            minutes=quest.target_minutes,
-            location="일일미션 달성",
+            minutes=quest.target_minutes or 20,
+            location=f"{mission_prefix}미션 달성",
             proof_image=award.proof_image,
         )
         award.workout_record = rec
         award.save(update_fields=["workout_record"])
-        messages.success(request, f"일일미션 완료! {award.get_badge_type_display()} 배지와 {award.points}점을 받았어요. (최근 운동기록 자동 등록)")
+        messages.success(request, f"{mission_prefix}미션 완료! {award.get_badge_type_display()} 배지와 {award.points}점을 받았어요. (최근 운동기록 자동 등록)")
     else:
         # 3. 이미 완료된 미션의 사진 변경/수정 또는 신규 등록
         if proof_image:
@@ -384,7 +408,7 @@ def complete_daily_quest(request, quest_kind, quest_id):
             else:
                 messages.success(request, "인증 사진이 성공적으로 등록되었습니다!")
         else:
-            messages.info(request, "이미 완료하고 배지를 받은 일일미션이에요.")
+            messages.info(request, "이미 완료하고 배지를 받은 미션이에요.")
     return redirect("dashboard")
 
 
@@ -1157,6 +1181,18 @@ def onboarding_group_quest(request, party_id):
     party = get_object_or_404(Party, pk=party_id, owner=request.user)
     workout_choices = WorkoutRecord.WORKOUT_CHOICES
     if request.method == "POST":
+        action = request.POST.get("action", "direct")
+        if action in ["ai", "facility"]:
+            from .services import generate_party_daily_missions, generate_party_weekly_missions
+            generate_party_daily_missions(party)
+            generate_party_weekly_missions(party)
+            profile = request.user.profile
+            profile.workout_mode = "GROUP"
+            profile.onboarding_completed = True
+            profile.save(update_fields=["workout_mode", "onboarding_completed"])
+            messages.success(request, f"{party.name}의 AI 일일(3개) & 주간(10개) 협동 미션을 설정했어요.")
+            return redirect("dashboard")
+
         title = request.POST.get("title", "").strip()[:100]
         workout_type = request.POST.get("workout_type", "")
         custom_workout_name = request.POST.get("custom_workout_name", "").strip()[:50]
@@ -1172,12 +1208,18 @@ def onboarding_group_quest(request, party_id):
                 party=party, creator=request.user, title=title,
                 workout_type=workout_type, custom_workout_name=custom_workout_name,
                 target_minutes=target_minutes,
+                period_type="DAILY",
+                mission_category="WORKOUT",
+                source="DIRECT",
             )
+            from .services import generate_party_daily_missions, generate_party_weekly_missions
+            generate_party_daily_missions(party)
+            generate_party_weekly_missions(party)
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"{party.name}의 일일 미션을 만들었어요.")
+            messages.success(request, f"{party.name}의 파티 미션을 만들었어요.")
             return redirect("dashboard")
     return render(request, "fitness/onboarding_group_quest.html", {
         "party": party, "workout_choices": workout_choices,

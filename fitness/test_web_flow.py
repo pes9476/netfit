@@ -310,3 +310,149 @@ class WebFlowTests(TestCase):
         # 3. 파티 온보딩 버튼 문구 확인
         group = self.client.get(reverse("onboarding_group"))
         self.assertContains(group, "파티미션설정 →")
+
+    def test_daily_and_weekly_missions_generation_and_counts(self):
+        from fitness.services import generate_daily_missions, generate_weekly_missions, sync_mission_progress
+        user = User.objects.create_user(username="mission-hero", password=None)
+        self.client.force_login(user)
+
+        # 1. 일일 미션 3개 생성 확인
+        daily = generate_daily_missions(user)
+        self.assertEqual(len(daily), 3)
+        self.assertTrue(any(m.mission_category == "ATTENDANCE" for m in daily))
+        self.assertEqual(sum(m.source == "AI" for m in daily), 2)
+
+        # 2. 주간 미션 10개 생성 확인
+        weekly = generate_weekly_missions(user)
+        self.assertEqual(len(weekly), 10)
+        self.assertTrue(any(m.mission_category == "ATTENDANCE" for m in weekly))
+        self.assertEqual(sum(m.period_type == "WEEKLY" for m in weekly), 10)
+
+        # 3. 대시보드 렌더링 확인
+        resp = self.client.get(reverse("dashboard"))
+        self.assertContains(resp, "일일 (3)")
+        self.assertContains(resp, "주간 (10)")
+        self.assertContains(resp, "오늘의 NetFit 출석 체크")
+
+    def test_attendance_check_in_and_weekly_accumulation(self):
+        from fitness.models import AttendanceRecord
+        user = User.objects.create_user(username="attendee", password=None)
+        self.client.force_login(user)
+
+        # 출석 체크 전 대시보드
+        dash_before = self.client.get(reverse("dashboard"))
+        self.assertContains(dash_before, "오늘 출석 체크하기 (+30점)")
+
+        # 출석 체크 실행
+        checkin_resp = self.client.post(reverse("check_in_attendance"))
+        self.assertRedirects(checkin_resp, reverse("dashboard"))
+
+        # 출석 레코드 및 배지 확인
+        self.assertTrue(AttendanceRecord.objects.filter(user=user).exists())
+        attendance_award = BadgeAward.objects.filter(user=user, personal_quest__mission_category="ATTENDANCE").first()
+        self.assertIsNotNone(attendance_award)
+        self.assertEqual(attendance_award.points, 30)
+
+        # 출석 체크 후 대시보드: 완료 상태 확인
+        dash_after = self.client.get(reverse("dashboard"))
+        self.assertContains(dash_after, "오늘 출석 완료!")
+        self.assertContains(dash_after, "+30점 지급됨")
+
+    def test_party_missions_daily_3_and_weekly_10_and_no_attendance(self):
+        from fitness.services import generate_party_daily_missions, generate_party_weekly_missions, sync_party_mission_progress
+        host = User.objects.create_user(username="party_host", password=None)
+        member = User.objects.create_user(username="party_member", password=None)
+        party = Party.objects.create(name="팀 넷핏", owner=host)
+        party.members.add(host, member)
+
+        self.client.force_login(host)
+
+        # 1. 파티 일일 미션 3개 생성 확인 (출석 미션 제외)
+        daily = generate_party_daily_missions(party)
+        self.assertEqual(len(daily), 3)
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in daily))
+        self.assertTrue(all(m.period_type == "DAILY" for m in daily))
+
+        # 2. 파티 주간 미션 10개 생성 확인 (출석 미션 제외)
+        weekly = generate_party_weekly_missions(party)
+        self.assertEqual(len(weekly), 10)
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in weekly))
+        self.assertTrue(all(m.period_type == "WEEKLY" for m in weekly))
+
+        # 3. sync_party_mission_progress 확인 및 모니터링 확인
+        party_data = sync_party_mission_progress(party, host)
+        self.assertEqual(len(party_data["daily_missions"]), 3)
+        self.assertEqual(len(party_data["weekly_missions"]), 10)
+        first_daily = party_data["daily_missions"][0]
+        self.assertEqual(len(first_daily.members_monitoring), 2)
+
+        # 4. 대시보드 렌더링 확인 (파티 미션 허브, 탭, 목록보기 모달 등)
+        dash = self.client.get(reverse("dashboard"))
+        self.assertContains(dash, "PARTY MISSION HUB")
+        self.assertContains(dash, "우리 파티 미션")
+        self.assertContains(dash, "팀 넷핏")
+        self.assertContains(dash, "일일 (3)")
+        self.assertContains(dash, "주간 (10)")
+        self.assertContains(dash, "groupDailyQuestListModal")
+        self.assertContains(dash, "groupWeeklyQuestListModal")
+
+    def test_daily_and_weekly_missions_rotation_by_date_and_week(self):
+        import datetime
+        from fitness.services import (
+            generate_daily_missions, generate_weekly_missions,
+            generate_party_daily_missions, generate_party_weekly_missions
+        )
+        user = User.objects.create_user(username="rotation_user", password=None)
+        party = Party.objects.create(name="로테이션파티", owner=user)
+        party.members.add(user)
+
+        # 1. 솔로 일일 미션: 날짜가 다르면(월요일 vs 화요일) 출석 외 2개 미션이 회전하여 변경됨
+        day1 = datetime.date(2026, 9, 21)
+        day2 = datetime.date(2026, 9, 22)
+        daily_d1 = generate_daily_missions(user, today=day1)
+        daily_d2 = generate_daily_missions(user, today=day2)
+
+        self.assertEqual(len(daily_d1), 3)
+        self.assertEqual(len(daily_d2), 3)
+        self.assertEqual(daily_d1[0].title, "오늘의 NetFit 출석 체크")
+        self.assertEqual(daily_d2[0].title, "오늘의 NetFit 출석 체크")
+        d1_ai_titles = [m.title for m in daily_d1[1:]]
+        d2_ai_titles = [m.title for m in daily_d2[1:]]
+        self.assertNotEqual(d1_ai_titles, d2_ai_titles)
+
+        # 2. 파티 일일 미션: 날짜가 다르면 3개 미션 전체가 회전하여 변경됨 (출석 미션 없음)
+        p_daily_d1 = generate_party_daily_missions(party, today=day1)
+        p_daily_d2 = generate_party_daily_missions(party, today=day2)
+        self.assertEqual(len(p_daily_d1), 3)
+        self.assertEqual(len(p_daily_d2), 3)
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_daily_d1))
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_daily_d2))
+        p_d1_titles = [m.title for m in p_daily_d1]
+        p_d2_titles = [m.title for m in p_daily_d2]
+        self.assertNotEqual(p_d1_titles, p_d2_titles)
+
+        # 3. 솔로 주간 미션: 주차가 다르면 출석 누적(1개) 외 9개 AI 미션이 회전하여 변경됨
+        w1_start = datetime.date(2026, 9, 21)
+        w2_start = datetime.date(2026, 9, 28)
+        weekly_w1 = generate_weekly_missions(user, week_start=w1_start)
+        weekly_w2 = generate_weekly_missions(user, week_start=w2_start)
+        self.assertEqual(len(weekly_w1), 10)
+        self.assertEqual(len(weekly_w2), 10)
+        self.assertEqual(weekly_w1[0].title, "이번 주 3일 이상 출석 달성하기")
+        self.assertEqual(weekly_w2[0].title, "이번 주 3일 이상 출석 달성하기")
+        w1_ai_titles = [m.title for m in weekly_w1[1:]]
+        w2_ai_titles = [m.title for m in weekly_w2[1:]]
+        self.assertNotEqual(w1_ai_titles, w2_ai_titles)
+
+        # 4. 파티 주간 미션: 주차가 다르면 10개 파티 미션이 회전하여 변경됨 (출석 미션 없음)
+        p_weekly_w1 = generate_party_weekly_missions(party, week_start=w1_start)
+        p_weekly_w2 = generate_party_weekly_missions(party, week_start=w2_start)
+        self.assertEqual(len(p_weekly_w1), 10)
+        self.assertEqual(len(p_weekly_w2), 10)
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_weekly_w1))
+        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_weekly_w2))
+        p_w1_titles = [m.title for m in p_weekly_w1]
+        p_w2_titles = [m.title for m in p_weekly_w2]
+        self.assertNotEqual(p_w1_titles, p_w2_titles)
+
+
