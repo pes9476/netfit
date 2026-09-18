@@ -2,7 +2,6 @@
 
 ![title](PPT/img/img_Main.png)
 
-<div align="center" style="width: 10%; margin: 0 auto;">
 
 ---
 
@@ -15,8 +14,6 @@ KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문
 ---
 </div>
 <br><br>
-
----
 
 </div>
 ## 🎮 NetFit은 뭔가요?
