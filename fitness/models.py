@@ -541,6 +541,7 @@ class FriendRequest(models.Model):
     from_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_friend_requests")
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_friend_requests")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    sender_viewed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -553,6 +554,7 @@ class PartyInvitation(models.Model):
     inviter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_party_invitations")
     invitee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_party_invitations")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
+    inviter_viewed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

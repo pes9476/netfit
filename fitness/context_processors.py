@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
-from .models import BadgeAward, DailyQuest, PersonalDailyQuest
+from .models import BadgeAward, DailyQuest, FriendRequest, PartyInvitation, PersonalDailyQuest
 
 
 def quest_menu(request):
@@ -39,7 +39,20 @@ def quest_menu(request):
         }
         for quest in group
     )
+
+    # 🔔 친구 요청 및 수락 알림 카운트
+    pending_friend_count = FriendRequest.objects.filter(to_user=request.user, status="PENDING").count()
+    accepted_friend_count = FriendRequest.objects.filter(from_user=request.user, status="ACCEPTED", sender_viewed=False).count()
+    header_friend_alert_count = pending_friend_count + accepted_friend_count
+
+    # 🔔 파티 초대 알림 카운트
+    pending_party_invitation_count = PartyInvitation.objects.filter(invitee=request.user, status="PENDING").count()
+
     return {
         "header_quests": entries,
         "header_quest_pending_count": sum(not entry["completed"] for entry in entries),
+        "pending_friend_count": pending_friend_count,
+        "accepted_friend_count": accepted_friend_count,
+        "header_friend_alert_count": header_friend_alert_count,
+        "pending_party_invitation_count": pending_party_invitation_count,
     }

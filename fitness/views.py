@@ -110,10 +110,10 @@ def dashboard(request):
     stats = card_stats(request.user)
     latest_record = records.order_by("-created_at").first()
     latitude, longitude = weather_coordinates(request.user.profile.area)
-    personal_quests = PersonalDailyQuest.objects.filter(user=request.user, is_active=True)[:3]
-    group_quests = DailyQuest.objects.filter(
+    personal_quests = list(PersonalDailyQuest.objects.filter(user=request.user, is_active=True))
+    group_quests = list(DailyQuest.objects.filter(
         party__members=request.user, is_active=True,
-    ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party")[:3]
+    ).filter(Q(party__challenge_end__isnull=True) | Q(party__challenge_end__gte=timezone.localdate())).select_related("party"))
     completed_personal_ids = set(BadgeAward.objects.filter(user=request.user, personal_quest__in=personal_quests).values_list("personal_quest_id", flat=True))
     completed_group_ids = set(BadgeAward.objects.filter(user=request.user, daily_quest__in=group_quests).values_list("daily_quest_id", flat=True))
 
@@ -193,6 +193,11 @@ def dashboard(request):
         invitee=request.user, status="PENDING"
     ).select_related("party", "inviter__profile")
 
+    # 🎉 친구 요청 수락 완료 알림 (내가 보낸 요청 중 상대방이 수락하여 아직 확인하지 않은 알림)
+    accepted_friend_requests = FriendRequest.objects.filter(
+        from_user=request.user, status="ACCEPTED", sender_viewed=False
+    ).select_related("to_user__profile")
+
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
@@ -205,6 +210,7 @@ def dashboard(request):
         "party_challenges": party_challenges, "weather_latitude": latitude, "weather_longitude": longitude,
         "pending_friend_requests": pending_friend_requests,
         "pending_party_invitations": pending_party_invitations,
+        "accepted_friend_requests": accepted_friend_requests,
     })
 
 
@@ -696,11 +702,13 @@ def friends_view(request):
     friends = User.objects.filter(received_friend_links__user=request.user).select_related("profile", "charactercard")
     pending_received_requests = FriendRequest.objects.filter(to_user=request.user, status="PENDING").select_related("from_user__profile", "from_user__charactercard")
     pending_sent_requests = FriendRequest.objects.filter(from_user=request.user, status="PENDING").select_related("to_user__profile")
+    accepted_requests = FriendRequest.objects.filter(from_user=request.user, status="ACCEPTED", sender_viewed=False).select_related("to_user__profile")
     return render(request, "fitness/friends.html", {
         "friend_form": FriendForm(),
         "friends": friends,
         "pending_received_requests": pending_received_requests,
         "pending_sent_requests": pending_sent_requests,
+        "accepted_requests": accepted_requests,
     })
 
 
@@ -722,7 +730,8 @@ def add_friend(request):
             elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
                 fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
                 fr.status = "ACCEPTED"
-                fr.save(update_fields=["status"])
+                fr.sender_viewed = False
+                fr.save(update_fields=["status", "sender_viewed"])
                 FriendLink.objects.get_or_create(user=request.user, friend=friend)
                 FriendLink.objects.get_or_create(user=friend, friend=request.user)
                 messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
@@ -738,7 +747,8 @@ def respond_friend_request(request, request_id, action):
         freq = get_object_or_404(FriendRequest, pk=request_id, to_user=request.user, status="PENDING")
         if action == "accept":
             freq.status = "ACCEPTED"
-            freq.save(update_fields=["status"])
+            freq.sender_viewed = False
+            freq.save(update_fields=["status", "sender_viewed"])
             FriendLink.objects.get_or_create(user=request.user, friend=freq.from_user)
             FriendLink.objects.get_or_create(user=freq.from_user, friend=request.user)
             messages.success(request, f"{freq.from_user.username}님의 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.")
@@ -746,6 +756,15 @@ def respond_friend_request(request, request_id, action):
             freq.status = "REJECTED"
             freq.save(update_fields=["status"])
             messages.info(request, f"{freq.from_user.username}님의 친구 요청을 거절했습니다.")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def dismiss_friend_notification(request, request_id):
+    if request.method == "POST":
+        freq = get_object_or_404(FriendRequest, pk=request_id, from_user=request.user, status="ACCEPTED")
+        freq.sender_viewed = True
+        freq.save(update_fields=["sender_viewed"])
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -1081,7 +1100,8 @@ def onboarding_group(request):
         elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
             fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
             fr.status = "ACCEPTED"
-            fr.save(update_fields=["status"])
+            fr.sender_viewed = False
+            fr.save(update_fields=["status", "sender_viewed"])
             FriendLink.objects.get_or_create(user=request.user, friend=friend)
             FriendLink.objects.get_or_create(user=friend, friend=request.user)
             messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")

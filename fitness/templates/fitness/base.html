@@ -68,8 +68,16 @@
             <summary>
               <i class="fa-solid fa-users" style="color: #38BDF8;"></i>
               <span>그룹원</span>
+              {% if pending_party_invitation_count %}
+                <span style="background: #38BDF8; color: #090D16; font-size: 10px; font-weight: 900; border-radius: 8px; padding: 1px 5px; margin-left: 2px; line-height: 1.2;">{{ pending_party_invitation_count }}</span>
+              {% endif %}
             </summary>
             <div class="header-friends-links">
+              {% if pending_party_invitation_count %}
+                <a href="{% url 'dashboard' %}" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; color: #38BDF8; font-weight: 800; font-size: 11px;">
+                  <i class="fa-solid fa-bell"></i> 파티 초대 {{ pending_party_invitation_count }}건 도착!
+                </a>
+              {% endif %}
               {% for party in user.parties.all %}
                 <b style="color: #FFFFFF; font-size: 13px;">{{ party.name }}</b>
                 {% for member in party.members.all %}
@@ -87,9 +95,24 @@
             <summary>
               <i class="fa-solid fa-user-group" style="color: var(--indigo-primary);"></i>
               <span>친구</span>
+              {% if header_friend_alert_count %}
+                <span style="background: var(--neon-mint); color: #090D16; font-size: 10px; font-weight: 900; border-radius: 8px; padding: 1px 5px; margin-left: 2px; line-height: 1.2; box-shadow: 0 0 8px rgba(0,245,155,0.6);">{{ header_friend_alert_count }}</span>
+              {% endif %}
               <i class="fa-solid fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
             </summary>
             <div class="header-friends-links">
+              {% if pending_friend_count %}
+                <a href="{% url 'friends' %}#received-requests" style="background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; color: var(--neon-mint); font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
+                  <span><i class="fa-solid fa-bell"></i> 받은 요청</span>
+                  <b style="background: var(--neon-mint); color: #090D16; padding: 1px 6px; border-radius: 6px; font-size: 10px;">{{ pending_friend_count }}</b>
+                </a>
+              {% endif %}
+              {% if accepted_friend_count %}
+                <a href="{% url 'dashboard' %}" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; color: #38BDF8; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
+                  <span><i class="fa-solid fa-circle-check"></i> 수락 알림</span>
+                  <b style="background: #38BDF8; color: #090D16; padding: 1px 6px; border-radius: 6px; font-size: 10px;">{{ accepted_friend_count }}</b>
+                </a>
+              {% endif %}
               <a href="{% url 'friends' %}#friend-list"><i class="fa-solid fa-list" style="margin-right: 6px;"></i>친구 목록 보기</a>
               <a href="{% url 'friends' %}#friend-add"><i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i>친구 추가</a>
             </div>
