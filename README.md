@@ -2,8 +2,7 @@
 
 ![title](PPT/img/img_Main.png)
 
-### KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문 
-
+KSPO 공공데이터 활용 경진대회 - 서비스 개발 부문 
 # Team NetFit
 
 **운동, 혼자가 아니라면**
