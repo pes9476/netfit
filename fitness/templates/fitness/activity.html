@@ -14,7 +14,7 @@
       <input type="hidden" name="next" value="activity">
       <div class="form-grid">
         {% for field in workout_form %}
-          <div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
+          <div class="field{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
             {% if field.name == 'proof_image' %}
               {{ field.label_tag }}
               <div style="display: none;">
