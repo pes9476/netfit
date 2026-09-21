@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 
@@ -7,6 +8,14 @@ from .models import BadgeAward, DailyQuest, FriendRequest, PartyInvitation, Pers
 def quest_menu(request):
     if not request.user.is_authenticated:
         return {}
+
+    cache_key = f"user_header_summary_{request.user.id}"
+    if request.method != "GET":
+        cache.delete(cache_key)
+    else:
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
 
     personal = list(PersonalDailyQuest.objects.filter(user=request.user, is_active=True, period_type="DAILY")[:3])
     group = list(
@@ -53,7 +62,7 @@ def quest_menu(request):
         request.user.parties.all().prefetch_related("members__profile")
     )
 
-    return {
+    data = {
         "header_quests": entries,
         "header_quest_pending_count": sum(not entry["completed"] for entry in entries),
         "pending_friend_count": pending_friend_count,
@@ -62,3 +71,5 @@ def quest_menu(request):
         "pending_party_invitation_count": pending_party_invitation_count,
         "header_user_parties": header_user_parties,
     }
+    cache.set(cache_key, data, timeout=10)
+    return data
