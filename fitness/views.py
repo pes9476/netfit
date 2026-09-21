@@ -1,6 +1,6 @@
 import random
 import math
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -134,8 +134,12 @@ def get_user_party_challenges(user):
             if row["is_me"]:
                 my_rank = idx
                 my_points = row["points"]
-        is_ended = bool(party.challenge_end and party.challenge_end < today)
-        days_left = (party.challenge_end - today).days if party.challenge_end else 0
+        end_time = party.challenge_end_time or time(23, 59, 59)
+        deadline_dt = timezone.make_aware(datetime.combine(party.challenge_end, end_time))
+        now = timezone.now()
+        is_ended = bool(deadline_dt < now)
+        remaining_seconds = max(0, int((deadline_dt - now).total_seconds())) if not is_ended else 0
+        days_left = remaining_seconds // 86400
         is_dday = bool(not is_ended and days_left == 0)
         is_urgent = bool(not is_ended and 0 <= days_left <= 2)
 
@@ -180,6 +184,9 @@ def get_user_party_challenges(user):
             "days_left": max(0, days_left),
             "is_dday": is_dday,
             "is_urgent": is_urgent,
+            "deadline_iso": deadline_dt.isoformat(),
+            "remaining_seconds": remaining_seconds,
+            "end_time_formatted": end_time.strftime("%H:%M"),
             "reversal_guide": reversal_guide,
             "pursuit_warning": pursuit_warning,
             "gap_to_lead": gap_to_lead,
@@ -216,21 +223,9 @@ def dashboard(request):
         active_party = request.user.parties.get(id=request.session["active_party_id"])
     else:
         user_parties = request.user.parties.order_by("-id")
-        custom_parties = user_parties.exclude(name="팀 넷핏 러너스")
-        if custom_parties.exists():
-            active_party = custom_parties.filter(
-                Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
-            ).first() or custom_parties.first()
-        else:
-            active_party = user_parties.first()
-
-    if not active_party and not needs_kakao_nickname(request.user):
-        # 가입된 파티가 없는 경우 기본 파티('팀 넷핏 러너스')에 자동 가입하여 솔로와 1:1 대칭으로 즉시 일일(3개)/주간(10개) 파티 미션 허브 및 목록보기 제공
-        default_party = Party.objects.filter(name="팀 넷핏 러너스").first() or Party.objects.first()
-        if not default_party:
-            default_party = Party.objects.create(name="팀 넷핏 러너스", owner=request.user)
-        default_party.members.add(request.user)
-        active_party = default_party
+        active_party = user_parties.filter(
+            Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
+        ).first() or user_parties.first()
 
     party_daily_missions = []
     party_weekly_missions = []
@@ -542,22 +537,11 @@ def ranking_view(request):
         users = users.filter(pk__in=list(friend_ids) + [current_user.pk])
 
     ranked = [{
-        "name": user.profile.display_name, "area": user.profile.area,
+        "name": user.profile.display_name or user.username, "area": user.profile.area,
         "level": user.charactercard.level,
         "total_score": BadgeAward.objects.filter(user=user).aggregate(total=Sum("points"))["total"] or 0,
         "is_me": user == current_user, "is_demo": False,
     } for user in users]
-    if scope == "friends":
-        demo_rows = DEMO_RANKINGS[:3]
-    elif scope == "party":
-        demo_rows = []
-    elif scope == "region":
-        demo_rows = [row for row in DEMO_RANKINGS if row["area"] == current_user.profile.area]
-        if not demo_rows:
-            demo_rows = [{"name": f"{current_user.profile.area} 운동친구", "area": current_user.profile.area, "level": 8, "total_xp": 2420}]
-    else:
-        demo_rows = DEMO_RANKINGS
-    ranked.extend({**row, "total_score": row["total_xp"], "is_me": False, "is_demo": True} for row in demo_rows)
     ranked.sort(key=lambda item: item["total_score"], reverse=True)
     for index, item in enumerate(ranked, 1):
         item["rank"] = index
@@ -1466,6 +1450,22 @@ def onboarding_group(request):
             challenge_end = date.fromisoformat(request.POST.get("challenge_end", ""))
         except (TypeError, ValueError):
             challenge_start = challenge_end = None
+
+        raw_end_time = request.POST.get("challenge_end_time", "").strip()
+        challenge_end_time = None
+        if raw_end_time:
+            try:
+                challenge_end_time = time.fromisoformat(raw_end_time)
+            except (ValueError, TypeError):
+                challenge_end_time = time(23, 59, 59)
+        else:
+            challenge_end_time = time(23, 59, 59)
+
+        try:
+            target_timer_minutes = max(0, int(request.POST.get("target_timer_minutes", 0) or 0))
+        except (ValueError, TypeError):
+            target_timer_minutes = 0
+
         if not room_name or not challenge_start or not challenge_end or challenge_end < challenge_start:
             messages.error(request, "파티 이름과 올바른 내기 시작일·종료일을 입력해 주세요.")
         else:
@@ -1487,6 +1487,8 @@ def onboarding_group(request):
                 party = Party.objects.create(
                     name=room_name, owner=request.user,
                     challenge_start=challenge_start, challenge_end=challenge_end,
+                    challenge_end_time=challenge_end_time,
+                    target_timer_minutes=target_timer_minutes,
                     challenge_reward=challenge_reward,
                 )
                 party.members.add(request.user)
@@ -1565,10 +1567,18 @@ def onboarding_group_quest(request, party_id):
 @login_required
 def region_view(request):
     card = request.user.charactercard
+    real_region_users = User.objects.filter(profile__area=request.user.profile.area, profile__rank_participation=True).select_related("profile", "charactercard")[:10]
+    region_rows = [{
+        "name": u.profile.display_name or u.username,
+        "area": u.profile.area,
+        "level": u.charactercard.level,
+        "total_xp": BadgeAward.objects.filter(user=u).aggregate(total=Sum("points"))["total"] or 0,
+    } for u in real_region_users]
+    region_rows.sort(key=lambda r: r["total_xp"], reverse=True)
     return render(request, "fitness/region.html", {
         "card": card, "stats": card_stats(request.user),
         "power": battle_power(card_stats(request.user), card.level),
-        "region_rows": DEMO_RANKINGS[:5],
+        "region_rows": region_rows,
     })
 
 
@@ -1581,9 +1591,9 @@ def battle_view(request):
         "power": battle_power(card_stats(request.user), card.level),
         "battle_form": BattleForm(initial={
             "scope": request.GET.get("scope", "PARTY"),
-            "region_name": request.GET.get("region", ""),
-        }), "battles": battles,
-        "demo_opponents": DEMO_OPPONENTS,
+        }),
+        "battles": battles,
+        "demo_opponents": [],
     })
 
 

@@ -753,3 +753,37 @@ class WebFlowTests(TestCase):
         res_sender_final = self.client.get(reverse("notifications_api"))
         self.assertEqual(res_sender_final.json()["total_count"], 0)
 
+    def test_party_timer_and_demo_removal(self):
+        """파티 생성 시 마감 타이머/목표 시간 설정 및 대시보드 타이머 정보 계산 검증."""
+        user = User.objects.create_user(username="timer_creator", password="password123")
+        self.client.force_login(user)
+
+        today = timezone.localdate()
+        res = self.client.post(reverse("onboarding_group"), {
+            "action": "create_room",
+            "room_name": "타이머 러닝 파티",
+            "challenge_start": today.isoformat(),
+            "challenge_end": (today + timedelta(days=3)).isoformat(),
+            "challenge_end_time": "18:30",
+            "target_timer_minutes": "45",
+            "challenge_reward": "시원한 커피 ☕",
+        })
+        party = Party.objects.get(name="타이머 러닝 파티")
+        self.assertEqual(party.challenge_end_time.strftime("%H:%M"), "18:30")
+        self.assertEqual(party.target_timer_minutes, 45)
+
+        # 대시보드 렌더링 확인
+        dash_res = self.client.get(reverse("dashboard"))
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertContains(dash_res, "타이머 러닝 파티")
+        self.assertContains(dash_res, "18:30 마감")
+        self.assertContains(dash_res, "하루 목표 45분")
+        self.assertContains(dash_res, "내기 마감 타이머")
+
+        # 랭킹에 예시 데이터(러닝민수 등)가 포함되지 않음을 검증
+        rank_res = self.client.get(reverse("ranking"))
+        self.assertEqual(rank_res.status_code, 200)
+        self.assertNotContains(rank_res, "러닝민수")
+        self.assertNotContains(rank_res, "수영하는수빈")
+
+

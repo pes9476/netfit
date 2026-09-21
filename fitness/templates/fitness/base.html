@@ -238,6 +238,7 @@
 
       window.handleNotificationAction = function(url, el) {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+        const isPartyAccept = url.includes('/party/invitation/') && url.includes('/accept/');
         fetch(url, {
           method: 'POST',
           headers: {
@@ -258,6 +259,14 @@
                 container.style.display = 'none';
               }
             }, 300);
+          }
+          if (isPartyAccept) {
+            showToast('🎉', '파티 참가 완료!', '파티에 성공적으로 참가했습니다. 대시보드를 갱신합니다.', '#38BDF8');
+            if (window.location.pathname === '/' || window.location.pathname === '') {
+              setTimeout(() => {
+                window.location.reload();
+              }, 800);
+            }
           }
         })
         .catch(err => {
@@ -503,6 +512,11 @@
               knownNotificationIds.add(id);
               if (!isInitialScan) {
                 showToast('🎉', '파티 초대 수락!', `${ainv.invitee_name}님이 '${ainv.party_name}' 초대를 수락했습니다.`, '#38BDF8');
+                if (window.location.pathname === '/' || window.location.pathname === '') {
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1200);
+                }
               }
               if (container) {
                 container.insertAdjacentHTML('afterbegin', renderAcceptedPartyCard(ainv));

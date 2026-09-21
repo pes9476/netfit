@@ -253,8 +253,8 @@
                   {% endif %}
 
                   {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
-                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                      <i class="fa-solid fa-stopwatch"></i> 타이머
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="운동 기록하러 가기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                      <i class="fa-solid fa-pen-to-square"></i> 기록 바로가기
                     </a>
                   {% endif %}
                 </div>
@@ -342,7 +342,7 @@
                     {% csrf_token %}
                     <div style="display: flex; gap: 6px; align-items: stretch;">
                       {% if quest.target_minutes %}
-                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(0,245,155,0.25);">
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(0,245,155,0.25);">
                           {% if quest.progress_percent > 0 %}
                             <i class="fa-solid fa-person-running"></i>
                             <span>운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
@@ -457,7 +457,7 @@
                 <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                   {% csrf_token %}
                   {% if quest.target_minutes %}
-                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
                       {% if quest.progress_percent > 0 %}
                         <i class="fa-solid fa-person-running"></i>
                         <span>운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
@@ -736,8 +736,8 @@
                     {% if quest.is_completed %}
                       <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
                     {% elif quest.target_minutes %}
-                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                        <i class="fa-solid fa-stopwatch"></i> 타이머
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="운동 기록하러 가기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                        <i class="fa-solid fa-pen-to-square"></i> 기록 바로가기
                       </a>
                     {% endif %}
                   </div>
@@ -835,7 +835,7 @@
                     {% csrf_token %}
                     <div style="display: flex; gap: 6px; align-items: stretch;">
                       {% if quest.target_minutes %}
-                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
                           {% if quest.progress_percent > 0 %}
                             <i class="fa-solid fa-person-running"></i>
                             <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
@@ -974,13 +974,13 @@
                   <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                     {% csrf_token %}
                     {% if quest.target_minutes %}
-                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(245,158,11,0.25);">
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(245,158,11,0.25);">
                         {% if quest.progress_percent > 0 %}
                           <i class="fa-solid fa-person-running"></i>
                           <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
                         {% else %}
                           <i class="fa-solid fa-play"></i>
-                          <span>파티 미션 시작 (타이머)</span>
+                          <span>파티 미션 시작</span>
                         {% endif %}
                       </a>
                     {% else %}
@@ -1029,7 +1029,26 @@
           <span style="background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px;">대결 진행 중 ⏱️</span>
         </div>
         <h2><i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 6px;"></i>{{ challenge.party.name }} 배지 내기</h2>
-        <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0;">{{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}</p>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+          <p style="color: var(--text-muted); font-size: 13px; margin: 0;">
+            {{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}
+            {% if challenge.party.challenge_end_time %}
+              <span style="color: #FBBF24; font-weight: 800;">({{ challenge.end_time_formatted }} 마감)</span>
+            {% endif %}
+          </p>
+          {% if challenge.party.target_timer_minutes %}
+            <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); padding: 1px 8px; border-radius: 6px;">
+              <i class="fa-solid fa-hourglass-half"></i> 하루 목표 {{ challenge.party.target_timer_minutes }}분
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- ⏱️ 실시간 내기 마감 타이머 위젯 -->
+        <div class="party-live-ticker-box" data-deadline="{{ challenge.deadline_iso }}" style="margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; background: rgba(0, 245, 155, 0.08); border: 1px solid rgba(0, 245, 155, 0.3); border-radius: 8px; padding: 4px 12px; box-shadow: 0 0 12px rgba(0,245,155,0.1);">
+          <i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); font-size: 13px;"></i>
+          <span style="font-size: 11.5px; font-weight: 700; color: #94A3B8;">내기 마감 타이머:</span>
+          <span class="party-live-ticker-text" style="font-family: 'Courier New', monospace; font-size: 13px; font-weight: 900; color: var(--neon-mint); letter-spacing: 0.5px;">계산 중...</span>
+        </div>
         {% if challenge.party.challenge_reward %}
           <p class="challenge-reward" style="margin-top: 6px;">🎁 내기 보상: <b style="color: var(--trophy-gold);">{{ challenge.party.challenge_reward }}</b></p>
         {% endif %}
@@ -1663,50 +1682,40 @@ function removeQuestPhotoPreview(questKey) {
   if (box) box.style.display = 'none';
 }
 
-// ⏱️ 실시간 운동 타이머 상태 동기화 (대시보드 일일미션 카드)
-(function syncLiveWorkoutTimer() {
-  function checkTimer() {
-    try {
-      const saved = localStorage.getItem('netfit_active_workout_timer');
-      if (!saved) {
-        document.querySelectorAll('.live-quest-timer-badge').forEach(b => b.style.display = 'none');
-        return;
-      }
-      const data = JSON.parse(saved);
-      if (!data.isTimerRunning) {
-        document.querySelectorAll('.live-quest-timer-badge').forEach(b => b.style.display = 'none');
-        return;
-      }
-      const now = Date.now();
-      const diffSec = Math.floor((now - data.updatedAt) / 1000);
-      const currentSec = data.timerSeconds + diffSec;
-      
-      document.querySelectorAll('.live-quest-timer-badge').forEach(badge => {
-        const questWorkout = badge.getAttribute('data-workout');
-        if (!data.workoutType || data.workoutType === '기타' || data.workoutType === questWorkout) {
-          badge.style.display = 'inline-flex';
-          const countdownVal = badge.querySelector('.timer-countdown-val');
-          if (countdownVal) {
-            if (data.mode === 'countdown' && data.targetSeconds > 0) {
-              const rem = Math.max(0, data.targetSeconds - currentSec);
-              const m = Math.floor(rem / 60);
-              const s = rem % 60;
-              countdownVal.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' 남음';
-            } else {
-              const m = Math.floor(currentSec / 60);
-              const s = currentSec % 60;
-              countdownVal.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' 경과';
-            }
-          }
-        } else {
-          badge.style.display = 'none';
-        }
-      });
-    } catch(e) {}
-  }
-  setInterval(checkTimer, 1000);
-  checkTimer();
-})();
+// ⏱️ 실시간 파티 내기 마감 타이머 위젯
+function updatePartyCountdownTickers() {
+  document.querySelectorAll('.party-live-ticker-box').forEach(box => {
+    const deadlineStr = box.getAttribute('data-deadline');
+    if (!deadlineStr) return;
+    const deadline = new Date(deadlineStr).getTime();
+    const now = Date.now();
+    const diff = deadline - now;
+    const textEl = box.querySelector('.party-live-ticker-text');
+    if (!textEl) return;
+
+    if (diff <= 0) {
+      textEl.textContent = "내기 종료됨 🏁";
+      textEl.style.color = "#EF4444";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    const parts = [];
+    if (days > 0) parts.push(days + "일");
+    parts.push(String(hours).padStart(2, '0') + "시간");
+    parts.push(String(mins).padStart(2, '0') + "분");
+    parts.push(String(secs).padStart(2, '0') + "초 남음");
+
+    textEl.textContent = parts.join(" ");
+  });
+}
+setInterval(updatePartyCountdownTickers, 1000);
+document.addEventListener('DOMContentLoaded', updatePartyCountdownTickers);
+updatePartyCountdownTickers();
 
 // 📸 등록된 인증 사진 팝업 모달 열기/닫기/수정/삭제
 function openProofModal(imgUrl, questKind, questId) {
@@ -2038,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   {{ quest.done_label }}
                 </span>
                 {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                     <i class="fa-solid fa-play"></i> 미션 시작
                   </a>
                 {% endif %}
@@ -2095,7 +2104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
                 {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                     <i class="fa-solid fa-play"></i> 미션 시작
                   </a>
                 {% endif %}
@@ -2152,7 +2161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
                 </span>
                 {% if quest.target_minutes %}
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                     <i class="fa-solid fa-play"></i> 미션 시작
                   </a>
                 {% endif %}
@@ -2227,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
                 {% if quest.target_minutes %}
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                     <i class="fa-solid fa-play"></i> 미션 시작
                   </a>
                 {% endif %}

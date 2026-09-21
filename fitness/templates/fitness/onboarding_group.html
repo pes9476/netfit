@@ -37,11 +37,21 @@
         <input class="input" id="challengeEnd" name="challenge_end" type="date" required>
       </div>
     </div>
+    <div class="form-grid" style="margin-top: 10px;">
+      <div class="field">
+        <label for="challengeEndTime"><i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); margin-right: 4px;"></i>내기 마감 시각 (타이머)</label>
+        <input class="input" id="challengeEndTime" name="challenge_end_time" type="time" value="23:59" required>
+      </div>
+      <div class="field">
+        <label for="targetTimerMinutes"><i class="fa-solid fa-hourglass-half" style="color: #38BDF8; margin-right: 4px;"></i>파티 목표 운동 시간 (선택, 분)</label>
+        <input class="input" id="targetTimerMinutes" name="target_timer_minutes" type="number" min="0" max="360" placeholder="예: 60 (분 단위)">
+      </div>
+    </div>
     <div class="field">
       <label for="challengeReward">내기 보상</label>
       <input class="input" id="challengeReward" name="challenge_reward" maxlength="200" placeholder="예: 1등에게 치킨 쏘기 🍗">
     </div>
-    <small>설정한 기간에 받은 배지 점수를 합산해 파티 1등을 정합니다.</small>
+    <small>설정한 기간과 마감 타이머 시각까지 모은 배지 점수를 합산해 파티 1등을 가립니다.</small>
 
     <div class="field" style="margin-top: 14px;">
       <label for="directInvitee"><i class="fa-solid fa-magnifying-glass" style="color: var(--neon-mint); margin-right: 4px;"></i>친구 닉네임으로 바로 초대 (선택)</label>
