@@ -14,8 +14,8 @@
   <form method="post" class="panel group-friend-add" style="margin-bottom: 20px;">
     {% csrf_token %}
     <input type="hidden" name="action" value="add_friend">
-    <h2>친구 추가</h2>
-    <p>초대할 친구의 닉네임을 입력하세요.</p>
+    <h2><i class="fa-solid fa-user-plus" style="color: var(--neon-mint); margin-right: 6px;"></i>친구 추가</h2>
+    <p>초대할 친구의 활동 닉네임 또는 아이디를 입력하세요.</p>
     {{ friend_form.friend_code }}
     <button class="button secondary" type="submit">친구 목록에 추가</button>
   </form>
@@ -24,7 +24,7 @@
   <form method="post" class="panel group-room-form" style="margin-top: 0;">
     {% csrf_token %}
     <input type="hidden" name="action" value="create_room">
-    <h2>파티 만들기</h2>
+    <h2><i class="fa-solid fa-users" style="color: #38BDF8; margin-right: 6px;"></i>파티 만들기</h2>
     <label for="roomName">파티 이름</label>
     <input class="input" id="roomName" name="room_name" maxlength="100" required placeholder="예: 퇴근 후 러닝 파티">
     <div class="form-grid">
@@ -39,11 +39,18 @@
     </div>
     <div class="field">
       <label for="challengeReward">내기 보상</label>
-      <input class="input" id="challengeReward" name="challenge_reward" maxlength="200" placeholder="예: 1등에게 건강식 사주기">
+      <input class="input" id="challengeReward" name="challenge_reward" maxlength="200" placeholder="예: 1등에게 치킨 쏘기 🍗">
     </div>
     <small>설정한 기간에 받은 배지 점수를 합산해 파티 1등을 정합니다.</small>
-    <fieldset class="invite-list">
-      <legend>친구 초대 목록</legend>
+
+    <div class="field" style="margin-top: 14px;">
+      <label for="directInvitee"><i class="fa-solid fa-magnifying-glass" style="color: var(--neon-mint); margin-right: 4px;"></i>친구 닉네임으로 바로 초대 (선택)</label>
+      <input class="input" id="directInvitee" name="direct_invitee" placeholder="초대할 친구의 닉네임 또는 아이디 입력">
+      <small style="color: #94A3B8; display: block; margin-top: 4px;">목록에 친구가 없어도 닉네임이나 아이디를 입력하면 파티 생성과 동시에 초대장이 발송됩니다.</small>
+    </div>
+
+    <fieldset class="invite-list" style="margin-top: 14px;">
+      <legend>내 친구 목록에서 선택</legend>
       {% for friend in friends %}
         <label>
           <input type="checkbox" name="invitees" value="{{ friend.id }}">
@@ -51,7 +58,7 @@
           <small>@{{ friend.username }}</small>
         </label>
       {% empty %}
-        <p>등록된 친구가 없습니다. 위에서 친구를 추가해 주세요.</p>
+        <p style="color: var(--text-muted); font-size: 13px;">등록된 맞팔로우 친구가 없습니다. 위의 닉네임 직접 검색 입력을 활용해 보세요.</p>
       {% endfor %}
     </fieldset>
     <div style="display: flex; justify-content: flex-end; margin-top: 24px;">

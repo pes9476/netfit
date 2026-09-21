@@ -31,8 +31,33 @@
 </article>
 
 <!-- 🔔 대기 중인 친구 요청, 수락 알림 및 파티 초대 알림 -->
-{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests %}
+{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations %}
 <section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  {% for ainv in accepted_party_invitations %}
+    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">🎉</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.25); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대 수락</span>
+            <span style="color: #94A3B8; font-size: 11px;">새로운 파티원이 합류했습니다</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: #38BDF8;">{{ ainv.invitee.profile.display_name|default:ainv.invitee.username }}</b>님이 <b style="color: #FFFFFF;">'{{ ainv.party.name }}'</b> 파티 초대를 수락했습니다! 함께 협동 미션을 시작해보세요.
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <form method="post" action="{% url 'dismiss_party_notification' ainv.id %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #090D16; padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
   {% for acc in accepted_friend_requests %}
     <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -586,7 +611,7 @@
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <!-- 일일 / 주간 탭 스위처 -->
             <div style="display: inline-flex; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 3px; gap: 4px;">
               <button type="button" id="tabBtnPartyDaily" onclick="switchPartyMissionTab('daily')" style="border: none; background: rgba(56, 189, 248, 0.2); color: #38BDF8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
@@ -596,6 +621,9 @@
                 <i class="fa-solid fa-calendar-week"></i> 주간 ({{ party_weekly_missions|length }})
               </button>
             </div>
+            <button type="button" class="button secondary" onclick="openInvitePartyModal('{{ active_party.id }}', '{{ active_party.name|escapejs }}')" style="padding: 6px 10px; font-size: 11px; border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;" title="친구 닉네임으로 파티 초대">
+              <i class="fa-solid fa-user-plus"></i> 친구 초대
+            </button>
             <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 6px 10px; font-size: 11px;">새 파티</a>
           </div>
         </div>
@@ -889,24 +917,65 @@
 <!-- 파티 배지 내기 스코어보드 -->
 {% for challenge in party_challenges %}
   <section class="panel party-scoreboard" style="margin-top: 24px;">
-    <div class="section-heading" style="margin-bottom: 16px;">
+    <div class="section-heading" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
       <div>
-        <span style="color: var(--trophy-gold); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY CHALLENGE</span>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+          <span style="color: var(--trophy-gold); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY CHALLENGE</span>
+          {% if challenge.is_ended %}
+            <span style="background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px;">대결 종료 🏁</span>
+          {% else %}
+            <span style="background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px;">대결 진행 중 ⏱️</span>
+          {% endif %}
+        </div>
         <h2><i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 6px;"></i>{{ challenge.party.name }} 배지 내기</h2>
         <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0;">{{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}</p>
         {% if challenge.party.challenge_reward %}
-          <p class="challenge-reward">🎁 내기 보상: <b>{{ challenge.party.challenge_reward }}</b></p>
+          <p class="challenge-reward" style="margin-top: 6px;">🎁 내기 보상: <b style="color: var(--trophy-gold);">{{ challenge.party.challenge_reward }}</b></p>
         {% endif %}
+      </div>
+      
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ challenge.party.id }}')" style="padding: 9px 18px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3); background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer;">
+          <i class="fa-solid fa-trophy"></i>
+          <span>{% if challenge.is_ended %}최종 결과 & 시상식 팝업 보기{% else %}순위 결과 & 축하 팝업 보기{% endif %}</span>
+        </button>
+        <button type="button" class="button secondary" onclick="openInvitePartyModal('{{ challenge.party.id }}', '{{ challenge.party.name|escapejs }}')" style="padding: 9px 14px; font-size: 13px; font-weight: 800; color: #38BDF8; border-color: rgba(56, 189, 248, 0.4); cursor: pointer;">
+          <i class="fa-solid fa-user-plus"></i> 친구 초대
+        </button>
       </div>
     </div>
     <ol>
       {% for row in challenge.rows %}
         <li{% if row.is_me %} class="is-me"{% endif %}>
-          <span>{% if forloop.first %}🏆{% else %}{{ forloop.counter }}위{% endif %} {{ row.name }}</span>
+          <span>
+            {% if row.rank == 1 %}
+              <b style="color: var(--trophy-gold); font-weight: 900;">🏆 1위</b>
+            {% elif row.rank == 2 %}
+              <b style="color: #CBD5E1; font-weight: 900;">🥈 2위</b>
+            {% elif row.rank == 3 %}
+              <b style="color: #CD7F32; font-weight: 900;">🥉 3위</b>
+            {% else %}
+              <span style="color: var(--text-muted); font-weight: 700;">{{ row.rank }}위</span>
+            {% endif %}
+            {{ row.name }}
+            {% if row.is_me %}
+              <span style="font-size: 10px; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 800; border: 1px solid rgba(0,245,155,0.3);">나</span>
+            {% endif %}
+          </span>
           <b style="color: var(--trophy-gold);">{{ row.points }}점</b>
         </li>
       {% endfor %}
     </ol>
+  </section>
+{% empty %}
+  <section class="panel party-scoreboard" style="margin-top: 24px; text-align: center; padding: 28px 20px;">
+    <i class="fa-solid fa-flag-checkered" style="font-size: 32px; color: var(--text-muted); margin-bottom: 10px;"></i>
+    <h3 style="color: #FFFFFF; font-size: 16px; margin: 0 0 6px;">진행 중인 파티 배지 내기가 없습니다</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 16px;">친구와 파티를 만들고 내기 기간과 보상을 설정하여 경쟁을 시작해 보세요!</p>
+    <a class="button btn-mint" href="{% url 'onboarding_group' %}" style="display: inline-flex; align-items: center; gap: 6px;">
+      <i class="fa-solid fa-plus"></i>
+      <span>새 파티 내기 만들기</span>
+    </a>
   </section>
 {% endfor %}
 
@@ -2055,5 +2124,343 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
+
+<!-- 👥 친구 닉네임으로 파티 초대 모달 -->
+<div id="invitePartyMemberModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 16, 0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeInvitePartyModal();">
+  <div style="background: linear-gradient(135deg, #111A2C 0%, #0D1322 100%); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 18px; max-width: 440px; width: 100%; box-shadow: 0 16px 45px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(56, 189, 248, 0.05);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-user-plus" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">친구 닉네임으로 파티 초대</b>
+      </div>
+      <button type="button" onclick="closeInvitePartyModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 2px;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="invitePartyForm" method="post" action="" style="padding: 20px; margin: 0;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="dashboard">
+      <p style="color: #94A3B8; font-size: 13px; line-height: 1.5; margin: 0 0 16px;">
+        '<b id="inviteModalPartyName" style="color: #38BDF8;">우리 파티</b>'에 함께 운동할 친구를 초대합니다.<br>
+        친구의 <b>활동 닉네임</b> 또는 <b>아이디</b>를 입력해 주세요.
+      </p>
+
+      <div class="field" style="margin-bottom: 20px;">
+        <label for="inviteFriendInput" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 8px;">
+          초대할 친구 닉네임 / 아이디
+        </label>
+        <input class="input" id="inviteFriendInput" name="friend_name" required placeholder="예: 러너123 또는 운동왕" style="width: 100%; box-sizing: border-box; font-size: 14px; padding: 10px 14px;">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="button secondary" onclick="closeInvitePartyModal()" style="padding: 8px 16px; font-size: 13px;">취소</button>
+        <button type="submit" class="button btn-mint" style="padding: 8px 20px; font-size: 13px; font-weight: 800; background: #38BDF8; border-color: #38BDF8; color: #090D16; cursor: pointer;">
+          <i class="fa-solid fa-paper-plane"></i> 초대장 발송
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 🏆 파티 내기 게임 종료 순위 결과 및 축하 팝업 모달 -->
+<div id="partyResultModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 16, 0.88); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) closePartyResultModal();">
+  <div style="background: linear-gradient(180deg, #131E35 0%, #0D1322 100%); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 22px; max-width: 520px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.15); overflow: hidden; animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); margin: auto;">
+    
+    <!-- 모달 상단 헤더 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(56, 189, 248, 0.08));">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">🏆</span>
+        <div>
+          <b style="color: #FFFFFF; font-size: 15px; display: block;">파티 내기 대결 최종 결과</b>
+          <small id="modalPartySubtitle" style="color: var(--trophy-gold); font-weight: 700; font-size: 11px;">NETFIT PARTY CHALLENGE RESULT</small>
+        </div>
+      </div>
+      <button type="button" onclick="closePartyResultModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 2px;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 모달 본문 콘텐츠 -->
+    <div style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+      
+      <!-- 👑 내 순위 맞춤 축하 카드 (1등, 2등, 3등, 4등에 따라 동적 변경) -->
+      <div id="modalMyResultCard" style="border-radius: 16px; padding: 20px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease;">
+        <!-- 상단 뱃지 & 아이콘 -->
+        <div id="modalRankIcon" style="font-size: 44px; line-height: 1; margin-bottom: 8px;">👑</div>
+        <div id="modalRankBadge" style="display: inline-block; font-size: 12px; font-weight: 900; padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; letter-spacing: 0.5px;">
+          1등 챔피언 우승
+        </div>
+        
+        <!-- 맞춤 축하 헤드라인 & 멘트 -->
+        <h3 id="modalRankTitle" style="font-size: 19px; font-weight: 900; margin: 0 0 8px; letter-spacing: -0.3px;">
+          축하드립니다! 영광의 1등을 차지하셨습니다!
+        </h3>
+        <p id="modalRankMessage" style="font-size: 13.5px; line-height: 1.6; margin: 0 0 14px; color: #E2E8F0;">
+          파티원들과의 치열한 경쟁 끝에 최고 점수로 우승을 차지했습니다! 약속된 보상을 만끽하세요!
+        </p>
+
+        <!-- 내 점수 박스 -->
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12); padding: 6px 16px; border-radius: 12px;">
+          <span style="font-size: 12px; color: #94A3B8;">내 누적 획득 점수:</span>
+          <b id="modalMyScoreText" style="font-size: 16px; font-weight: 900; color: var(--trophy-gold);">0점</b>
+        </div>
+      </div>
+
+      <!-- 🎁 약속된 내기 보상 배너 -->
+      <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px;">🎁</span>
+        <div>
+          <span style="font-size: 11px; font-weight: 800; color: var(--trophy-gold); display: block;">공식 파티 내기 보상</span>
+          <b id="modalRewardText" style="color: #FFFFFF; font-size: 14px;">1등에게 치킨 쏘기</b>
+        </div>
+      </div>
+
+      <!-- 📊 전체 파티원 순위표 (시상대 & 리더보드) -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <b style="font-size: 13px; color: #E2E8F0; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-ranking-star" style="color: #38BDF8;"></i> 전체 파티원 최종 순위
+          </b>
+          <span id="modalDateRange" style="font-size: 11px; color: #94A3B8;">2026.09.15 ~ 2026.09.21</span>
+        </div>
+        
+        <div id="modalRankingList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- JS로 파티원 순위 행이 렌더링됩니다 -->
+        </div>
+      </div>
+
+      <!-- 🔍 순위별 멘트 체험 시뮬레이터 (사용자 및 검증자가 1등, 2등, 3등, 4등 팝업 멘트를 즉시 체험) -->
+      <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; padding: 12px 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <small style="color: #94A3B8; font-weight: 800; font-size: 11px;">
+            <i class="fa-solid fa-sliders" style="color: var(--neon-mint); margin-right: 4px;"></i>순위별 팝업 멘트 바로 체험해보기:
+          </small>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+          <button type="button" onclick="simulatePartyRank(1)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(245, 158, 11, 0.4); color: var(--trophy-gold); text-align: center;">
+            👑 1등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(2)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(203, 213, 225, 0.4); color: #CBD5E1; text-align: center;">
+            🥈 2등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(3)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(205, 127, 50, 0.4); color: #CD7F32; text-align: center;">
+            🥉 3등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(4)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(0, 245, 155, 0.35); color: var(--neon-mint); text-align: center;">
+            💪 4등 보기
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 모달 하단 닫기/확인 버튼 -->
+    <div style="padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <a href="{% url 'onboarding_group' %}" class="button secondary" style="padding: 7px 14px; font-size: 12px; border-color: rgba(255,255,255,0.15);">
+        <i class="fa-solid fa-plus"></i> 새 내기 만들기
+      </a>
+      <button type="button" onclick="closePartyResultModal()" class="button btn-mint" style="padding: 8px 22px; font-size: 13px; font-weight: 800; cursor: pointer;">
+        확인 완료
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// -------------------------------------------------------------
+// 👥 파티원 친구 초대 모달 제어
+// -------------------------------------------------------------
+function openInvitePartyModal(partyId, partyName) {
+  const modal = document.getElementById('invitePartyMemberModal');
+  const form = document.getElementById('invitePartyForm');
+  const nameEl = document.getElementById('inviteModalPartyName');
+  const inputEl = document.getElementById('inviteFriendInput');
+  if (!modal || !form) return;
+
+  nameEl.textContent = partyName || '우리 파티';
+  form.action = `/party/${partyId}/invite/`;
+  modal.style.display = 'flex';
+  if (inputEl) {
+    inputEl.value = '';
+    setTimeout(() => inputEl.focus(), 100);
+  }
+}
+
+function closeInvitePartyModal() {
+  const modal = document.getElementById('invitePartyMemberModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// -------------------------------------------------------------
+// 🏆 파티 내기 게임 종료 순위 결과 및 축하 팝업 모달 제어
+// -------------------------------------------------------------
+const PARTY_CHALLENGES_DATA = {
+  {% for challenge in party_challenges %}
+    "{{ challenge.party.id }}": {
+      "partyName": "{{ challenge.party.name|escapejs }}",
+      "startDate": "{{ challenge.party.challenge_start|date:'Y.m.d' }}",
+      "endDate": "{{ challenge.party.challenge_end|date:'Y.m.d' }}",
+      "reward": "{{ challenge.party.challenge_reward|default:'자유 내기'|escapejs }}",
+      "isEnded": {{ challenge.is_ended|yesno:"true,false" }},
+      "myRank": {{ challenge.my_rank }},
+      "myPoints": {{ challenge.my_points }},
+      "totalMembers": {{ challenge.total_members }},
+      "rows": [
+        {% for row in challenge.rows %}
+          {
+            "rank": {{ row.rank }},
+            "name": "{{ row.name|escapejs }}",
+            "username": "{{ row.username|escapejs }}",
+            "points": {{ row.points }},
+            "isMe": {{ row.is_me|yesno:"true,false" }}
+          }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+};
+
+let currentModalPartyId = null;
+
+function renderRankCardContent(rank, scoreText, rewardText) {
+  const card = document.getElementById('modalMyResultCard');
+  const icon = document.getElementById('modalRankIcon');
+  const badge = document.getElementById('modalRankBadge');
+  const title = document.getElementById('modalRankTitle');
+  const message = document.getElementById('modalRankMessage');
+  const score = document.getElementById('modalMyScoreText');
+
+  score.textContent = (scoreText !== undefined ? scoreText : '0') + '점';
+
+  if (rank === 1) {
+    card.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.12) 100%)';
+    card.style.border = '1px solid rgba(245, 158, 11, 0.55)';
+    card.style.boxShadow = '0 8px 30px rgba(245, 158, 11, 0.2)';
+    icon.innerHTML = '👑 <span style="font-size:32px;">🏆</span>';
+    badge.style.background = 'rgba(245, 158, 11, 0.3)';
+    badge.style.color = '#FDE047';
+    badge.style.border = '1px solid #F59E0B';
+    badge.textContent = '🏆 1등 챔피언 우승';
+    title.style.color = '#FDE047';
+    title.textContent = '축하드립니다! 영광의 1등을 차지하셨습니다!';
+    message.textContent = `파티원들과의 치열한 경쟁 끝에 최고 점수로 당당히 우승을 거두었습니다! 약속된 공식 보상 [${rewardText}]을 기분 좋게 쟁취하세요!`;
+  } else if (rank === 2) {
+    card.style.background = 'linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(71, 85, 105, 0.12) 100%)';
+    card.style.border = '1px solid rgba(203, 213, 225, 0.45)';
+    card.style.boxShadow = '0 8px 30px rgba(148, 163, 184, 0.15)';
+    icon.innerHTML = '🥈';
+    badge.style.background = 'rgba(148, 163, 184, 0.3)';
+    badge.style.color = '#F1F5F9';
+    badge.style.border = '1px solid #CBD5E1';
+    badge.textContent = '🥈 2등 준우승 완주';
+    title.style.color = '#F1F5F9';
+    title.textContent = '정말 아깝네요! 2위로 멋지게 완주하셨습니다!';
+    message.textContent = '조금만 더 달렸다면 1등이었을 텐데 정말 아깝습니다! 하지만 누구보다 뜨거운 땀방울을 흘리셨습니다. 다음 내기에서 꼭 1등에 도전해보세요!';
+  } else if (rank === 3) {
+    card.style.background = 'linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(139, 69, 19, 0.12) 100%)';
+    card.style.border = '1px solid rgba(205, 127, 50, 0.45)';
+    card.style.boxShadow = '0 8px 30px rgba(205, 127, 50, 0.15)';
+    icon.innerHTML = '🥉';
+    badge.style.background = 'rgba(205, 127, 50, 0.3)';
+    badge.style.color = '#FDBA74';
+    badge.style.border = '1px solid #CD7F32';
+    badge.textContent = '🥉 3등 3위 입상';
+    title.style.color = '#FDBA74';
+    title.textContent = '값진 3위 입상! 훌륭한 레이스였습니다!';
+    message.textContent = '끝까지 포기하지 않고 최선을 다해 3위를 기록하셨습니다! 함께 땀 흘려준 파티원들과 함께 서로 격려의 박수를 나눠보세요.';
+  } else {
+    card.style.background = 'linear-gradient(135deg, rgba(0, 245, 155, 0.14) 0%, rgba(16, 185, 129, 0.08) 100%)';
+    card.style.border = '1px solid rgba(0, 245, 155, 0.4)';
+    card.style.boxShadow = '0 8px 30px rgba(0, 245, 155, 0.1)';
+    icon.innerHTML = '💪';
+    badge.style.background = 'rgba(0, 245, 155, 0.2)';
+    badge.style.color = 'var(--neon-mint)';
+    badge.style.border = '1px solid rgba(0, 245, 155, 0.4)';
+    badge.textContent = `💪 ${rank}등 완주 성공`;
+    title.style.color = 'var(--neon-mint)';
+    title.textContent = `${rank}위 완주 축하! 끝까지 달린 멋진 파티원!`;
+    message.textContent = '비록 순위권은 아니지만, 마지막 날까지 포기하지 않고 달린 당신이 진정한 스포츠맨입니다! 매일의 운동은 당신을 더 강하게 만듭니다.';
+  }
+}
+
+function openPartyResultModal(partyId) {
+  const modal = document.getElementById('partyResultModal');
+  if (!modal) return;
+
+  const pData = PARTY_CHALLENGES_DATA[partyId] || Object.values(PARTY_CHALLENGES_DATA)[0];
+  if (!pData) return;
+
+  currentModalPartyId = partyId;
+
+  // 타이틀 및 보상 세팅
+  document.getElementById('modalPartySubtitle').textContent = `${pData.partyName} · ${pData.isEnded ? '대결 종료 🏁' : '대결 진행 중 ⏱️'}`;
+  document.getElementById('modalDateRange').textContent = `${pData.startDate} ~ ${pData.endDate}`;
+  document.getElementById('modalRewardText').textContent = pData.reward;
+
+  // 내 순위 카드 렌더링
+  renderRankCardContent(pData.myRank, pData.myPoints, pData.reward);
+
+  // 전체 순위 리스트 렌더링
+  const listEl = document.getElementById('modalRankingList');
+  listEl.innerHTML = '';
+
+  pData.rows.forEach(r => {
+    const rowDiv = document.createElement('div');
+    rowDiv.style.display = 'flex';
+    rowDiv.style.justifyContent = 'space-between';
+    rowDiv.style.alignItems = 'center';
+    rowDiv.style.padding = '9px 14px';
+    rowDiv.style.borderRadius = '10px';
+    rowDiv.style.background = r.isMe ? 'rgba(0, 245, 155, 0.12)' : 'rgba(255, 255, 255, 0.04)';
+    rowDiv.style.border = r.isMe ? '1px solid rgba(0, 245, 155, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)';
+
+    let rankBadge = '';
+    if (r.rank === 1) rankBadge = '<b style="color: var(--trophy-gold); font-size: 14px; margin-right: 8px;">🏆 1위</b>';
+    else if (r.rank === 2) rankBadge = '<b style="color: #CBD5E1; font-size: 14px; margin-right: 8px;">🥈 2위</b>';
+    else if (r.rank === 3) rankBadge = '<b style="color: #CD7F32; font-size: 14px; margin-right: 8px;">🥉 3위</b>';
+    else rankBadge = `<span style="color: #94A3B8; font-size: 13px; font-weight: 700; margin-right: 8px;">${r.rank}위</span>`;
+
+    const meTag = r.isMe ? '<span style="background: var(--neon-mint); color: #090D16; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">나</span>' : '';
+
+    rowDiv.innerHTML = `
+      <div style="display: flex; align-items: center;">
+        ${rankBadge}
+        <span style="color: ${r.isMe ? '#FFFFFF' : '#CBD5E1'}; font-weight: ${r.isMe ? '800' : '600'}; font-size: 13px;">${r.name}</span>
+        ${meTag}
+      </div>
+      <b style="color: var(--trophy-gold); font-size: 13.5px;">${r.points}점</b>
+    `;
+    listEl.appendChild(rowDiv);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function simulatePartyRank(targetRank) {
+  const pData = (currentModalPartyId && PARTY_CHALLENGES_DATA[currentModalPartyId]) || Object.values(PARTY_CHALLENGES_DATA)[0] || {
+    "reward": "1등에게 치킨 쏘기 🍗",
+    "myPoints": targetRank === 1 ? 250 : targetRank === 2 ? 180 : targetRank === 3 ? 120 : 60
+  };
+  const simulatedScore = targetRank === 1 ? 250 : targetRank === 2 ? 180 : targetRank === 3 ? 120 : 60;
+  renderRankCardContent(targetRank, simulatedScore, pData.reward || "1등에게 치킨 쏘기 🍗");
+}
+
+function closePartyResultModal() {
+  const modal = document.getElementById('partyResultModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// 자동 팝업: 종료된 파티가 있는 경우 최초 1회 결과 축하 팝업 자동 안내
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const endedParties = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
+    if (endedParties.length > 0 && !sessionStorage.getItem('netfit_party_result_shown')) {
+      sessionStorage.setItem('netfit_party_result_shown', 'true');
+      setTimeout(() => openPartyResultModal(endedParties[0]), 600);
+    }
+  } catch (e) {}
+});
+</script>
 {% endblock %}
 

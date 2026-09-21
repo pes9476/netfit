@@ -8,6 +8,7 @@ from .views import (
     onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo,
     outfit_shop, profile_view, ranking_view, record_workout, region_view,
     register_view, respond_friend_request, respond_party_invitation,
+    dismiss_party_notification, invite_party_member,
     sports_news_api, weather_api,
 )
 
@@ -40,6 +41,8 @@ urlpatterns = [
     path("friends/request/<int:request_id>/<str:action>/", respond_friend_request, name="respond_friend_request"),
     path("friends/dismiss/<int:request_id>/", dismiss_friend_notification, name="dismiss_friend_notification"),
     path("party/invitation/<int:invitation_id>/<str:action>/", respond_party_invitation, name="respond_party_invitation"),
+    path("party/notification/<int:invitation_id>/dismiss/", dismiss_party_notification, name="dismiss_party_notification"),
+    path("party/<int:party_id>/invite/", invite_party_member, name="invite_party_member"),
     path("facilities/", facilities_view, name="facilities"),
     path("region/", region_view, name="region"),
     path("battle/", battle_view, name="battle"),

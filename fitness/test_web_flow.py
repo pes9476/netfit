@@ -455,4 +455,121 @@ class WebFlowTests(TestCase):
         p_w2_titles = [m.title for m in p_weekly_w2]
         self.assertNotEqual(p_w1_titles, p_w2_titles)
 
+    def test_party_invite_by_nickname_and_accept_flow(self):
+        """파티 생성 시 닉네임 검색 초대, 대시보드 초대장 수신, 수락 시 대시보드 파티 동기화 및 알림을 검증한다."""
+        owner = User.objects.create_user(username="파티장님", password="password123")
+        friend = User.objects.create_user(username="달리기왕", password="password123")
+
+        # 1. 닉네임 검색으로 친구 추가 동작 검증
+        self.client.force_login(owner)
+        res = self.client.post(reverse("onboarding_group"), {
+            "action": "add_friend",
+            "friend_code": "달리기왕",  # 닉네임으로 검색
+        })
+        self.assertRedirects(res, reverse("onboarding_group"))
+        self.assertTrue(FriendRequest.objects.filter(from_user=owner, to_user=friend, status="PENDING").exists())
+
+        # 2. 파티 생성과 동시에 닉네임 직접 검색 초대 (direct_invitee)
+        today = timezone.localdate()
+        res_create = self.client.post(reverse("onboarding_group"), {
+            "action": "create_room",
+            "room_name": "불꽃 러닝 파티",
+            "challenge_start": today.isoformat(),
+            "challenge_end": (today + timedelta(days=7)).isoformat(),
+            "challenge_reward": "치킨 쏘기 🍗",
+            "direct_invitee": "달리기왕",  # 닉네임으로 직접 초대
+        })
+        party = Party.objects.get(name="불꽃 러닝 파티")
+        self.assertRedirects(res_create, reverse("onboarding_group_quest", args=[party.id]))
+        self.assertTrue(PartyInvitation.objects.filter(party=party, inviter=owner, invitee=friend, status="PENDING").exists())
+
+        # 3. 초대받은 친구가 대시보드 접속 시 파티 초대 알림 확인
+        self.client.force_login(friend)
+        dash_res = self.client.get(reverse("dashboard"))
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertIn("불꽃 러닝 파티", dash_res.content.decode())
+        self.assertEqual(len(dash_res.context["pending_party_invitations"]), 1)
+
+        # 4. 초대 수락 시 파티 멤버 추가 및 세션 활성화 검증
+        inv = PartyInvitation.objects.get(party=party, invitee=friend)
+        accept_res = self.client.post(reverse("respond_party_invitation", args=[inv.id, "accept"]))
+        self.assertRedirects(accept_res, reverse("dashboard"))
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, "ACCEPTED")
+        self.assertFalse(inv.inviter_viewed)
+        self.assertTrue(party.members.filter(id=friend.id).exists())
+
+        # 친구 대시보드에서 해당 파티가 active_party로 동기화되었는지 확인
+        dash_after_accept = self.client.get(reverse("dashboard"))
+        self.assertEqual(dash_after_accept.context["active_party"].id, party.id)
+        # 하단 스코어보드에 파티가 나타나는지 확인
+        challenge_parties = [c["party"].id for c in dash_after_accept.context["party_challenges"]]
+        self.assertIn(party.id, challenge_parties)
+
+        # 5. 파티장이 대시보드 접속 시 수락 완료 알림(accepted_party_invitations) 확인
+        self.client.force_login(owner)
+        owner_dash = self.client.get(reverse("dashboard"))
+        self.assertEqual(len(owner_dash.context["accepted_party_invitations"]), 1)
+        self.assertIn("초대를 수락했습니다", owner_dash.content.decode())
+
+        # 알림 확인 클릭 시 해제
+        dismiss_res = self.client.post(reverse("dismiss_party_notification", args=[inv.id]))
+        self.assertRedirects(dismiss_res, reverse("dashboard"))
+        inv.refresh_from_db()
+        self.assertTrue(inv.inviter_viewed)
+
+        # 6. 대시보드에서 추가 친구 닉네임으로 초대 기능(invite_party_member) 검증
+        user3 = User.objects.create_user(username="헬스매니아", password="password123")
+
+        invite_res = self.client.post(reverse("invite_party_member", args=[party.id]), {
+            "friend_name": "헬스매니아",
+        })
+        self.assertRedirects(invite_res, reverse("dashboard"))
+        self.assertTrue(PartyInvitation.objects.filter(party=party, invitee=user3, status="PENDING").exists())
+
+    def test_party_challenge_rankings_and_result_popup_calculation(self):
+        """파티 내기 종료 및 진행 중일 때 순위, 점수, 팝업 데이터가 정확하게 산출되는지 검증한다."""
+        user1 = User.objects.create_user(username="p1", password="password123")
+        user2 = User.objects.create_user(username="p2", password="password123")
+        
+        today = timezone.localdate()
+        party = Party.objects.create(
+            name="순위 테스트 파티",
+            owner=user1,
+            challenge_start=today - timedelta(days=5),
+            challenge_end=today - timedelta(days=1),  # 종료된 파티
+            challenge_reward="1등에게 점심 쏘기 🍱",
+        )
+        party.members.add(user1, user2)
+
+        # 배지 점수 부여: user1 = 100점, user2 = 50점
+        b1 = BadgeAward.objects.create(
+            user=user1, badge_type=BadgeAward.GOLD, points=100, source="DAILY_QUEST"
+        )
+        BadgeAward.objects.filter(id=b1.id).update(awarded_at=timezone.now() - timedelta(days=2))
+
+        b2 = BadgeAward.objects.create(
+            user=user2, badge_type=BadgeAward.SILVER, points=50, source="DAILY_QUEST"
+        )
+        BadgeAward.objects.filter(id=b2.id).update(awarded_at=timezone.now() - timedelta(days=2))
+
+        # user1로 로그인 시: 1등, 100점, is_ended=True
+        self.client.force_login(user1)
+        res1 = self.client.get(reverse("dashboard"))
+        ch1 = next(c for c in res1.context["party_challenges"] if c["party"].id == party.id)
+        self.assertTrue(ch1["is_ended"])
+        self.assertEqual(ch1["my_rank"], 1)
+        self.assertEqual(ch1["my_points"], 100)
+        self.assertEqual(ch1["rows"][0]["name"], "p1")
+        self.assertEqual(ch1["rows"][0]["rank"], 1)
+        self.assertEqual(ch1["rows"][1]["name"], "p2")
+        self.assertEqual(ch1["rows"][1]["rank"], 2)
+
+        # user2로 로그인 시: 2등, 50점
+        self.client.force_login(user2)
+        res2 = self.client.get(reverse("dashboard"))
+        ch2 = next(c for c in res2.context["party_challenges"] if c["party"].id == party.id)
+        self.assertEqual(ch2["my_rank"], 2)
+        self.assertEqual(ch2["my_points"], 50)
+
 

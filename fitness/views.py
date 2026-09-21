@@ -125,9 +125,21 @@ def dashboard(request):
     completed_personal_ids = {q.id for q in daily_missions if q.is_completed}
 
     # 👥 파티 미션 허브 (일일 3개 + 주간 10개 순수 파티 협동 미션)
-    active_party = request.user.parties.filter(
-        Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
-    ).first() or request.user.parties.first()
+    party_id_param = request.GET.get("party_id")
+    if party_id_param and request.user.parties.filter(id=party_id_param).exists():
+        active_party = request.user.parties.get(id=party_id_param)
+        request.session["active_party_id"] = active_party.id
+    elif "active_party_id" in request.session and request.user.parties.filter(id=request.session["active_party_id"]).exists():
+        active_party = request.user.parties.get(id=request.session["active_party_id"])
+    else:
+        user_parties = request.user.parties.order_by("-id")
+        custom_parties = user_parties.exclude(name="팀 넷핏 러너스")
+        if custom_parties.exists():
+            active_party = custom_parties.filter(
+                Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
+            ).first() or custom_parties.first()
+        else:
+            active_party = user_parties.first()
 
     if not active_party and not needs_kakao_nickname(request.user):
         # 가입된 파티가 없는 경우 기본 파티('팀 넷핏 러너스')에 자동 가입하여 솔로와 1:1 대칭으로 즉시 일일(3개)/주간(10개) 파티 미션 허브 및 목록보기 제공
@@ -153,6 +165,7 @@ def dashboard(request):
     }
 
     party_challenges = []
+    today = timezone.localdate()
     for party in request.user.parties.all():
         if not party.challenge_start or not party.challenge_end:
             continue
@@ -162,9 +175,30 @@ def dashboard(request):
                 user=member,
                 awarded_at__date__range=(party.challenge_start, party.challenge_end),
             ).aggregate(total=Sum("points"))["total"] or 0
-            rows.append({"name": member.profile.display_name or member.username, "points": points, "is_me": member == request.user})
+            rows.append({
+                "user_id": member.id,
+                "name": member.profile.display_name or member.username,
+                "username": member.username,
+                "points": points,
+                "is_me": member == request.user,
+            })
         rows.sort(key=lambda row: row["points"], reverse=True)
-        party_challenges.append({"party": party, "rows": rows})
+        my_rank = None
+        my_points = 0
+        for idx, row in enumerate(rows, start=1):
+            row["rank"] = idx
+            if row["is_me"]:
+                my_rank = idx
+                my_points = row["points"]
+        is_ended = bool(party.challenge_end and party.challenge_end < today)
+        party_challenges.append({
+            "party": party,
+            "rows": rows,
+            "is_ended": is_ended,
+            "my_rank": my_rank or (len(rows) if rows else 1),
+            "my_points": my_points,
+            "total_members": len(rows),
+        })
 
     # 🔔 대기 중인 친구 요청 및 파티 초대
     pending_friend_requests = FriendRequest.objects.filter(
@@ -179,6 +213,11 @@ def dashboard(request):
         from_user=request.user, status="ACCEPTED", sender_viewed=False
     ).select_related("to_user__profile")
 
+    # 🎉 파티 초대 수락 완료 알림 (내가 보낸 파티 초대 중 상대방이 수락하여 아직 확인하지 않은 알림)
+    accepted_party_invitations = PartyInvitation.objects.filter(
+        inviter=request.user, status="ACCEPTED", inviter_viewed=False
+    ).select_related("invitee__profile", "party")
+
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
@@ -190,6 +229,7 @@ def dashboard(request):
         "today_attended": today_attended,
         "week_attendances": week_attendances,
         "active_party": active_party,
+        "user_all_parties": request.user.parties.all(),
         "party_daily_missions": party_daily_missions,
         "party_weekly_missions": party_weekly_missions,
         "group_quests": group_quests, "personal_quests": personal_quests,
@@ -199,6 +239,7 @@ def dashboard(request):
         "pending_friend_requests": pending_friend_requests,
         "pending_party_invitations": pending_party_invitations,
         "accepted_friend_requests": accepted_friend_requests,
+        "accepted_party_invitations": accepted_party_invitations,
     })
 
 
@@ -798,13 +839,67 @@ def respond_party_invitation(request, invitation_id, action):
         inv = get_object_or_404(PartyInvitation, pk=invitation_id, invitee=request.user, status="PENDING")
         if action == "accept":
             inv.status = "ACCEPTED"
-            inv.save(update_fields=["status"])
+            inv.inviter_viewed = False
+            inv.save(update_fields=["status", "inviter_viewed"])
             inv.party.members.add(request.user)
-            messages.success(request, f"'{inv.party.name}' 파티 초대를 수락했습니다! 파티 일일미션에 참여해보세요.")
+            request.session["active_party_id"] = inv.party.id
+            messages.success(request, f"'{inv.party.name}' 파티 초대를 수락했습니다! 파티 일일미션 및 내기 챌린지에 참여해보세요.")
         elif action == "reject":
             inv.status = "REJECTED"
             inv.save(update_fields=["status"])
             messages.info(request, f"'{inv.party.name}' 파티 초대를 거절했습니다.")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def dismiss_party_notification(request, invitation_id):
+    if request.method == "POST":
+        inv = get_object_or_404(PartyInvitation, pk=invitation_id, inviter=request.user, status="ACCEPTED")
+        inv.inviter_viewed = True
+        inv.save(update_fields=["inviter_viewed"])
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def invite_party_member(request, party_id):
+    if request.method == "POST":
+        party = get_object_or_404(Party, pk=party_id)
+        if not party.members.filter(id=request.user.id).exists():
+            messages.error(request, "파티에 소속된 멤버만 친구를 초대할 수 있습니다.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        if party.members.count() >= party.max_members:
+            messages.error(request, f"파티 정원(최대 {party.max_members}명)이 가득 찼습니다.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        target_name = request.POST.get("friend_name", "").strip()
+        if not target_name:
+            messages.error(request, "초대할 친구의 닉네임 또는 아이디를 입력해 주세요.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        target_user = User.objects.filter(
+            Q(username__iexact=target_name) | Q(first_name__iexact=target_name)
+        ).first()
+
+        if not target_user:
+            messages.error(request, f"'{target_name}'에 해당하는 사용자를 찾을 수 없습니다. 닉네임 또는 아이디를 확인해주세요.")
+        elif target_user == request.user:
+            messages.error(request, "본인은 파티에 초대할 수 없습니다.")
+        elif party.members.filter(id=target_user.id).exists():
+            target_display = target_user.profile.display_name or target_user.username
+            messages.info(request, f"{target_display}님은 이미 '{party.name}' 파티의 멤버입니다.")
+        elif PartyInvitation.objects.filter(party=party, invitee=target_user, status="PENDING").exists():
+            target_display = target_user.profile.display_name or target_user.username
+            messages.info(request, f"{target_display}님에게 이미 초대를 보냈습니다. 수락 대기 중입니다.")
+        else:
+            PartyInvitation.objects.create(
+                party=party,
+                inviter=request.user,
+                invitee=target_user,
+                status="PENDING",
+            )
+            target_display = target_user.profile.display_name or target_user.username
+            messages.success(request, f"'{party.name}' 파티에 {target_display}님을 성공적으로 초대했습니다!")
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -1112,15 +1207,17 @@ def onboarding_group(request):
     ).select_related("profile").distinct()
     if request.method == "POST" and request.POST.get("action") == "add_friend":
         code = request.POST.get("friend_code", "").strip()
-        friend = User.objects.filter(username__iexact=code).first()
+        friend = User.objects.filter(
+            Q(username__iexact=code) | Q(first_name__iexact=code)
+        ).first()
         if not friend:
-            messages.error(request, "일치하는 친구를 찾지 못했어요.")
+            messages.error(request, f"'{code}'에 해당하는 친구를 찾지 못했어요. 닉네임 또는 아이디를 확인해 주세요.")
         elif friend == request.user:
             messages.error(request, "본인은 친구로 추가할 수 없어요.")
         elif FriendLink.objects.filter(user=request.user, friend=friend).exists():
-            messages.info(request, f"{friend.username}님과는 이미 친구예요.")
+            messages.info(request, f"{friend.profile.display_name or friend.username}님과는 이미 친구예요.")
         elif FriendRequest.objects.filter(from_user=request.user, to_user=friend, status="PENDING").exists():
-            messages.info(request, f"{friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
+            messages.info(request, f"{friend.profile.display_name or friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
         elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
             fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
             fr.status = "ACCEPTED"
@@ -1128,10 +1225,10 @@ def onboarding_group(request):
             fr.save(update_fields=["status", "sender_viewed"])
             FriendLink.objects.get_or_create(user=request.user, friend=friend)
             FriendLink.objects.get_or_create(user=friend, friend=request.user)
-            messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
+            messages.success(request, f"{friend.profile.display_name or friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
         else:
             FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
-            messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+            messages.success(request, f"{friend.profile.display_name or friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
         return redirect("onboarding_group")
     if request.method == "POST" and request.POST.get("action") == "create_room":
         room_name = request.POST.get("room_name", "").strip()[:100]
@@ -1149,6 +1246,15 @@ def onboarding_group(request):
                 int(value) for value in request.POST.getlist("invitees")
                 if value.isdigit() and int(value) in friend_ids
             }
+            direct_invitee_name = request.POST.get("direct_invitee", "").strip()
+            if direct_invitee_name:
+                direct_user = User.objects.filter(
+                    Q(username__iexact=direct_invitee_name) | Q(first_name__iexact=direct_invitee_name)
+                ).exclude(id=request.user.id).first()
+                if direct_user:
+                    invited_ids.add(direct_user.id)
+                else:
+                    messages.warning(request, f"입력하신 '{direct_invitee_name}'님을 찾지 못하여 파티 초대 대상에서 제외되었습니다.")
             with transaction.atomic():
                 party = Party.objects.create(
                     name=room_name, owner=request.user,
@@ -1166,6 +1272,7 @@ def onboarding_group(request):
                 profile = request.user.profile
                 profile.workout_mode = "GROUP"
                 profile.save(update_fields=["workout_mode"])
+                request.session["active_party_id"] = party.id
             if invited_ids:
                 messages.success(request, f"'{party.name}' 파티를 만들고 {len(invited_ids)}명의 친구에게 초대를 보냈어요!")
             else:
