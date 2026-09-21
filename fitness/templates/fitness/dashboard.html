@@ -2451,13 +2451,17 @@ function closePartyResultModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// 자동 팝업: 종료된 파티가 있는 경우 최초 1회 결과 축하 팝업 자동 안내
+// 자동 팝업: 종료된 파티가 있는 경우 사용자가 버튼을 누르지 않아도 대시보드 접속 시 자동으로 결과 축하 팝업 안내
 document.addEventListener('DOMContentLoaded', () => {
   try {
     const endedParties = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
-    if (endedParties.length > 0 && !sessionStorage.getItem('netfit_party_result_shown')) {
-      sessionStorage.setItem('netfit_party_result_shown', 'true');
-      setTimeout(() => openPartyResultModal(endedParties[0]), 600);
+    for (const partyId of endedParties) {
+      const storageKey = 'netfit_party_result_shown_' + partyId;
+      if (!sessionStorage.getItem(storageKey)) {
+        sessionStorage.setItem(storageKey, 'true');
+        setTimeout(() => openPartyResultModal(partyId), 600);
+        break;
+      }
     }
   } catch (e) {}
 });
