@@ -937,7 +937,7 @@
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ challenge.party.id }}')" style="padding: 9px 18px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3); background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer;">
           <i class="fa-solid fa-trophy"></i>
-          <span>{% if challenge.is_ended %}최종 결과 & 시상식 팝업 보기{% else %}순위 결과 & 축하 팝업 보기{% endif %}</span>
+          <span>순위 결과 보기</span>
         </button>
         <button type="button" class="button secondary" onclick="openInvitePartyModal('{{ challenge.party.id }}', '{{ challenge.party.name|escapejs }}')" style="padding: 9px 14px; font-size: 13px; font-weight: 800; color: #38BDF8; border-color: rgba(56, 189, 248, 0.4); cursor: pointer;">
           <i class="fa-solid fa-user-plus"></i> 친구 초대
