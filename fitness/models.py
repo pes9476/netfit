@@ -458,18 +458,40 @@ class ProofSubmission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class DailyQuest(models.Model):
+    SOURCE_CHOICES = [("DIRECT", "직접 입력"), ("AI", "AI 추천"), ("SYSTEM", "시스템")]
+    PERIOD_CHOICES = [("DAILY", "일일"), ("WEEKLY", "주간")]
+    CATEGORY_CHOICES = [
+        ("ATTENDANCE", "출석 체크"),
+        ("WORKOUT", "협동 운동"),
+        ("FACILITY", "주변 시설"),
+        ("CUMULATIVE", "주간 누적"),
+    ]
     party = models.ForeignKey(Party, on_delete=models.CASCADE, related_name="daily_quests")
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="created_daily_quests",
+        null=True, blank=True,
     )
     title = models.CharField(max_length=100)
     workout_type = models.CharField(
         max_length=10,
         choices=[choice for choice in WorkoutRecord.WORKOUT_CHOICES if choice[0] != "만보"],
+        default="기타",
+        blank=True,
     )
     custom_workout_name = models.CharField(max_length=50, blank=True)
-    target_minutes = models.PositiveIntegerField()
+    target_minutes = models.PositiveIntegerField(default=0)
+    period_type = models.CharField(max_length=10, choices=PERIOD_CHOICES, default="DAILY")
+    mission_category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="WORKOUT")
+    target_count = models.PositiveIntegerField(default=1)
+    current_progress = models.PositiveIntegerField(default=0)
+    facility = models.ForeignKey(
+        "Facility", null=True, blank=True, on_delete=models.SET_NULL, related_name="party_quests",
+    )
+    week_start = models.DateField(null=True, blank=True)
+    reward_points = models.PositiveIntegerField(default=30)
+    description = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=8, choices=SOURCE_CHOICES, default="AI")
     quest_date = models.DateField(default=timezone.localdate)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -484,8 +506,27 @@ class DailyQuest(models.Model):
         return "산책" if self.workout_type == "걷기" else self.get_workout_type_display()
 
 
+class AttendanceRecord(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="attendances")
+    date = models.DateField(default=timezone.localdate)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "date"], name="unique_user_daily_attendance")
+        ]
+
+
 class PersonalDailyQuest(models.Model):
-    SOURCE_CHOICES = [("DIRECT", "직접 입력"), ("AI", "AI 추천")]
+    SOURCE_CHOICES = [("DIRECT", "직접 입력"), ("AI", "AI 추천"), ("SYSTEM", "시스템")]
+    PERIOD_CHOICES = [("DAILY", "일일"), ("WEEKLY", "주간")]
+    CATEGORY_CHOICES = [
+        ("ATTENDANCE", "출석 체크"),
+        ("WORKOUT", "운동 수행"),
+        ("FACILITY", "주변 시설"),
+        ("CUMULATIVE", "주간 누적"),
+    ]
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="personal_daily_quests",
@@ -494,9 +535,21 @@ class PersonalDailyQuest(models.Model):
     workout_type = models.CharField(
         max_length=10,
         choices=[choice for choice in WorkoutRecord.WORKOUT_CHOICES if choice[0] != "만보"],
+        default="기타",
+        blank=True,
     )
     custom_workout_name = models.CharField(max_length=50, blank=True)
-    target_minutes = models.PositiveIntegerField()
+    target_minutes = models.PositiveIntegerField(default=0)
+    period_type = models.CharField(max_length=10, choices=PERIOD_CHOICES, default="DAILY")
+    mission_category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="WORKOUT")
+    target_count = models.PositiveIntegerField(default=1)
+    current_progress = models.PositiveIntegerField(default=0)
+    facility = models.ForeignKey(
+        "Facility", null=True, blank=True, on_delete=models.SET_NULL, related_name="quests",
+    )
+    week_start = models.DateField(null=True, blank=True)
+    reward_points = models.PositiveIntegerField(default=30)
+    description = models.CharField(max_length=255, blank=True)
     source = models.CharField(max_length=8, choices=SOURCE_CHOICES, default="DIRECT")
     quest_date = models.DateField(default=timezone.localdate)
     is_active = models.BooleanField(default=True)
@@ -507,6 +560,8 @@ class PersonalDailyQuest(models.Model):
 
     @property
     def workout_label(self):
+        if self.mission_category == "ATTENDANCE":
+            return "출석 체크"
         if self.workout_type == "기타" and self.custom_workout_name:
             return self.custom_workout_name
         return "산책" if self.workout_type == "걷기" else self.get_workout_type_display()

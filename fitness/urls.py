@@ -2,7 +2,7 @@ from django.urls import path
 from .kakao import kakao_callback, kakao_login
 from .views import (
     UserLogoutView, activity_view, add_friend, battle_arena, battle_view,
-    complete_daily_quest, create_battle, dashboard, demo_battle, demo_level,
+    check_in_attendance, complete_daily_quest, create_battle, dashboard, demo_battle, demo_level,
     dismiss_friend_notification, facilities_view, friends_view, login_view,
     onboarding_course, onboarding_entry, onboarding_group, onboarding_group_quest,
     onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo,
@@ -29,6 +29,7 @@ urlpatterns = [
     path("profile/", profile_view, name="profile"),
     path("activity/", activity_view, name="activity"),
     path("record/", record_workout, name="record_workout"),
+    path("attendance/check-in/", check_in_attendance, name="check_in_attendance"),
     path("quests/<str:quest_kind>/<int:quest_id>/complete/", complete_daily_quest, name="complete_daily_quest"),
     path("ranking/", ranking_view, name="ranking"),
     path("outfits/", outfit_shop, name="outfit_shop"),

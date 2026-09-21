@@ -123,9 +123,9 @@
 {% endif %}
 
 <section class="dash">
-  <div class="dashboard-left">
+  <div class="dashboard-left" style="display: flex; flex-direction: column; gap: 20px;">
     <!-- 캐릭터 카드 -->
-    <article class="card card-새싹">
+    <article class="card card-새싹" style="margin: 0;">
       <div class="card-title">
         <span><i class="fa-solid fa-id-card-clip" style="color: var(--neon-mint); margin-right: 6px;"></i>{{ user.profile.display_name|default:"내 캐릭터" }}</span>
       </div>
@@ -137,128 +137,261 @@
         {{ user.profile.get_gender_display }} · {% if user.profile.age_group == "child" %}어린이{% elif user.profile.age_group == "senior" %}시니어{% else %}성인{% endif %} · BMI {% if user.profile.bmi %}{{ user.profile.bmi }}{% else %}-{% endif %}
       </p>
     </article>
-    <!-- 나의 솔로 일일미션 (좌측 컬럼: 캐릭터 카드 바로 아래) -->
-    {% if personal_quests %}
-      <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 20px;">
-        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">SOLO DAILY MISSION</span>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일미션</h2>
-              {% if personal_quests|length > 2 %}
-                <span style="font-size: 10.5px; font-weight: 800; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 1px 6px;">총 {{ personal_quests|length }}개</span>
-              {% endif %}
-            </div>
-          </div>
+    <!-- 🎯 NETFIT 미션 허브 (일일 미션 3개 & 주간 미션 10개) -->
+    <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
+      <!-- 상단 헤더 및 탭 전환 -->
+      <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+        <div>
+          <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">NETFIT MISSION HUB</span>
+          <h2 style="font-size: 16px; margin: 2px 0 0;">나의 미션</h2>
+        </div>
+        
+        <!-- 탭 스위처: [일일 미션 (3)] / [주간 미션 (10)] -->
+        <div style="display: inline-flex; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 3px; gap: 4px;">
+          <button type="button" id="tabBtnDaily" onclick="switchMissionTab('daily')" style="border: none; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
+            <i class="fa-solid fa-bolt"></i> 일일 ({{ daily_missions|length }})
+          </button>
+          <button type="button" id="tabBtnWeekly" onclick="switchMissionTab('weekly')" style="border: none; background: transparent; color: #94A3B8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
+            <i class="fa-solid fa-calendar-week"></i> 주간 ({{ weekly_missions|length }})
+          </button>
+        </div>
+      </div>
+
+      <!-- 1. 일일 미션 뷰 (1개씩 페이징) -->
+      <div id="dailyMissionView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
+            오늘의 미션 <b style="color: #FFFFFF;">{{ daily_missions|length }}개</b> (출석 1 + 맞춤 2)
+          </span>
           <div style="display: flex; align-items: center; gap: 6px;">
-            {% if personal_quests|length > 2 %}
-              <!-- 페이지 넘기기 컨트롤 < 1 / 2 > -->
-              <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
-                <button type="button" id="soloPrevBtn" onclick="changeSoloPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
-                  <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <span id="soloPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 24px; text-align: center;">1/2</span>
-                <button type="button" id="soloNextBtn" onclick="changeSoloPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
-                  <i class="fa-solid fa-chevron-right"></i>
-                </button>
-              </div>
-              <button type="button" onclick="openSoloQuestListModal()" class="button secondary" style="padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 일일미션 목록보기">
-                <i class="fa-solid fa-list-ul"></i>
-                <span>목록보기</span>
+            <!-- 페이징 컨트롤 < 1 / 3 > -->
+            <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
+              <button type="button" id="dailyPrevBtn" onclick="changeDailyPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                <i class="fa-solid fa-chevron-left"></i>
               </button>
-            {% endif %}
-            <a class="button secondary" href="{% url 'onboarding_solo' %}" style="padding: 6px 12px; font-size: 11px;">새 일일미션</a>
+              <span id="dailyPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 26px; text-align: center;">1/{{ daily_missions|length|default:3 }}</span>
+              <button type="button" id="dailyNextBtn" onclick="changeDailyPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+            <button type="button" onclick="openSoloQuestListModal()" class="button secondary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(0,245,155,0.35); color: var(--neon-mint);" title="전체 일일미션 목록보기">
+              <i class="fa-solid fa-list-ul"></i>
+              <span>목록보기</span>
+            </button>
           </div>
         </div>
-        <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px;">
-          {% for quest in personal_quests %}
-            <article class="solo-quest-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.counter0 < 2 %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+
+        <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          {% for quest in daily_missions %}
+            <article class="daily-mission-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <small style="color: var(--neon-mint); font-weight: 700;">{{ quest.get_source_display }}</small>
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                    <i class="fa-solid fa-stopwatch"></i> 타이머
-                  </a>
-                </div>
-                <h3 style="font-size: 14px; margin: 6px 0 2px;">{{ quest.title }}</h3>
-                <p style="color: var(--text-muted); font-size: 11.5px; margin: 2px 0 8px;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분</p>
+                  {% if quest.mission_category == 'ATTENDANCE' %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-calendar-check"></i> 출석 미션 · 30P
+                    </span>
+                  {% elif quest.mission_category == 'FACILITY' %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-map-location-dot"></i> 주변 시설 · {{ quest.reward_points }}P
+                    </span>
+                  {% else %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-robot"></i> AI 추천 · {{ quest.reward_points }}P
+                    </span>
+                  {% endif %}
 
-                <!-- 남은 시간 & 달성 진행률 -->
+                  {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                      <i class="fa-solid fa-stopwatch"></i> 타이머
+                    </a>
+                  {% endif %}
+                </div>
+
+                <h3 style="font-size: 14px; margin: 8px 0 3px; color: #FFFFFF;">{{ quest.title }}</h3>
+                <p style="color: var(--text-muted); font-size: 11.5px; margin: 0 0 10px;">{{ quest.description|default:quest.workout_label }}</p>
+
+                <!-- 진행률 바 또는 출석 상태 박스 -->
+                {% if quest.mission_category == 'ATTENDANCE' %}
+                  <div style="margin-bottom: 10px;">
+                    {% if quest.is_completed or today_attended %}
+                      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 10px; color: var(--neon-mint); font-weight: 800; font-size: 12px;">
+                        <span><i class="fa-solid fa-circle-check"></i> 오늘 출석 완료!</span>
+                        <b>+30점 지급됨 ✔️</b>
+                      </div>
+                    {% else %}
+                      <form method="post" action="{% url 'check_in_attendance' %}" style="margin: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="button btn-mint" style="width: 100%; padding: 10px; font-size: 12.5px; font-weight: 900; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 0 16px rgba(0,245,155,0.25);">
+                          <i class="fa-solid fa-pen-nib"></i> <span>오늘 출석 체크하기 (+30점)</span>
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div style="margin: 6px 0 12px; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                      {% if quest.is_completed %}
+                        <span style="color: var(--neon-mint); font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-circle-check"></i> 목표 달성 완료!</span>
+                      {% else %}
+                        <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-hourglass-half"></i> 남은 시간: <b style="color: #FFFFFF; font-size: 12px;">{{ quest.remaining_minutes }}분</b></span>
+                      {% endif %}
+                      <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_label }} ({{ quest.progress_percent }}%)</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                      <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+              {% if quest.mission_category != 'ATTENDANCE' %}
+                {% if quest.is_completed %}
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <b class="quest-done" style="font-size: 11.5px; margin: 0;"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
+                    {% if quest.badge_award and quest.badge_award.proof_image %}
+                      <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'personal', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11.5px; font-weight: 800; cursor: pointer; width: 100%;">
+                        <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
+                      </button>
+                    {% else %}
+                      <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="margin-top: 2px;">
+                        {% csrf_token %}
+                        <label class="button secondary" style="width: 100%; padding: 6px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                          <i class="fa-solid fa-camera"></i> <span>인증 사진 추가하기</span>
+                          <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                        </label>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <!-- 사진 미리보기 박스 -->
+                    <div id="preview_box_personal_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
+                      <div style="position: relative; display: inline-block; flex-shrink: 0;">
+                        <img id="preview_img_personal_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
+                        <button type="button" onclick="removeQuestPhotoPreview('personal_{{ quest.id }}')" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: #FFFFFF; border: 2px solid #10192A; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+                          <i class="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                      <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
+                    </div>
+
+                    <div style="display: flex; gap: 6px;">
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                        <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
+                        <span>사진</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'personal_{{ quest.id }}')">
+                      </label>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                    </div>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 2. 주간 미션 뷰 (1개씩 페이징) -->
+      <div id="weeklyMissionView" style="display: none; flex-direction: column; gap: 10px; flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
+            이번 주 미션 <b style="color: #FFFFFF;">{{ weekly_missions|length }}개</b> (출석누적 1 + AI 9)
+          </span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <!-- 페이징 컨트롤 < 1 / 10 > -->
+            <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
+              <button type="button" id="weeklyPrevBtn" onclick="changeWeeklyPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <span id="weeklyPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 28px; text-align: center;">1/{{ weekly_missions|length|default:10 }}</span>
+              <button type="button" id="weeklyNextBtn" onclick="changeWeeklyPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+            <button type="button" onclick="openWeeklyQuestListModal()" class="button secondary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 주간미션 목록보기">
+              <i class="fa-solid fa-list-ul"></i>
+              <span>목록보기</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          {% for quest in weekly_missions %}
+            <article class="weekly-mission-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  {% if quest.mission_category == 'ATTENDANCE' %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-calendar-days"></i> 출석 누적 · {{ quest.reward_points }}P
+                    </span>
+                  {% elif quest.mission_category == 'FACILITY' %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-building-circle-check"></i> 주변 시설 · {{ quest.reward_points }}P
+                    </span>
+                  {% else %}
+                    <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.15); color: var(--trophy-gold); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 2px 7px;">
+                      <i class="fa-solid fa-chart-line"></i> 주간 누적 · {{ quest.reward_points }}P
+                    </span>
+                  {% endif %}
+
+                  {% if quest.is_completed %}
+                    <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
+                  {% else %}
+                    <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">도전 중 ⏱️</span>
+                  {% endif %}
+                </div>
+
+                <h3 style="font-size: 14px; margin: 8px 0 3px; color: #FFFFFF;">{{ quest.title }}</h3>
+                <p style="color: var(--text-muted); font-size: 11.5px; margin: 0 0 10px;">{{ quest.description }}</p>
+
+                <!-- 주간 누적 진행률 바 -->
                 <div style="margin: 6px 0 12px; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    {% if quest.is_completed %}
-                      <span style="color: var(--neon-mint); font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-circle-check"></i> 목표 달성 완료!</span>
-                    {% else %}
-                      <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-hourglass-half"></i> 남은 시간: <b style="color: #FFFFFF; font-size: 12px;">{{ quest.remaining_minutes }}분</b></span>
-                    {% endif %}
-                    <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_minutes }}/{{ quest.target_minutes }}분 ({{ quest.progress_percent }}%)</span>
+                    <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;">
+                      {% if quest.is_completed %}
+                        <i class="fa-solid fa-medal" style="color: var(--trophy-gold);"></i> 주간 미션 달성!
+                      {% else %}
+                        <i class="fa-solid fa-spinner"></i> 누적 진행 현황
+                      {% endif %}
+                    </span>
+                    <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_label }} ({{ quest.progress_percent }}%)</span>
                   </div>
                   <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
-                    <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
-                  </div>
-                  <!-- 실시간 타이머 작동 시 라이브 뱃지 -->
-                  <div class="live-quest-timer-badge" data-workout="{{ quest.workout_type }}" style="display: none; margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.3); font-size: 10.5px; color: var(--neon-mint); font-weight: 800;">
-                    <i class="fa-solid fa-bolt"></i> 타이머 측정 중: <span class="timer-countdown-val"></span>
+                    <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
                   </div>
                 </div>
               </div>
 
               {% if quest.is_completed %}
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                  <b class="quest-done" style="font-size: 11.5px; margin: 0;"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
-                  {% if quest.badge_award and quest.badge_award.proof_image %}
-                    <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'personal', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11.5px; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,245,155,0.22)'" onmouseout="this.style.background='rgba(0,245,155,0.12)'">
-                      <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
-                    </button>
-                  {% else %}
-                    <!-- 완료 후 사진 추가 폼 -->
-                    <form method="post" action="{% url 'complete_daily_quest' 'personal' quest.id %}" enctype="multipart/form-data" style="margin-top: 2px;">
-                      {% csrf_token %}
-                      <label class="button secondary" style="width: 100%; padding: 6px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                        <i class="fa-solid fa-camera"></i> <span>인증 사진 추가하기</span>
-                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
-                      </label>
-                    </form>
-                  {% endif %}
+                <div style="display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.3); border-radius: 8px;">
+                  <b style="color: var(--neon-mint); font-size: 12px;"><i class="fa-solid fa-circle-check"></i> 완료 · {{ quest.reward_points }}P 수령 완료</b>
                 </div>
-              {% else %}
-                <form method="post" action="{% url 'complete_daily_quest' 'personal' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+              {% elif quest.progress_percent >= 100 %}
+                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" style="margin: 0;">
                   {% csrf_token %}
-                  <!-- 사진 미리보기 박스 (우측 상단 대각선 ✕ 버튼) -->
-                  <div id="preview_box_personal_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
-                    <div style="position: relative; display: inline-block; flex-shrink: 0;">
-                      <img id="preview_img_personal_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
-                      <button type="button" onclick="removeQuestPhotoPreview('personal_{{ quest.id }}')" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: #FFFFFF; border: 2px solid #10192A; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); padding: 0; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="사진 삭제">
-                        <i class="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
-                    <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
-                  </div>
-
-                  <div style="display: flex; gap: 6px;">
-                    <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
-                      <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
-                      <span>사진 추가</span>
-                      <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'personal_{{ quest.id }}')">
-                    </label>
-                    <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
-                  </div>
+                  <button type="submit" class="button btn-mint" style="width: 100%; padding: 8px 10px; font-size: 12px; font-weight: 900;">
+                    <i class="fa-solid fa-gift"></i> 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                  </button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                  {% csrf_token %}
+                  <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                    <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
+                    <span>인증</span>
+                    <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                  </label>
+                  <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
+                    수동 완료 & 배지 받기
+                  </button>
                 </form>
               {% endif %}
             </article>
           {% endfor %}
         </div>
-      </section>
-    {% else %}
-      <section class="panel dashboard-quests empty compact-solo-quests" style="margin-top: 20px;">
-        <div>
-          <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">SOLO DAILY MISSION</span>
-          <h2 style="font-size: 16px; margin: 2px 0 0;">나의 솔로 일일미션</h2>
-          <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 14px;">혼자 도전할 일일미션을 만들어보세요.</p>
-        </div>
-        <a class="button secondary" href="{% url 'onboarding_solo' %}" style="align-self: flex-start; padding: 6px 12px; font-size: 11px;">미션 만들기</a>
-      </section>
-    {% endif %}
+      </div>
+    </section>
   </div>
 
   <div class="dashboard-main" style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
@@ -439,160 +572,311 @@
       </div>
     </article>
 
-    <!-- 우리 파티 일일미션 (우측 컬럼: 스포츠 뉴스 바로 아래! - 솔로 미션과 바닥 라인 완벽 일치) -->
-    {% if group_quests %}
+    <!-- 👥 우리 파티 미션 허브 (우측 컬럼: 솔로 미션 허브와 1:1 완벽 대칭 구조) -->
+    {% if active_party %}
       <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
           <div>
-            <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY DAILY MISSION</span>
+            <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
             <div style="display: flex; align-items: center; gap: 6px;">
-              <h2>우리 파티 일일미션</h2>
-              {% if group_quests|length > 2 %}
-                <span style="font-size: 10.5px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 1px 6px;">총 {{ group_quests|length }}개</span>
-              {% endif %}
+              <h2>우리 파티 미션</h2>
+              <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); border-radius: 6px; padding: 1px 7px;">
+                <i class="fa-solid fa-users"></i> {{ active_party.name }}
+              </span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            {% if group_quests|length > 2 %}
-              <!-- 페이지 넘기기 컨트롤 < 1 / 2 > -->
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <!-- 일일 / 주간 탭 스위처 -->
+            <div style="display: inline-flex; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 3px; gap: 4px;">
+              <button type="button" id="tabBtnPartyDaily" onclick="switchPartyMissionTab('daily')" style="border: none; background: rgba(56, 189, 248, 0.2); color: #38BDF8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-bolt"></i> 일일 ({{ party_daily_missions|length }})
+              </button>
+              <button type="button" id="tabBtnPartyWeekly" onclick="switchPartyMissionTab('weekly')" style="border: none; background: transparent; color: #94A3B8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-calendar-week"></i> 주간 ({{ party_weekly_missions|length }})
+              </button>
+            </div>
+            <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 6px 10px; font-size: 11px;">새 파티</a>
+          </div>
+        </div>
+
+        <!-- 1. 파티 일일 미션 뷰 (1개씩 페이징) -->
+        <div id="partyDailyMissionView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
+              오늘의 파티 미션 <b style="color: #FFFFFF;">{{ party_daily_missions|length }}개</b> (협동 2 + 주변시설 1)
+            </span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <!-- 페이징 컨트롤 < 1 / 3 > (1개씩 보기로 컴팩트하게 축소) -->
               <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
-                <button type="button" id="groupPrevBtn" onclick="changeGroupPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                <button type="button" id="partyDailyPrevBtn" onclick="changePartyDailyPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
                   <i class="fa-solid fa-chevron-left"></i>
                 </button>
-                <span id="groupPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 24px; text-align: center;">1/2</span>
-                <button type="button" id="groupNextBtn" onclick="changeGroupPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                <span id="partyDailyPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 26px; text-align: center;">1/{{ party_daily_missions|length|default:3 }}</span>
+                <button type="button" id="partyDailyNextBtn" onclick="changePartyDailyPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
                   <i class="fa-solid fa-chevron-right"></i>
                 </button>
               </div>
-              <button type="button" onclick="openGroupQuestListModal()" class="button secondary" style="padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 파티 미션 목록보기">
+              <button type="button" onclick="openGroupDailyQuestListModal()" class="button secondary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 파티 일일미션 목록보기">
                 <i class="fa-solid fa-list-ul"></i>
                 <span>목록보기</span>
               </button>
-            {% endif %}
-            <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 8px 14px; font-size: 12px;">새 파티 만들기</a>
+            </div>
           </div>
-        </div>
-        <div class="quest-cards" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
-          {% for quest in group_quests %}
-            <article class="group-quest-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.counter0 < 2 %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; padding: 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
-              <div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <small style="color: #38BDF8; font-weight: 700;">{{ quest.party.name }}</small>
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                    <i class="fa-solid fa-stopwatch"></i> 타이머
-                  </a>
-                </div>
-                <h3 style="font-size: 14px; margin: 6px 0 2px;">{{ quest.title }}</h3>
-                <p style="color: var(--text-muted); font-size: 11.5px; margin: 2px 0 8px;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분</p>
 
-                <!-- 남은 시간 & 달성 진행률 -->
-                <div style="margin: 6px 0 12px; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    {% if quest.is_completed %}
-                      <span style="color: var(--neon-mint); font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-circle-check"></i> 파티 목표 달성 완료!</span>
-                    {% else %}
-                      <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-hourglass-half"></i> 남은 시간: <b style="color: #FFFFFF; font-size: 12px;">{{ quest.remaining_minutes }}분</b></span>
-                    {% endif %}
-                    <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_minutes }}/{{ quest.target_minutes }}분 ({{ quest.progress_percent }}%)</span>
-                  </div>
-                  <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
-                    <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
-                  </div>
-                  <!-- 실시간 타이머 작동 시 라이브 뱃지 -->
-                  <div class="live-quest-timer-badge" data-workout="{{ quest.workout_type }}" style="display: none; margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.3); font-size: 10.5px; color: var(--neon-mint); font-weight: 800;">
-                    <i class="fa-solid fa-bolt"></i> 타이머 측정 중: <span class="timer-countdown-val"></span>
-                  </div>
-                </div>
-
-                <!-- 👥 파티 참여자 실시간 모니터링 -->
-                {% if quest.members_monitoring %}
-                  <div class="party-members-monitoring" style="margin: 8px 0 12px; background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                      <span style="font-size: 11.5px; font-weight: 800; color: #94A3B8; display: inline-flex; align-items: center; gap: 5px;">
-                        <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 오늘 미션 현황
+          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+            {% for quest in party_daily_missions %}
+              <article class="party-daily-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    {% if quest.mission_category == 'FACILITY' %}
+                      <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 2px 7px;">
+                        <i class="fa-solid fa-map-location-dot"></i> 주변 시설 · {{ quest.reward_points }}P
                       </span>
-                      <span style="font-size: 11px; color: #64748B; font-weight: 700;">총 {{ quest.members_monitoring|length }}명</span>
+                    {% else %}
+                      <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 2px 7px;">
+                        <i class="fa-solid fa-users"></i> 파티 협동 · {{ quest.reward_points }}P
+                      </span>
+                    {% endif %}
+
+                    {% if quest.is_completed %}
+                      <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
+                    {% elif quest.target_minutes %}
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                        <i class="fa-solid fa-stopwatch"></i> 타이머
+                      </a>
+                    {% endif %}
+                  </div>
+
+                  <h3 style="font-size: 14px; margin: 7px 0 2px; color: #FFFFFF;">{{ quest.title }}</h3>
+                  <p style="color: var(--text-muted); font-size: 11.5px; margin: 0 0 8px;">{{ quest.description|default:quest.workout_label }}</p>
+
+                  <!-- 진행률 바 -->
+                  <div style="margin: 4px 0 8px; background: rgba(0,0,0,0.25); padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      {% if quest.is_completed %}
+                        <span style="color: var(--neon-mint); font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-circle-check"></i> 파티 목표 달성 완료!</span>
+                      {% else %}
+                        <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;"><i class="fa-solid fa-hourglass-half"></i> 남은 시간: <b style="color: #FFFFFF; font-size: 12px;">{{ quest.remaining_minutes }}분</b></span>
+                      {% endif %}
+                      <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_label }} ({{ quest.progress_percent }}%)</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                      {% for member in quest.members_monitoring %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.03);">
-                          <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 11.5px; color: #CBD5E1; font-weight: 700;">
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                      <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
+                    </div>
+                  </div>
+
+                  <!-- 👥 파티 참여자 실시간 모니터링 (슬림 접이식 details) -->
+                  {% if quest.members_monitoring %}
+                    <details class="party-members-details" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
+                      <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-size: 11px; font-weight: 800; color: #94A3B8; list-style: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                          <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 오늘 미션 현황 ({{ quest.members_monitoring|length }}명)
+                        </span>
+                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #38BDF8;">
+                          <span>현황 보기</span>
+                          <i class="fa-solid fa-chevron-down" style="font-size: 9px;"></i>
+                        </span>
+                      </summary>
+                      <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
+                        {% for member in quest.members_monitoring %}
+                          <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                            <span style="font-size: 11px; color: #CBD5E1; font-weight: 700;">
                               {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
                             </span>
-                          </div>
-                          <div>
                             {% if member.is_done %}
-                              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.3); padding: 2px 8px; border-radius: 6px;">
-                                <i class="fa-solid fa-medal"></i> 완료 🏅
-                              </span>
+                              <span style="font-size: 10px; font-weight: 800; color: var(--neon-mint);">🏅 완료</span>
                             {% else %}
-                              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #94A3B8; background: rgba(255, 255, 255, 0.05); padding: 2px 8px; border-radius: 6px;">
-                                <i class="fa-regular fa-clock"></i> 도전 중 ⏱️
-                              </span>
+                              <span style="font-size: 10px; font-weight: 700; color: #94A3B8;">⏱️ 도전 중</span>
                             {% endif %}
                           </div>
-                        </div>
-                      {% endfor %}
-                    </div>
-                  </div>
-                {% endif %}
-              </div>
-
-              {% if quest.is_completed %}
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                  <b class="quest-done" style="font-size: 11.5px; margin: 0;"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
-                  {% if quest.badge_award and quest.badge_award.proof_image %}
-                    <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'group', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11.5px; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,245,155,0.22)'" onmouseout="this.style.background='rgba(0,245,155,0.12)'">
-                      <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
-                    </button>
-                  {% else %}
-                    <!-- 완료 후 사진 추가 폼 -->
-                    <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin-top: 2px;">
-                      {% csrf_token %}
-                      <label class="button secondary" style="width: 100%; padding: 6px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                        <i class="fa-solid fa-camera"></i> <span>인증 사진 추가하기</span>
-                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
-                      </label>
-                    </form>
+                        {% endfor %}
+                      </div>
+                    </details>
                   {% endif %}
                 </div>
-              {% else %}
-                <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
-                  {% csrf_token %}
-                  <!-- 사진 미리보기 박스 (우측 상단 대각선 ✕ 버튼) -->
-                  <div id="preview_box_group_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
-                    <div style="position: relative; display: inline-block; flex-shrink: 0;">
-                      <img id="preview_img_group_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
-                      <button type="button" onclick="removeQuestPhotoPreview('group_{{ quest.id }}')" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: #FFFFFF; border: 2px solid #10192A; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); padding: 0; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="사진 삭제">
-                        <i class="fa-solid fa-xmark"></i>
+
+                {% if quest.is_completed %}
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <b class="quest-done" style="font-size: 11.5px; margin: 0;"><i class="fa-solid fa-circle-check"></i> 완료 · 배지 수령</b>
+                    {% if quest.badge_award and quest.badge_award.proof_image %}
+                      <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'group', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11.5px; font-weight: 800; cursor: pointer; width: 100%;">
+                        <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
                       </button>
+                    {% else %}
+                      <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin-top: 2px;">
+                        {% csrf_token %}
+                        <label class="button secondary" style="width: 100%; padding: 6px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                          <i class="fa-solid fa-camera"></i> <span>인증 사진 추가하기</span>
+                          <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                        </label>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <!-- 사진 미리보기 박스 -->
+                    <div id="preview_box_group_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
+                      <div style="position: relative; display: inline-block; flex-shrink: 0;">
+                        <img id="preview_img_group_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
+                        <button type="button" onclick="removeQuestPhotoPreview('group_{{ quest.id }}')" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: #FFFFFF; border: 2px solid #10192A; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+                          <i class="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                      <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
                     </div>
-                    <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
+
+                    <div style="display: flex; gap: 6px;">
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                        <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
+                        <span>사진</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'group_{{ quest.id }}')">
+                      </label>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                    </div>
+                  </form>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- 2. 파티 주간 미션 뷰 (1개씩 페이징) -->
+        <div id="partyWeeklyMissionView" style="display: none; flex-direction: column; gap: 10px; flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
+              이번 주 파티 미션 <b style="color: #FFFFFF;">{{ party_weekly_missions|length }}개</b> (주간 협동 & 누적 10)
+            </span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <!-- 페이징 컨트롤 < 1 / 10 > (1개씩 보기로 컴팩트하게 축소) -->
+              <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
+                <button type="button" id="partyWeeklyPrevBtn" onclick="changePartyWeeklyPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="partyWeeklyPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 28px; text-align: center;">1/{{ party_weekly_missions|length|default:10 }}</span>
+                <button type="button" id="partyWeeklyNextBtn" onclick="changePartyWeeklyPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+              <button type="button" onclick="openGroupWeeklyQuestListModal()" class="button secondary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 파티 주간미션 목록보기">
+                <i class="fa-solid fa-list-ul"></i>
+                <span>목록보기</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+            {% for quest in party_weekly_missions %}
+              <article class="party-weekly-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    {% if quest.mission_category == 'FACILITY' %}
+                      <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 2px 7px;">
+                        <i class="fa-solid fa-building-circle-check"></i> 주변 시설 · {{ quest.reward_points }}P
+                      </span>
+                    {% else %}
+                      <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.15); color: var(--trophy-gold); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 2px 7px;">
+                        <i class="fa-solid fa-chart-line"></i> 주간 누적 · {{ quest.reward_points }}P
+                      </span>
+                    {% endif %}
+
+                    {% if quest.is_completed %}
+                      <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
+                    {% else %}
+                      <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">도전 중 ⏱️</span>
+                    {% endif %}
                   </div>
 
-                  <div style="display: flex; gap: 6px;">
-                    <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
-                      <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
-                      <span>사진 추가</span>
-                      <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'group_{{ quest.id }}')">
-                    </label>
-                    <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                  <h3 style="font-size: 14px; margin: 7px 0 2px; color: #FFFFFF;">{{ quest.title }}</h3>
+                  <p style="color: var(--text-muted); font-size: 11.5px; margin: 0 0 8px;">{{ quest.description }}</p>
+
+                  <!-- 주간 누적 진행률 바 -->
+                  <div style="margin: 4px 0 8px; background: rgba(0,0,0,0.25); padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;">
+                        {% if quest.is_completed %}
+                          <i class="fa-solid fa-medal" style="color: var(--trophy-gold);"></i> 파티 주간 목표 달성!
+                        {% else %}
+                          <i class="fa-solid fa-spinner"></i> 파티 합산 진행 현황
+                        {% endif %}
+                      </span>
+                      <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_label }} ({{ quest.progress_percent }}%)</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+                      <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
+                    </div>
                   </div>
-                </form>
-              {% endif %}
-            </article>
-          {% endfor %}
+
+                  <!-- 👥 파티 참여자 실시간 모니터링 (슬림 접이식 details) -->
+                  {% if quest.members_monitoring %}
+                    <details class="party-members-details" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
+                      <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-size: 11px; font-weight: 800; color: #94A3B8; list-style: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                          <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 이번 주 미션 현황 ({{ quest.members_monitoring|length }}명)
+                        </span>
+                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #38BDF8;">
+                          <span>현황 보기</span>
+                          <i class="fa-solid fa-chevron-down" style="font-size: 9px;"></i>
+                        </span>
+                      </summary>
+                      <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
+                        {% for member in quest.members_monitoring %}
+                          <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                            <span style="font-size: 11px; color: #CBD5E1; font-weight: 700;">
+                              {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
+                            </span>
+                            {% if member.is_done %}
+                              <span style="font-size: 10px; font-weight: 800; color: var(--neon-mint);">🏅 완료</span>
+                            {% else %}
+                              <span style="font-size: 10px; font-weight: 700; color: #94A3B8;">⏱️ 도전 중</span>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </details>
+                  {% endif %}
+                </div>
+
+                {% if quest.is_completed %}
+                  <div style="display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.3); border-radius: 8px;">
+                    <b style="color: var(--neon-mint); font-size: 12px;"><i class="fa-solid fa-circle-check"></i> 완료 · {{ quest.reward_points }}P 수령 완료</b>
+                  </div>
+                {% elif quest.progress_percent >= 100 %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="button btn-mint" style="width: 100%; padding: 8px 10px; font-size: 12px; font-weight: 900;">
+                      <i class="fa-solid fa-gift"></i> 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                    </button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                    {% csrf_token %}
+                    <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                      <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
+                      <span>인증</span>
+                      <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                    </label>
+                    <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
+                      수동 완료 & 배지 받기
+                    </button>
+                  </form>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
         </div>
       </section>
     {% else %}
       <section class="panel dashboard-quests empty compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-          <span style="color: var(--neon-mint); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY DAILY MISSION</span>
-          <h2>우리 파티 일일미션</h2>
-          <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">파티를 만들고 기간을 정해 배지 점수 내기를 시작해요.</p>
+          <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
+          <h2>우리 파티 미션</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">파티를 만들고 파티원들과 함께 일일(3개) & 주간(10개) 협동 미션에 도전해보세요!</p>
         </div>
-        <a class="button secondary" href="{% url 'onboarding_group' %}" style="align-self: flex-start;">파티 만들기</a>
+        <a class="button btn-mint" href="{% url 'onboarding_group' %}" style="align-self: flex-start; text-decoration: none; padding: 10px 18px; font-weight: 800;">
+          <i class="fa-solid fa-users-viewfinder"></i> 파티 만들기
+        </a>
       </section>
     {% endif %}
   </div>
@@ -1204,45 +1488,112 @@ function confirmDeleteProof() {
   }
 }
 
-// 📑 일일미션 최대 2개 페이징 및 목록보기 로직
-let currentSoloPage = 0;
-const soloPageSize = 2;
-function renderSoloQuestPage() {
-  const cards = document.querySelectorAll('.solo-quest-card');
+// 📑 일일 미션 (1개씩 페이징)
+let currentDailyPage = 0;
+const dailyPageSize = 1;
+function renderDailyMissionPage() {
+  const cards = document.querySelectorAll('.daily-mission-card');
   if (!cards.length) return;
-  const totalPages = Math.ceil(cards.length / soloPageSize);
-  if (currentSoloPage >= totalPages) currentSoloPage = totalPages - 1;
-  if (currentSoloPage < 0) currentSoloPage = 0;
+  const totalPages = Math.ceil(cards.length / dailyPageSize);
+  if (currentDailyPage >= totalPages) currentDailyPage = totalPages - 1;
+  if (currentDailyPage < 0) currentDailyPage = 0;
 
   cards.forEach((card, idx) => {
-    const pIdx = Math.floor(idx / soloPageSize);
-    if (pIdx === currentSoloPage) {
-      card.style.display = 'flex';
-    } else {
-      card.style.display = 'none';
-    }
+    const pIdx = Math.floor(idx / dailyPageSize);
+    card.style.display = (pIdx === currentDailyPage) ? 'flex' : 'none';
   });
 
-  const ind = document.getElementById('soloPageIndicator');
-  if (ind) ind.textContent = `${currentSoloPage + 1}/${totalPages}`;
+  const ind = document.getElementById('dailyPageIndicator');
+  if (ind) ind.textContent = `${currentDailyPage + 1}/${totalPages}`;
 
-  const prevBtn = document.getElementById('soloPrevBtn');
-  const nextBtn = document.getElementById('soloNextBtn');
+  const prevBtn = document.getElementById('dailyPrevBtn');
+  const nextBtn = document.getElementById('dailyNextBtn');
   if (prevBtn) {
-    prevBtn.disabled = (currentSoloPage === 0);
-    prevBtn.style.opacity = (currentSoloPage === 0) ? '0.35' : '1';
-    prevBtn.style.cursor = (currentSoloPage === 0) ? 'not-allowed' : 'pointer';
+    prevBtn.disabled = (currentDailyPage === 0);
+    prevBtn.style.opacity = (currentDailyPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentDailyPage === 0) ? 'not-allowed' : 'pointer';
   }
   if (nextBtn) {
-    nextBtn.disabled = (currentSoloPage === totalPages - 1);
-    nextBtn.style.opacity = (currentSoloPage === totalPages - 1) ? '0.35' : '1';
-    nextBtn.style.cursor = (currentSoloPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+    nextBtn.disabled = (currentDailyPage === totalPages - 1);
+    nextBtn.style.opacity = (currentDailyPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentDailyPage === totalPages - 1) ? 'not-allowed' : 'pointer';
   }
 }
 
-function changeSoloPage(delta) {
-  currentSoloPage += delta;
-  renderSoloQuestPage();
+function changeDailyPage(delta) {
+  currentDailyPage += delta;
+  renderDailyMissionPage();
+}
+
+// 📑 주간 미션 (1개씩 페이징)
+let currentWeeklyPage = 0;
+const weeklyPageSize = 1;
+function renderWeeklyMissionPage() {
+  const cards = document.querySelectorAll('.weekly-mission-card');
+  if (!cards.length) return;
+  const totalPages = Math.ceil(cards.length / weeklyPageSize);
+  if (currentWeeklyPage >= totalPages) currentWeeklyPage = totalPages - 1;
+  if (currentWeeklyPage < 0) currentWeeklyPage = 0;
+
+  cards.forEach((card, idx) => {
+    const pIdx = Math.floor(idx / weeklyPageSize);
+    card.style.display = (pIdx === currentWeeklyPage) ? 'flex' : 'none';
+  });
+
+  const ind = document.getElementById('weeklyPageIndicator');
+  if (ind) ind.textContent = `${currentWeeklyPage + 1}/${totalPages}`;
+
+  const prevBtn = document.getElementById('weeklyPrevBtn');
+  const nextBtn = document.getElementById('weeklyNextBtn');
+  if (prevBtn) {
+    prevBtn.disabled = (currentWeeklyPage === 0);
+    prevBtn.style.opacity = (currentWeeklyPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentWeeklyPage === 0) ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentWeeklyPage === totalPages - 1);
+    nextBtn.style.opacity = (currentWeeklyPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentWeeklyPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+  }
+}
+
+function changeWeeklyPage(delta) {
+  currentWeeklyPage += delta;
+  renderWeeklyMissionPage();
+}
+
+// 🔄 일일 / 주간 미션 탭 전환
+function switchMissionTab(tab) {
+  const dailyView = document.getElementById('dailyMissionView');
+  const weeklyView = document.getElementById('weeklyMissionView');
+  const tabBtnDaily = document.getElementById('tabBtnDaily');
+  const tabBtnWeekly = document.getElementById('tabBtnWeekly');
+
+  if (tab === 'daily') {
+    if (dailyView) dailyView.style.display = 'flex';
+    if (weeklyView) weeklyView.style.display = 'none';
+    if (tabBtnDaily) {
+      tabBtnDaily.style.background = 'rgba(0, 245, 155, 0.2)';
+      tabBtnDaily.style.color = 'var(--neon-mint)';
+    }
+    if (tabBtnWeekly) {
+      tabBtnWeekly.style.background = 'transparent';
+      tabBtnWeekly.style.color = '#94A3B8';
+    }
+    renderDailyMissionPage();
+  } else {
+    if (dailyView) dailyView.style.display = 'none';
+    if (weeklyView) weeklyView.style.display = 'flex';
+    if (tabBtnWeekly) {
+      tabBtnWeekly.style.background = 'rgba(56, 189, 248, 0.2)';
+      tabBtnWeekly.style.color = '#38BDF8';
+    }
+    if (tabBtnDaily) {
+      tabBtnDaily.style.background = 'transparent';
+      tabBtnDaily.style.color = '#94A3B8';
+    }
+    renderWeeklyMissionPage();
+  }
 }
 
 function openSoloQuestListModal() {
@@ -1255,70 +1606,160 @@ function closeSoloQuestListModal() {
   if (modal) modal.style.display = 'none';
 }
 
-let currentGroupPage = 0;
-const groupPageSize = 2;
-function renderGroupQuestPage() {
-  const cards = document.querySelectorAll('.group-quest-card');
-  if (!cards.length) return;
-  const totalPages = Math.ceil(cards.length / groupPageSize);
-  if (currentGroupPage >= totalPages) currentGroupPage = totalPages - 1;
-  if (currentGroupPage < 0) currentGroupPage = 0;
-
-  cards.forEach((card, idx) => {
-    const pIdx = Math.floor(idx / groupPageSize);
-    if (pIdx === currentGroupPage) {
-      card.style.display = 'flex';
-    } else {
-      card.style.display = 'none';
-    }
-  });
-
-  const ind = document.getElementById('groupPageIndicator');
-  if (ind) ind.textContent = `${currentGroupPage + 1}/${totalPages}`;
-
-  const prevBtn = document.getElementById('groupPrevBtn');
-  const nextBtn = document.getElementById('groupNextBtn');
-  if (prevBtn) {
-    prevBtn.disabled = (currentGroupPage === 0);
-    prevBtn.style.opacity = (currentGroupPage === 0) ? '0.35' : '1';
-    prevBtn.style.cursor = (currentGroupPage === 0) ? 'not-allowed' : 'pointer';
-  }
-  if (nextBtn) {
-    nextBtn.disabled = (currentGroupPage === totalPages - 1);
-    nextBtn.style.opacity = (currentGroupPage === totalPages - 1) ? '0.35' : '1';
-    nextBtn.style.cursor = (currentGroupPage === totalPages - 1) ? 'not-allowed' : 'pointer';
-  }
-}
-
-function changeGroupPage(delta) {
-  currentGroupPage += delta;
-  renderGroupQuestPage();
-}
-
-function openGroupQuestListModal() {
-  const modal = document.getElementById('groupQuestListModal');
+function openWeeklyQuestListModal() {
+  const modal = document.getElementById('weeklyQuestListModal');
   if (modal) modal.style.display = 'flex';
 }
 
-function closeGroupQuestListModal() {
-  const modal = document.getElementById('groupQuestListModal');
+function closeWeeklyQuestListModal() {
+  const modal = document.getElementById('weeklyQuestListModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// 📑 파티 미션 탭 전환
+function switchPartyMissionTab(tab) {
+  const dailyView = document.getElementById('partyDailyMissionView');
+  const weeklyView = document.getElementById('partyWeeklyMissionView');
+  const tabBtnDaily = document.getElementById('tabBtnPartyDaily');
+  const tabBtnWeekly = document.getElementById('tabBtnPartyWeekly');
+
+  if (tab === 'daily') {
+    if (dailyView) dailyView.style.display = 'flex';
+    if (weeklyView) weeklyView.style.display = 'none';
+    if (tabBtnDaily) {
+      tabBtnDaily.style.background = 'rgba(56, 189, 248, 0.2)';
+      tabBtnDaily.style.color = '#38BDF8';
+    }
+    if (tabBtnWeekly) {
+      tabBtnWeekly.style.background = 'transparent';
+      tabBtnWeekly.style.color = '#94A3B8';
+    }
+    renderPartyDailyMissionPage();
+  } else {
+    if (dailyView) dailyView.style.display = 'none';
+    if (weeklyView) weeklyView.style.display = 'flex';
+    if (tabBtnWeekly) {
+      tabBtnWeekly.style.background = 'rgba(56, 189, 248, 0.2)';
+      tabBtnWeekly.style.color = '#38BDF8';
+    }
+    if (tabBtnDaily) {
+      tabBtnDaily.style.background = 'transparent';
+      tabBtnDaily.style.color = '#94A3B8';
+    }
+    renderPartyWeeklyMissionPage();
+  }
+}
+
+// 📑 파티 일일미션 페이징 (1개씩 보기로 컴팩트화)
+let currentPartyDailyPage = 0;
+const partyDailyPageSize = 1;
+function renderPartyDailyMissionPage() {
+  const cards = document.querySelectorAll('.party-daily-card');
+  if (!cards.length) return;
+  const totalPages = Math.ceil(cards.length / partyDailyPageSize);
+  if (currentPartyDailyPage >= totalPages) currentPartyDailyPage = totalPages - 1;
+  if (currentPartyDailyPage < 0) currentPartyDailyPage = 0;
+
+  cards.forEach((card, idx) => {
+    const pIdx = Math.floor(idx / partyDailyPageSize);
+    card.style.display = (pIdx === currentPartyDailyPage) ? 'flex' : 'none';
+  });
+
+  const ind = document.getElementById('partyDailyPageIndicator');
+  if (ind) ind.textContent = `${currentPartyDailyPage + 1}/${totalPages}`;
+
+  const prevBtn = document.getElementById('partyDailyPrevBtn');
+  const nextBtn = document.getElementById('partyDailyNextBtn');
+  if (prevBtn) {
+    prevBtn.disabled = (currentPartyDailyPage === 0);
+    prevBtn.style.opacity = (currentPartyDailyPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentPartyDailyPage === 0) ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentPartyDailyPage === totalPages - 1);
+    nextBtn.style.opacity = (currentPartyDailyPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentPartyDailyPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+  }
+}
+
+function changePartyDailyPage(delta) {
+  currentPartyDailyPage += delta;
+  renderPartyDailyMissionPage();
+}
+
+// 📑 파티 주간미션 페이징 (1개씩 보기로 컴팩트화)
+let currentPartyWeeklyPage = 0;
+const partyWeeklyPageSize = 1;
+function renderPartyWeeklyMissionPage() {
+  const cards = document.querySelectorAll('.party-weekly-card');
+  if (!cards.length) return;
+  const totalPages = Math.ceil(cards.length / partyWeeklyPageSize);
+  if (currentPartyWeeklyPage >= totalPages) currentPartyWeeklyPage = totalPages - 1;
+  if (currentPartyWeeklyPage < 0) currentPartyWeeklyPage = 0;
+
+  cards.forEach((card, idx) => {
+    const pIdx = Math.floor(idx / partyWeeklyPageSize);
+    card.style.display = (pIdx === currentPartyWeeklyPage) ? 'flex' : 'none';
+  });
+
+  const ind = document.getElementById('partyWeeklyPageIndicator');
+  if (ind) ind.textContent = `${currentPartyWeeklyPage + 1}/${totalPages}`;
+
+  const prevBtn = document.getElementById('partyWeeklyPrevBtn');
+  const nextBtn = document.getElementById('partyWeeklyNextBtn');
+  if (prevBtn) {
+    prevBtn.disabled = (currentPartyWeeklyPage === 0);
+    prevBtn.style.opacity = (currentPartyWeeklyPage === 0) ? '0.35' : '1';
+    prevBtn.style.cursor = (currentPartyWeeklyPage === 0) ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (currentPartyWeeklyPage === totalPages - 1);
+    nextBtn.style.opacity = (currentPartyWeeklyPage === totalPages - 1) ? '0.35' : '1';
+    nextBtn.style.cursor = (currentPartyWeeklyPage === totalPages - 1) ? 'not-allowed' : 'pointer';
+  }
+}
+
+function changePartyWeeklyPage(delta) {
+  currentPartyWeeklyPage += delta;
+  renderPartyWeeklyMissionPage();
+}
+
+function openGroupDailyQuestListModal() {
+  const modal = document.getElementById('groupDailyQuestListModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeGroupDailyQuestListModal() {
+  const modal = document.getElementById('groupDailyQuestListModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openGroupWeeklyQuestListModal() {
+  const modal = document.getElementById('groupWeeklyQuestListModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeGroupWeeklyQuestListModal() {
+  const modal = document.getElementById('groupWeeklyQuestListModal');
   if (modal) modal.style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderSoloQuestPage();
-  renderGroupQuestPage();
+  renderDailyMissionPage();
+  renderWeeklyMissionPage();
+  renderPartyDailyMissionPage();
+  renderPartyWeeklyMissionPage();
 });
 </script>
 
-<!-- 📋 나의 솔로 일일미션 전체 목록보기 팝업 모달 -->
+<!-- 📋 나의 일일미션 전체 목록보기 팝업 모달 -->
 <div id="soloQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeSoloQuestListModal();">
   <div style="background: #111A2C; border: 1px solid rgba(0,245,155,0.4); border-radius: 18px; max-width: 520px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
       <div style="display: flex; align-items: center; gap: 8px;">
         <i class="fa-solid fa-list-check" style="color: var(--neon-mint); font-size: 16px;"></i>
-        <b style="color: #FFFFFF; font-size: 15px;">나의 솔로 일일미션 전체 목록</b>
-        <span style="font-size: 11px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ personal_quests|length }}개</span>
+        <b style="color: #FFFFFF; font-size: 15px;">나의 일일미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ daily_missions|length }}개</span>
       </div>
       <button type="button" onclick="closeSoloQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
         <i class="fa-solid fa-xmark"></i>
@@ -1326,40 +1767,37 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
-      {% for quest in personal_quests %}
+      {% for quest in daily_missions %}
         <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11.5px; font-weight: 800; color: var(--neon-mint);">{{ quest.get_source_display }}</span>
+            <span style="font-size: 11.5px; font-weight: 800; color: var(--neon-mint);">
+              {% if quest.mission_category == 'ATTENDANCE' %}출석 체크 · 30P{% elif quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}AI 추천 · {{ quest.reward_points }}P{% endif %}
+            </span>
             <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-circle-check"></i> 완료
                 </span>
+              {% elif quest.mission_category == 'ATTENDANCE' and today_attended %}
+                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-circle-check"></i> 출석 완료
+                </span>
               {% else %}
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
-                  <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
+                  {{ quest.done_label }}
                 </span>
               {% endif %}
-              <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                <i class="fa-solid fa-stopwatch"></i> 타이머
-              </a>
             </div>
           </div>
 
           <div>
             <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
-            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분 (달성률 {{ quest.progress_percent }}%)</p>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.description|default:quest.workout_label }}</p>
           </div>
 
           <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
             <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); border-radius: 4px;"></div>
           </div>
-
-          {% if quest.is_completed and quest.badge_award and quest.badge_award.proof_image %}
-            <button type="button" onclick="openProofModal('{{ quest.badge_award.proof_image.url }}', 'personal', '{{ quest.id }}')" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; background: rgba(0,245,155,0.12); border: 1px solid rgba(0,245,155,0.35); border-radius: 8px; color: var(--neon-mint); font-size: 11px; font-weight: 800; cursor: pointer; width: fit-content;">
-              <i class="fa-solid fa-image"></i> 등록된 인증 사진 보기
-            </button>
-          {% endif %}
         </div>
       {% endfor %}
     </div>
@@ -1370,25 +1808,79 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<!-- 📋 우리 파티 일일미션 전체 목록보기 팝업 모달 -->
-<div id="groupQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeGroupQuestListModal();">
-  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 520px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+<!-- 📋 나의 주간 미션 전체 목록보기 팝업 모달 -->
+<div id="weeklyQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeWeeklyQuestListModal();">
+  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 540px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <i class="fa-solid fa-users" style="color: #38BDF8; font-size: 16px;"></i>
-        <b style="color: #FFFFFF; font-size: 15px;">우리 파티 일일미션 전체 목록</b>
-        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ group_quests|length }}개</span>
+        <i class="fa-solid fa-calendar-week" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">나의 주간 미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ weekly_missions|length }}개</span>
       </div>
-      <button type="button" onclick="closeGroupQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
+      <button type="button" onclick="closeWeeklyQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
     <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
-      {% for quest in group_quests %}
+      {% for quest in weekly_missions %}
         <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11.5px; font-weight: 800; color: #38BDF8;">{{ quest.party.name }}</span>
+            <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'ATTENDANCE' %}var(--neon-mint){% elif quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
+              {{ quest.get_mission_category_display }} · {{ quest.reward_points }}P
+            </span>
+            <div>
+              {% if quest.is_completed %}
+                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-circle-check"></i> 완료
+                </span>
+              {% else %}
+                <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
+                  {{ quest.done_label }} ({{ quest.progress_percent }}%)
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.description }}</p>
+          </div>
+
+          <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+            <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <button type="button" onclick="closeWeeklyQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📋 우리 파티 일일미션 전체 목록보기 팝업 모달 -->
+<div id="groupDailyQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeGroupDailyQuestListModal();">
+  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 520px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-users" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">우리 파티 일일미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ party_daily_missions|length }}개</span>
+      </div>
+      <button type="button" onclick="closeGroupDailyQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
+      {% for quest in party_daily_missions %}
+        <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11.5px; font-weight: 800; color: #38BDF8;">
+              {% if quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}파티 협동 · {{ quest.reward_points }}P{% endif %}
+            </span>
             <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
@@ -1399,15 +1891,17 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
                 </span>
               {% endif %}
-              <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                <i class="fa-solid fa-stopwatch"></i> 타이머
-              </a>
+              {% if quest.target_minutes %}
+                <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                  <i class="fa-solid fa-stopwatch"></i> 타이머
+                </a>
+              {% endif %}
             </div>
           </div>
 
           <div>
             <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
-            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.workout_label }} · 목표 {{ quest.target_minutes }}분 (달성률 {{ quest.progress_percent }}%)</p>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.description|default:quest.workout_label }} (목표 {{ quest.target_minutes }}분)</p>
           </div>
 
           <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
@@ -1436,7 +1930,77 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
-      <button type="button" onclick="closeGroupQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
+      <button type="button" onclick="closeGroupDailyQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📋 우리 파티 주간미션 전체 목록보기 팝업 모달 -->
+<div id="groupWeeklyQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeGroupWeeklyQuestListModal();">
+  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 540px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-calendar-week" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">우리 파티 주간 미션 전체 목록</b>
+        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ party_weekly_missions|length }}개</span>
+      </div>
+      <button type="button" onclick="closeGroupWeeklyQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
+      {% for quest in party_weekly_missions %}
+        <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
+              {% if quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}주간 누적 · {{ quest.reward_points }}P{% endif %}
+            </span>
+            <div>
+              {% if quest.is_completed %}
+                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
+                  <i class="fa-solid fa-circle-check"></i> 완료
+                </span>
+              {% else %}
+                <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
+                  {{ quest.done_label }} ({{ quest.progress_percent }}%)
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
+            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.description }}</p>
+          </div>
+
+          <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+            <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
+          </div>
+
+          {% if quest.members_monitoring %}
+            <div style="background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 8px 10px; margin-top: 4px;">
+              <span style="font-size: 11px; color: #94A3B8; font-weight: 800; display: block; margin-bottom: 6px;">파티원 달성 현황</span>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                {% for m in quest.members_monitoring %}
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                    <span style="color: #CBD5E1;">{% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}</span>
+                    {% if m.is_done %}
+                      <span style="color: var(--neon-mint); font-weight: 800;">완료 🏅</span>
+                    {% else %}
+                      <span style="color: #94A3B8;">도전 중 ⏱️</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <button type="button" onclick="closeGroupWeeklyQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
     </div>
   </div>
 </div>

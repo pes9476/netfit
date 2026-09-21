@@ -8,7 +8,7 @@ def quest_menu(request):
     if not request.user.is_authenticated:
         return {}
 
-    personal = list(PersonalDailyQuest.objects.filter(user=request.user, is_active=True)[:5])
+    personal = list(PersonalDailyQuest.objects.filter(user=request.user, is_active=True, period_type="DAILY")[:3])
     group = list(
         DailyQuest.objects.filter(party__members=request.user, is_active=True)
         .filter(models.Q(party__challenge_end__isnull=True) | models.Q(party__challenge_end__gte=timezone.localdate()))
@@ -26,7 +26,7 @@ def quest_menu(request):
     entries = [
         {
             "title": quest.title,
-            "detail": f"개인 · {quest.workout_label} {quest.target_minutes}분",
+            "detail": f"일일 · {quest.workout_label}" + (f" {quest.target_minutes}분" if quest.target_minutes else ""),
             "completed": quest.id in completed_personal,
         }
         for quest in personal
