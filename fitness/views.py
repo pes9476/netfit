@@ -113,12 +113,19 @@ def get_user_party_challenges(user):
     for party in user.parties.all():
         if not party.challenge_start or not party.challenge_end:
             continue
-        rows = []
-        for member in party.members.select_related("profile"):
-            points = BadgeAward.objects.filter(
-                user=member,
+        members = list(party.members.select_related("profile"))
+        points_map = dict(
+            BadgeAward.objects.filter(
+                user__in=members,
                 awarded_at__date__range=(party.challenge_start, party.challenge_end),
-            ).aggregate(total=Sum("points"))["total"] or 0
+            )
+            .values("user_id")
+            .annotate(total=Sum("points"))
+            .values_list("user_id", "total")
+        )
+        rows = []
+        for member in members:
+            points = points_map.get(member.id, 0) or 0
             rows.append({
                 "user_id": member.id,
                 "name": member.profile.display_name or member.username,

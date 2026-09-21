@@ -48,6 +48,11 @@ def quest_menu(request):
     # 🔔 파티 초대 알림 카운트
     pending_party_invitation_count = PartyInvitation.objects.filter(invitee=request.user, status="PENDING").count()
 
+    # 👥 헤더용 파티 및 멤버 프로필 N+1 방지 일괄 프리페치
+    header_user_parties = list(
+        request.user.parties.all().prefetch_related("members__profile")
+    )
+
     return {
         "header_quests": entries,
         "header_quest_pending_count": sum(not entry["completed"] for entry in entries),
@@ -55,4 +60,5 @@ def quest_menu(request):
         "accepted_friend_count": accepted_friend_count,
         "header_friend_alert_count": header_friend_alert_count,
         "pending_party_invitation_count": pending_party_invitation_count,
+        "header_user_parties": header_user_parties,
     }

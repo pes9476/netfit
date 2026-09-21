@@ -84,7 +84,7 @@ if ON_RAILWAY and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB")))
     raise ImproperlyConfigured("Railway requires PostgreSQL: set DATABASE_URL and unset USE_SQLITE.")
 if DATABASE_URL and not USE_SQLITE:
     DATABASES = {"default": dj_database_url.parse(
-        DATABASE_URL, conn_max_age=60, conn_health_checks=True,
+        DATABASE_URL, conn_max_age=600,
     )}
 elif os.getenv("POSTGRES_DB") and not USE_SQLITE:
     DATABASES = {

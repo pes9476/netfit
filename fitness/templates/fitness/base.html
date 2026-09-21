@@ -78,7 +78,7 @@
                   <i class="fa-solid fa-bell"></i> 파티 초대 {{ pending_party_invitation_count }}건 도착!
                 </a>
               {% endif %}
-              {% for party in user.parties.all %}
+              {% for party in header_user_parties|default:user.parties.all %}
                 <b style="color: #FFFFFF; font-size: 13px;">{{ party.name }}</b>
                 {% for member in party.members.all %}
                   <small style="display: block; color: var(--text-muted); padding: 3px 0 3px 10px;">• {{ member.profile.display_name|default:member.username }}</small>
@@ -227,7 +227,7 @@
     // 🔔 실시간 스마트 알림 폴링 (Smart Polling)
     // ==========================================
     (function initSmartNotificationPolling() {
-      const POLLING_INTERVAL = 10000; // 10초
+      const POLLING_INTERVAL = 15000; // 15초 최적화 (동시 요청 병목 해소)
       const knownNotificationIds = new Set();
       let isInitialScan = true;
 
