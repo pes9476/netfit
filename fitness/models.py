@@ -389,6 +389,7 @@ class Party(models.Model):
     challenge_end = models.DateField(null=True, blank=True)
     challenge_end_time = models.TimeField(null=True, blank=True, help_text="내기 마감 시각 (타이머)")
     target_timer_minutes = models.PositiveIntegerField(default=0, blank=True, help_text="파티 목표 운동 시간(분)")
+    workout_type = models.CharField(max_length=20, default="러닝", blank=True, help_text="파티 목표 운동 종류")
     challenge_reward = models.CharField(max_length=200, blank=True)
 
 

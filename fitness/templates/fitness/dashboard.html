@@ -669,11 +669,16 @@
         <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
           <div>
             <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
-            <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <h2>우리 파티 미션</h2>
               <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); border-radius: 6px; padding: 1px 7px;">
                 <i class="fa-solid fa-users"></i> {{ active_party.name }}
               </span>
+              {% if active_party.workout_type %}
+                <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 1px 7px;">
+                  <i class="fa-solid fa-person-running"></i> {{ active_party.workout_type }}
+                </span>
+              {% endif %}
             </div>
           </div>
 
@@ -687,6 +692,9 @@
                 <i class="fa-solid fa-calendar-week"></i> 주간 ({{ party_weekly_missions|length }})
               </button>
             </div>
+            <a href="{% url 'activity' %}?workout_type={{ active_party.workout_type|default:'러닝'|urlencode }}&target={{ active_party.target_timer_minutes|default:'30' }}" class="button btn-mint" style="padding: 6px 12px; font-size: 11px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="파티 운동 인증하러 가기">
+              <i class="fa-solid fa-circle-check"></i> 인증하기
+            </a>
             <button type="button" class="button secondary" onclick="openInvitePartyModal('{{ active_party.id }}', '{{ active_party.name|escapejs }}')" style="padding: 6px 10px; font-size: 11px; border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;" title="친구 닉네임으로 파티 초대">
               <i class="fa-solid fa-user-plus"></i> 친구 초대
             </button>
@@ -1036,6 +1044,11 @@
               <span style="color: #FBBF24; font-weight: 800;">({{ challenge.end_time_formatted }} 마감)</span>
             {% endif %}
           </p>
+          {% if challenge.party.workout_type %}
+            <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 1px 8px; border-radius: 6px;">
+              <i class="fa-solid fa-person-running"></i> 운동 종목: {{ challenge.party.workout_type }}
+            </span>
+          {% endif %}
           {% if challenge.party.target_timer_minutes %}
             <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); padding: 1px 8px; border-radius: 6px;">
               <i class="fa-solid fa-hourglass-half"></i> 하루 목표 {{ challenge.party.target_timer_minutes }}분
@@ -1055,6 +1068,10 @@
       </div>
       
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <a href="{% url 'activity' %}?workout_type={{ challenge.party.workout_type|default:'러닝'|urlencode }}&target={{ challenge.party.target_timer_minutes|default:'30' }}" class="button btn-mint" style="padding: 9px 16px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 4px 14px rgba(0, 245, 155, 0.25);" title="파티 목표 운동 인증하기">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>인증하기</span>
+        </a>
         {% if ended_challenges %}
           <button type="button" class="button secondary" onclick="openEndedPartyHistoryModal()" style="padding: 9px 14px; font-size: 13px; font-weight: 800; color: #CBD5E1; border-color: rgba(255, 255, 255, 0.18); cursor: pointer;" title="지난 파티 내기 기록 목록보기">
             <i class="fa-solid fa-clock-rotate-left" style="color: var(--trophy-gold);"></i>

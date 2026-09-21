@@ -346,8 +346,24 @@ def profile_view(request):
     })
 
 
+WORKOUT_FACILITY_KEYWORDS = {
+    "러닝": ["육상", "트랙", "운동장", "공원", "간이운동장"],
+    "걷기": ["공원", "산책", "간이운동장", "운동장", "게이트볼"],
+    "수영": ["수영", "물놀이", "풀"],
+    "배드민턴": ["배드민턴", "체육관", "간이운동장"],
+    "테니스": ["테니스", "라켓"],
+    "자전거": ["자전거", "사이클", "트랙", "간이운동장", "공원"],
+    "헬스": ["체력단련", "헬스", "피트니스", "체육관"],
+    "등산": ["등산", "산", "공원", "간이운동장"],
+    "축구": ["축구", "풋살", "구장", "간이운동장"],
+    "농구": ["농구", "구기", "체육관", "간이운동장"],
+    "요가": ["체육관", "문화", "생활체육"],
+}
+
+
 @login_required
 def activity_view(request):
+    selected_workout = request.GET.get("workout_type", "").strip() or "러닝"
     try:
         current_lat = float(request.GET.get("lat", ""))
         current_lon = float(request.GET.get("lon", ""))
@@ -355,28 +371,54 @@ def activity_view(request):
     except (TypeError, ValueError):
         current_lat = current_lon = None
         use_current_location = False
-    facilities = Facility.objects.filter(is_active=True)
-    if not use_current_location:
-        facilities = facilities.filter(region=request.user.profile.area)
+
+    # 운동 종류 맞춤 시설 쿼리 필터링
+    kws = WORKOUT_FACILITY_KEYWORDS.get(selected_workout, [])
+    workout_q = Q()
+    for kw in kws:
+        workout_q |= Q(facility_type__icontains=kw) | Q(name__icontains=kw)
+
+    base_qs = Facility.objects.filter(is_active=True)
+    matched_qs = base_qs.filter(workout_q) if kws else base_qs
+
     recommendations = []
-    for facility in list(facilities[:500] if use_current_location else facilities[:3]):
-        if use_current_location:
+    if use_current_location:
+        # GPS 위치 기준 거리 계산
+        pool = list(matched_qs[:400])
+        if len(pool) < 3:
+            pool += list(base_qs.exclude(id__in=[f.id for f in pool])[:200])
+        for facility in pool:
             if facility.latitude is None or facility.longitude is None:
                 continue
             lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
             dlat, dlon = lat2 - lat1, math.radians(facility.longitude - current_lon)
             value = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
             facility.distance_km = round(6371 * 2 * math.asin(math.sqrt(value)), 1)
-        query = quote(f"{facility.name} {facility.address}".strip(), safe="")
-        facility.kakao_map_url = (
-            f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
-            if facility.latitude is not None and facility.longitude is not None
-            else f"https://map.kakao.com/link/search/{query}"
-        )
-        recommendations.append(facility)
-    if use_current_location:
+            query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+            facility.kakao_map_url = (
+                f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
+                if facility.latitude is not None and facility.longitude is not None
+                else f"https://map.kakao.com/link/search/{query}"
+            )
+            recommendations.append(facility)
         recommendations.sort(key=lambda item: item.distance_km)
         recommendations = recommendations[:3]
+    else:
+        # 지역 기준 추천 (운동 종류 맞춤 우선 배치)
+        regional_matched = list(matched_qs.filter(region=request.user.profile.area)[:3])
+        if len(regional_matched) < 3:
+            needed = 3 - len(regional_matched)
+            fallback = list(base_qs.filter(region=request.user.profile.area).exclude(id__in=[f.id for f in regional_matched])[:needed])
+            recommendations = regional_matched + fallback
+        else:
+            recommendations = regional_matched
+        for facility in recommendations:
+            query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+            facility.kakao_map_url = (
+                f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
+                if facility.latitude is not None and facility.longitude is not None
+                else f"https://map.kakao.com/link/search/{query}"
+            )
 
     # AJAX 요청인 경우 JSON 응답 반환 (페이지 새로고침 방지 & 입력 데이터 보존)
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.GET.get("ajax") == "1":
@@ -1526,10 +1568,7 @@ def onboarding_group(request):
                 profile.workout_mode = "GROUP"
                 profile.save(update_fields=["workout_mode"])
                 request.session["active_party_id"] = party.id
-            if invited_ids:
-                messages.success(request, f"'{party.name}' 파티를 만들고 {len(invited_ids)}명의 친구에게 초대를 보냈어요!")
-            else:
-                messages.success(request, f"'{party.name}' 파티를 만들었어요!")
+            # 1단계(기간·타이머) 완료 후 파티 생성 완료 알림을 띄우지 않고 자연스럽게 다음(미션 설정) 단계로 이동
             return redirect("onboarding_group_quest", party_id=party.id)
     return render(request, "fitness/onboarding_group.html", {
         "friends": friends, "friend_form": FriendForm(),
@@ -1546,11 +1585,13 @@ def onboarding_group_quest(request, party_id):
             from .services import generate_party_daily_missions, generate_party_weekly_missions
             generate_party_daily_missions(party)
             generate_party_weekly_missions(party)
+            party.workout_type = "러닝"
+            party.save(update_fields=["workout_type"])
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"{party.name}의 AI 일일(3개) & 주간(10개) 협동 미션을 설정했어요.")
+            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! AI 일일(3개) & 주간(10개) 협동 미션이 시작됩니다.")
             return redirect("dashboard")
 
         title = request.POST.get("title", "").strip()[:100]
@@ -1564,6 +1605,12 @@ def onboarding_group_quest(request, party_id):
         if not title or workout_type not in valid_types or (workout_type == "기타" and not custom_workout_name) or not 5 <= target_minutes <= 300:
             messages.error(request, "미션 이름, 운동 종류, 목표 시간(5~300분)을 확인해 주세요.")
         else:
+            # 파티의 대표 운동 종류 업데이트
+            party.workout_type = custom_workout_name if workout_type == "기타" else workout_type
+            if target_minutes and not party.target_timer_minutes:
+                party.target_timer_minutes = target_minutes
+            party.save(update_fields=["workout_type", "target_timer_minutes"])
+
             DailyQuest.objects.create(
                 party=party, creator=request.user, title=title,
                 workout_type=workout_type, custom_workout_name=custom_workout_name,
@@ -1579,7 +1626,7 @@ def onboarding_group_quest(request, party_id):
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"{party.name}의 파티 미션을 만들었어요.")
+            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! (운동 종목: {party.workout_type})")
             return redirect("dashboard")
     return render(request, "fitness/onboarding_group_quest.html", {
         "party": party, "workout_choices": workout_choices,

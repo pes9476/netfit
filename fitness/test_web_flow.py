@@ -786,4 +786,55 @@ class WebFlowTests(TestCase):
         self.assertNotContains(rank_res, "러닝민수")
         self.assertNotContains(rank_res, "수영하는수빈")
 
+    def test_party_workout_type_and_facility_recommendations(self):
+        """파티 생성 2단계 운동종목 설정, 대시보드 인증하기 버튼, 운동종목별 체육시설 추천 검증."""
+        user = User.objects.create_user(username="workout_tester", password="password123")
+        self.client.force_login(user)
+
+        today = timezone.localdate()
+        # 1. 파티 1단계(기간·타이머 설정) 제출 -> 생성 완료가 아닌 onboarding_group_quest로 이동
+        step1_res = self.client.post(reverse("onboarding_group"), {
+            "action": "create_room",
+            "room_name": "수영 마스터 파티",
+            "challenge_start": today.isoformat(),
+            "challenge_end": (today + timedelta(days=7)).isoformat(),
+            "challenge_end_time": "21:00",
+            "target_timer_minutes": "50",
+            "challenge_reward": "회식 쏘기",
+        })
+        party = Party.objects.get(name="수영 마스터 파티")
+        self.assertRedirects(step1_res, reverse("onboarding_group_quest", args=[party.id]))
+
+        # 2. 파티 2단계(운동 종목 및 미션 설정)
+        step2_res = self.client.post(reverse("onboarding_group_quest", args=[party.id]), {
+            "title": "주 3회 50분 자유형 완주",
+            "workout_type": "수영",
+            "target_minutes": "50",
+            "reward_points": "50",
+        })
+        self.assertRedirects(step2_res, reverse("dashboard"))
+        party.refresh_from_db()
+        self.assertEqual(party.workout_type, "수영")
+        self.assertEqual(party.target_timer_minutes, 50)
+
+        # 3. 대시보드에서 운동 종목 및 인증하기 버튼 링크 확인
+        dash = self.client.get(reverse("dashboard"))
+        self.assertContains(dash, "수영 마스터 파티")
+        self.assertContains(dash, "운동 종목: 수영")
+        self.assertContains(dash, "인증하기")
+        self.assertContains(dash, "workout_type=%EC%88%98%EC%98%81")
+
+        # 4. 운동 기록 페이지 시설 추천: 종목에 따라 수영 시설 우선 추천
+        from fitness.models import Facility
+        Facility.objects.create(name="올림픽 수영장", facility_type="수영장", region=user.profile.area, is_active=True)
+        Facility.objects.create(name="한강 러닝 트랙", facility_type="육상트랙", region=user.profile.area, is_active=True)
+
+        act_res = self.client.get(reverse("activity") + "?workout_type=수영&ajax=1", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(act_res.status_code, 200)
+        data = act_res.json()
+        self.assertEqual(data["status"], "success")
+        facility_names = [f["name"] for f in data["facilities"]]
+        self.assertIn("올림픽 수영장", facility_names)
+
+
 
