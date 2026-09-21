@@ -339,6 +339,195 @@ PARTY_DAILY_NO_FACILITY_THEMES = [
     ("파티 전신 파워 버닝 루틴 30분", "일요일 마무리! 전신을 깨우는 파티 합동 루틴을 완수하세요.", "기타", 30, 50),
 ]
 
+# 2-1) 파티 목표 운동 종목별 일일 메인 미션 템플릿 풀 (매일 요일별 로테이션)
+WORKOUT_PARTY_DAILY_TEMPLATES = {
+    "러닝": [
+        ("파티 월요 스타트 협동 러닝 30분", "새로운 한 주를 여는 파티원들과의 30분 유산소 러닝 세션!", 30, 50),
+        ("파티 화요 인터벌 페이스 런 30분", "서로의 페이스를 맞춰 달리며 심폐 지구력을 키워보세요.", 30, 50),
+        ("파티 수요 활력 유산소 러닝 35분", "한 주의 중간을 시원하게 달리는 35분 파티 러닝 세션!", 35, 50),
+        ("파티 목요 지구력 지속 러닝 30분", "지치지 않는 파티의 에너지를 보여주는 30분 유산소 달리기.", 30, 50),
+        ("파티 불금 하이퍼 버닝 런 35분", "불타는 금요일! 파티원들과 뜨거운 땀방울을 함께 흘려보세요.", 35, 50),
+        ("파티 주말 롱코스 트레킹 & 러닝 40분", "주말 야외에서 파티원들과 함께 즐기는 여유롭고 긴 러닝!", 40, 50),
+        ("파티 일요 리커버리 조깅 25분", "한 주를 기분 좋게 마무리하는 편안한 파티 조깅 세션.", 25, 40),
+    ],
+    "헬스": [
+        ("파티 월요 가슴 & 삼두 협동 웨이트 30분", "새로운 한 주! 상체 근육을 함께 단련하며 동기부여를 얻어보세요.", 30, 50),
+        ("파티 화요 등 & 이두 풀 데이 30분", "파티원들과 함께 당기는 근육을 집중 자극해보세요.", 30, 50),
+        ("파티 수요 하체 스쿼트 챌린지 35분", "탄탄한 하체를 위해 파티원들과 스쿼트 세션을 완수하세요.", 35, 50),
+        ("파티 목요 어깨 숄더 프레스 집중 30분", "어깨 볼륨과 상체 밸런스를 잡는 파티 웨이트 세션.", 30, 50),
+        ("파티 불금 전신 파워 서킷 버닝 35분", "불금의 에너지를 전신 서킷 웨이트에 쏟아부어 한계에 도전하세요.", 35, 50),
+        ("파티 주말 코어 & 기능성 트레이닝 40분", "주말 동안 파티원들과 흔들림 없는 코어와 근력을 다져보세요.", 40, 50),
+        ("파티 일요 스트레칭 & 모빌리티 25분", "한 주 동안 지친 관절과 근육을 유연하게 풀어주는 회복 세션.", 25, 40),
+    ],
+    "수영": [
+        ("파티 자유형 폼 & 페이스 협동 수영 30분", "파티원들과 일정한 페이스로 시원하게 물살을 갈라보세요.", 30, 50),
+        ("파티 평영 & 배영 밸런스 수영 30분", "다양한 영법을 조화롭게 구사하며 전신을 자극해보세요.", 30, 50),
+        ("파티 수요 인터벌 랩 챌린지 35분", "정해진 랩 타임을 목표로 심폐 능력을 강화하는 수영 세션.", 35, 50),
+        ("파티 목요 지구력 롱디스턴스 수영 30분", "쉬지 않고 꾸준히 나아가는 파티 롱디스턴스 수영.", 30, 50),
+        ("파티 불금 하이퍼 스피드 수영 35분", "불타는 금요일! 강력한 발차기와 스트로크로 스피드를 올려보세요.", 35, 50),
+        ("파티 주말 롱코스 수영 트레이닝 40분", "주말 물속에서 파티원들과 함께 즐기는 장거리 수영 훈련.", 40, 50),
+        ("파티 일요 리커버리 이지 수영 25분", "피로를 부드럽게 씻어내는 편안한 리커버리 수영 세션.", 25, 40),
+    ],
+    "자전거": [
+        ("파티 로드 라이딩 페이스 유지 30분", "파티원들과 일정한 케이던스로 페달을 밟아보세요.", 30, 50),
+        ("파티 케이던스 인터벌 라이딩 30분", "회전수를 올리는 인터벌 페달링으로 심폐 지구력을 키워보세요.", 30, 50),
+        ("파티 수요 파워 페달링 힐클라임 35분", "오르막길 저항을 이겨내며 하체 파워를 폭발시키는 세션.", 35, 50),
+        ("파티 목요 지구력 크루징 라이딩 30분", "바람을 가르며 파티원들과 함께 달리는 30분 지속 라이딩.", 30, 50),
+        ("파티 불금 하이스피드 스프린트 35분", "불금! 순간 가속과 스프린트로 최고 속도에 도전해보세요.", 35, 50),
+        ("파티 주말 장거리 투어 라이딩 40분", "주말 야외 코스를 파티원들과 함께 탐방하는 롱 라이딩 세션.", 40, 50),
+        ("파티 일요 리커버리 이지 스핀 25분", "가벼운 기어비로 다리의 젖산을 풀어주는 회복 라이딩.", 25, 40),
+    ],
+    "축구": [
+        ("파티 풋살/축구 패스 앤 무브 30분", "파티원들과 호흡을 맞추며 패스 앤 무브를 실천하세요.", 30, 50),
+        ("파티 슛 & 볼 컨트롤 실전 훈련 30분", "정확한 킥과 부드러운 터치로 경기 감각을 끌어올려보세요.", 30, 50),
+        ("파티 수요 축구 미니게임 챌린지 35분", "파티원들과 박진감 넘치는 미니게임 세션을 소화하세요.", 35, 50),
+        ("파티 목요 공간 침투 & 스프린트 30분", "빠른 방향 전환과 스프린트로 순발력을 강화해보세요.", 30, 50),
+        ("파티 불금 하이퍼 풋살 매치 35분", "불금의 열기를 풋살 코트에 쏟아붓는 뜨거운 축구 세션.", 35, 50),
+        ("파티 주말 정규 축구 매치 40분", "주말 넓은 그라운드에서 파티원들과 마음껏 달려보세요.", 40, 50),
+        ("파티 일요 축구 전술 & 회복 25분", "가벼운 패스 게임과 스트레칭으로 한 주를 마무리하세요.", 25, 40),
+    ],
+    "농구": [
+        ("파티 슛팅 폼 & 3점슛 릴레이 30분", "파티원들과 정확한 슛 릴레이에 도전하세요.", 30, 50),
+        ("파티 드리블 돌파 & 레이업 30분", "화려한 드리블과 림 어택으로 공격 기술을 가다듬어보세요.", 30, 50),
+        ("파티 수요 3on3 하프코트 경기 35분", "파티원들과 합을 맞춰 치열한 3대3 농구 경기를 치르세요.", 35, 50),
+        ("파티 목요 속공 트랜지션 러닝 30분", "빠른 공수 전환과 코트 스프린트로 심폐 지구력을 높여보세요.", 30, 50),
+        ("파티 불금 풀코트 픽업게임 35분", "불타는 금요일! 올코트에서 열정적으로 뛰어보세요.", 35, 50),
+        ("파티 주말 농구 토너먼트 세션 40분", "주말 코트에서 파티원들과 함께 실력을 뽐내는 롱 게임 세션.", 40, 50),
+        ("파티 일요 자유투 집중 & 쿨다운 25분", "집중력을 모으는 자유투 연습과 피로 회복 세션.", 25, 40),
+    ],
+    "배드민턴": [
+        ("파티 클리어 & 스매시 랠리 30분", "시원한 하이클리어와 스매시로 스트레스를 날리세요.", 30, 50),
+        ("파티 헤어핀 & 드롭 정밀 훈련 30분", "네트 앞 섬세한 컨트롤과 수비 리시브를 훈련하세요.", 30, 50),
+        ("파티 수요 복식 랠리 챌린지 35분", "파티원과 호흡을 맞추며 긴 랠리를 이어가는 복식 게임.", 35, 50),
+        ("파티 목요 스텝 & 풋워크 인터벌 30분", "코트를 빈틈없이 누비는 셔틀런 풋워크 세션.", 30, 50),
+        ("파티 불금 복식 리그전 35분", "불금! 파티원들과 함께하는 박진감 넘치는 배드민턴 매치.", 35, 50),
+        ("파티 주말 토너먼트 복식전 40분", "주말 코트에서 펼쳐지는 파티원들의 진검승부 세션.", 40, 50),
+        ("파티 일요 릴랙스 랠리 & 쿨다운 25분", "가벼운 셔틀콕 랠리와 손목·어깨 스트레칭 세션.", 25, 40),
+    ],
+    "테니스": [
+        ("파티 스트로크 랠리 집중 훈련 30분", "포핸드와 백핸드 스트로크의 깊이를 높여보세요.", 30, 50),
+        ("파티 발리 & 네트 플레이 30분", "빠른 반사신경과 전위 발리 공격을 연습하세요.", 30, 50),
+        ("파티 수요 복식 타이브레이크 35분", "파티원과 함께하는 손에 땀을 쥐는 복식 매치 세션.", 35, 50),
+        ("파티 목요 사이드 스텝 & 서브 30분", "강력한 서브 에이스와 민첩한 사이드 스텝을 단련하세요.", 30, 50),
+        ("파티 불금 테니스 풀 매치 35분", "불타는 금요일! 코트에서 열정을 불태우는 테니스 경기.", 35, 50),
+        ("파티 주말 정규 세트 매치 40분", "주말 파티원들과 제대로 된 세트 스코어 경기에 도전하세요.", 40, 50),
+        ("파티 일요 이지 랠리 & 리커버리 25분", "기분 좋은 랠리와 관절 케어로 한 주를 정돈하세요.", 25, 40),
+    ],
+    "요가": [
+        ("파티 수리야 나마스카라 태양예배 30분", "태양예배 시퀀스로 온몸의 에너지를 깨워보세요.", 30, 50),
+        ("파티 밸런스 & 아사나 집중 30분", "흔들리지 않는 집중력으로 균형 감각을 단련하세요.", 30, 50),
+        ("파티 수요 빈야사 플로우 세션 35분", "호흡과 동작이 하나가 되는 부드러운 빈야사 플로우.", 35, 50),
+        ("파티 목요 하타 요가 호흡 수련 30분", "깊은 호흡과 함께 아사나를 오래 유지하며 내면을 다져보세요.", 30, 50),
+        ("파티 불금 힐링 인요가 35분", "불금! 한 주 동안 쌓인 피로를 깊은 스트레칭으로 씻어내세요.", 35, 50),
+        ("파티 주말 전신 코어 요가 40분", "주말 매트 위에서 코어 힘과 유연성을 동시에 강화하세요.", 40, 50),
+        ("파티 일요 명상 & 릴랙세이션 25분", "차분한 명상과 이완으로 새로운 한 주를 준비하는 힐링 세션.", 25, 40),
+    ],
+    "등산": [
+        ("파티 둘레길 협동 트레킹 30분", "파티원들과 숲길을 걸으며 피톤치드를 마셔보세요.", 30, 50),
+        ("파티 언덕 경사로 페이스 훈련 30분", "오르막 경사를 오르며 하체와 심폐 지구력을 키워보세요.", 30, 50),
+        ("파티 수요 등산로 파워 보행 35분", "힘찬 걸음걸이로 산길을 오르는 35분 트레킹 세션.", 35, 50),
+        ("파티 목요 하체 지구력 등산 트레이닝 30분", "계단과 바윗길을 넘나들며 튼튼한 하체를 만드세요.", 30, 50),
+        ("파티 불금 나이트 트레킹 35분", "불금 저녁! 시원한 바람을 맞으며 걷는 야간 트레킹.", 35, 50),
+        ("파티 주말 정상 정복 등산 세션 40분", "주말 명산을 찾아 파티원들과 정상 목표에 도전하세요.", 40, 50),
+        ("파티 일요 힐링 피톤치드 산책 25분", "산림욕과 가벼운 산책으로 몸과 마음을 정화하세요.", 25, 40),
+    ],
+}
+
+# 2-2) 파티 목표 운동 종목별 일일 강화/인터벌 2번째 미션 템플릿 풀
+WORKOUT_PARTY_SECONDARY_TEMPLATES = {
+    "러닝": [
+        ("파티원과 함께 심폐 강화 인터벌 러닝 30분", "심박수를 올리는 인터벌 구간 러닝으로 지구력을 극대화하세요.", 30, 50),
+        ("파티원과 함께 케이던스 맞춤 러닝 30분", "파티원들과 보폭과 발구름을 일치시키며 가볍게 달려보세요.", 30, 50),
+        ("파티원과 함께 템포 런 챌린지 30분", "목표 페이스를 유지하며 집중력 있게 달리는 러닝 세션.", 30, 50),
+        ("파티원과 함께 릴레이 지속주 러닝 30분", "파티원들과 교대로 선두를 맡아 30분 동안 지속해서 달려보세요.", 30, 50),
+        ("파티원과 함께 고강도 언덕 스프린트 35분", "오르막 인터벌로 폭발적인 심폐와 하체 파워를 기르세요.", 35, 50),
+        ("파티원과 함께 주말 그룹 LSD 러닝 40분", "주말을 맞아 여유 있는 페이스로 긴 거리를 달려보세요.", 40, 50),
+        ("파티원과 함께 쿨다운 리커버리 러닝 25분", "편안한 조깅으로 뭉친 다리 근육을 풀어주는 회복 세션.", 25, 40),
+    ],
+    "헬스": [
+        ("파티원과 함께 고강도 슈퍼세트 웨이트 30분", "휴식 시간을 줄이고 타겟 근육을 집중 공략하세요.", 30, 50),
+        ("파티원과 함께 덤벨 & 바벨 스트렝스 30분", "정확한 궤적과 자극으로 근육의 볼륨을 채워보세요.", 30, 50),
+        ("파티원과 함께 전신 서킷 트레이닝 30분", "다양한 동작을 쉼 없이 순환하며 칼로리를 소모하세요.", 30, 50),
+        ("파티원과 함께 타바타 인터벌 웨이트 30분", "20초 운동 10초 휴식의 타바타 리듬으로 한계에 도전하세요.", 30, 50),
+        ("파티원과 함께 불타는 근력 한계돌파 35분", "불금의 에너지를 쏟아 마지막 세트까지 완수하세요.", 35, 50),
+        ("파티원과 함께 주말 중량 리프팅 세션 40분", "충분한 웜업 후 고중량 리프팅을 안전하게 수행하세요.", 40, 50),
+        ("파티원과 함께 저강도 관절 회복 스트레칭 25분", "폼롤러와 스트레칭으로 관절의 가동 범위를 넓혀주세요.", 25, 40),
+    ],
+    "수영": [
+        ("파티원과 함께 수영 킥판 발차기 & 코어 강화 30분", "강력한 하체 발차기로 추진력을 높이는 훈련.", 30, 50),
+        ("파티원과 함께 수영 영법 자세 교정 세션 30분", "스트로크와 호흡 타이밍을 세밀하게 점검해보세요.", 30, 50),
+        ("파티원과 함께 50m 스프린트 인터벌 수영 30분", "짧은 거리를 전력 질주하며 순발력을 단련하세요.", 30, 50),
+        ("파티원과 함께 수영 턴 & 잠영 테크닉 훈련 30분", "플립턴과 돌핀킥으로 벽을 차고 나가는 기술 연습.", 30, 50),
+        ("파티원과 함께 젖산 내성 수영 세션 35분", "지치지 않는 체력을 만드는 고강도 랩 훈련.", 35, 50),
+        ("파티원과 함께 주말 지구력 랩 챌린지 수영 40분", "장거리 랩을 쉬지 않고 도는 주말 수영 세션.", 40, 50),
+        ("파티원과 함께 물속 스트레칭 & 회복 수영 25분", "물속 저항을 활용해 부드럽게 근육을 이완하세요.", 25, 40),
+    ],
+    "자전거": [
+        ("파티원과 함께 고속 스프린트 인터벌 30분", "순간적인 가속으로 최고 속도를 경험해보세요.", 30, 50),
+        ("파티원과 함께 인터벌 기어비 훈련 30분", "고단과 저단 기어를 넘나들며 페달링 스킬을 단련하세요.", 30, 50),
+        ("파티원과 함께 그룹 팩 라이딩 30분", "앞뒤 라이더의 간격을 유지하며 바람 저항을 줄여보세요.", 30, 50),
+        ("파티원과 함께 파워존 유지 지속 라이딩 30분", "목표 파워 출력을 일정하게 유지하는 세션.", 30, 50),
+        ("파티원과 함께 불금 파워 버닝 인터벌 35분", "불타는 인터벌로 허벅지와 심폐를 동시에 자극하세요.", 35, 50),
+        ("파티원과 함께 주말 롱 라이딩 투어 40분", "멋진 코스를 파티원들과 함께 완주하는 세션.", 40, 50),
+        ("파티원과 함께 쿨다운 회복 라이딩 25분", "가벼운 회전수로 젖산을 분해하는 힐링 라이딩.", 25, 40),
+    ],
+    "축구": [
+        ("파티원과 함께 순발력 코디네이션 훈련 30분", "민첩성과 풋워크를 향상하는 스텝 훈련.", 30, 50),
+        ("파티원과 함께 볼 컨트롤 & 퍼스트 터치 30분", "날아오는 볼을 안정적으로 소유하는 기술 연마.", 30, 50),
+        ("파티원과 함께 크로스 & 슈팅 세션 30분", "측면 크로스와 정확한 임팩트로 골망을 흔드세요.", 30, 50),
+        ("파티원과 함께 전술 압박 스프린트 30분", "수비 인터벌과 압박 타이밍을 맞추는 세션.", 30, 50),
+        ("파티원과 함께 불타는 축구 체력 버닝 35분", "경기 후반에도 지치지 않는 강철 체력 훈련.", 35, 50),
+        ("파티원과 함께 주말 실전 전술 세션 40분", "팀원들과 유기적인 패스 워크를 완성해보세요.", 40, 50),
+        ("파티원과 함께 경기 후 회복 스트레칭 25분", "햄스트링과 종아리 근육을 풀어주는 마무리 세션.", 25, 40),
+    ],
+    "농구": [
+        ("파티원과 함께 2대2 픽앤롤 연습 30분", "스크린 플레이와 패스 타이밍을 맞춰보세요.", 30, 50),
+        ("파티원과 함께 수비 풋워크 & 슬라이드 30분", "낮은 자세로 상대를 마크하는 수비 훈련.", 30, 50),
+        ("파티원과 함께 점프력 & 리바운드 세션 30분", "보드 장악력을 높이는 박스아웃 훈련.", 30, 50),
+        ("파티원과 함께 인터벌 속공 스프린트 30분", "코트를 가로지르는 맹렬한 역습 달리기.", 30, 50),
+        ("파티원과 함께 고강도 농구 서킷 35분", "드리블과 점프를 엮은 고강도 서킷 루틴.", 35, 50),
+        ("파티원과 함께 주말 슛팅 챌린지 40분", "포지션별 슛 성공률을 끌어올리는 연습.", 40, 50),
+        ("파티원과 함께 가벼운 릴랙스 슛 & 회복 25분", "정적인 슛팅과 관절 이완 세션.", 25, 40),
+    ],
+    "배드민턴": [
+        ("파티원과 함께 전위 푸시 & 수비 리시브 30분", "빠른 네트 플레이와 안정적인 수비 훈련.", 30, 50),
+        ("파티원과 함께 좌우 코트 셔틀런 30분", "코트 구석구석을 커버하는 민첩성 훈련.", 30, 50),
+        ("파티원과 함께 롱 랠리 지구력 세션 30분", "미스 없이 셔틀콕을 주고받는 집중력 훈련.", 30, 50),
+        ("파티원과 함께 인터벌 스매시 훈련 30분", "강력한 다운포스로 스매시 결정력을 높이세요.", 30, 50),
+        ("파티원과 함께 하이퍼 버닝 랠리 35분", "땀방울이 쏟아지는 불금 랠리 매치.", 35, 50),
+        ("파티원과 함께 주말 복식 랭킹전 40분", "팀워크와 전략으로 승리를 쟁취하세요.", 40, 50),
+        ("파티원과 함께 손목 & 어깨 회복 스트레칭 25분", "라켓 운동 피로를 날리는 유연성 세션.", 25, 40),
+    ],
+    "테니스": [
+        ("파티원과 함께 탑스핀 & 슬라이스 30분", "구질 변화로 상대를 흔드는 테크닉 훈련.", 30, 50),
+        ("파티원과 함께 베이스라인 딥 랠리 30분", "깊숙한 스트로크로 코트를 지배하세요.", 30, 50),
+        ("파티원과 함께 서브 앤 발리 전략 30분", "서브 후 빠른 전진 공격을 실전처럼 연습하세요.", 30, 50),
+        ("파티원과 함께 인터벌 코트 스프린트 30분", "공을 쫓아 전력 질주하는 풋워크 훈련.", 30, 50),
+        ("파티원과 함께 고강도 랠리 버닝 35분", "강한 템포로 랠리를 이어가는 심폐 세션.", 35, 50),
+        ("파티원과 함께 주말 랭킹전 매치 40분", "파티원들의 실력을 겨루는 주말 게임.", 40, 50),
+        ("파티원과 함께 관절 케어 스트레칭 25분", "어깨, 팔꿈치, 무릎을 부드럽게 풀어주세요.", 25, 40),
+    ],
+    "요가": [
+        ("파티원과 함께 골반 & 햄스트링 스트레칭 30분", "하체의 굳은 근육을 길고 시원하게 늘려보세요.", 30, 50),
+        ("파티원과 함께 척추 기립근 밸런스 교정 30분", "바른 자세를 유지하며 코어를 단련하세요.", 30, 50),
+        ("파티원과 함께 파워 요가 근력 세션 30분", "유연성과 근력을 동시에 잡는 파워 아사나.", 30, 50),
+        ("파티원과 함께 흉추 가동성 열기 30분", "답답한 가슴과 어깨를 활짝 여는 흉추 스트레칭.", 30, 50),
+        ("파티원과 함께 딥 스트레칭 버닝 35분", "호흡을 길게 내쉬며 더 깊은 동작으로 나아가세요.", 35, 50),
+        ("파티원과 함께 주말 코어 밸런스 플로우 40분", "매트 위에서 조화로운 전신 균형을 완성하세요.", 40, 50),
+        ("파티원과 함께 전신 이완 회복 요가 25분", "심신의 안정을 돕는 포근한 힐링 루틴.", 25, 40),
+    ],
+    "등산": [
+        ("파티원과 함께 계단 오르기 파워 트레이닝 30분", "하체 근력과 심폐를 빠르게 깨우는 계단 세션.", 30, 50),
+        ("파티원과 함께 심폐 인터벌 오르막 보행 30분", "호흡을 가다듬으며 가파른 경사를 극복하세요.", 30, 50),
+        ("파티원과 함께 하체 밸런스 & 코어 보행 30분", "바위나 불규칙한 지형에서 중심을 잡는 훈련.", 30, 50),
+        ("파티원과 함께 등산 스틱 테크닉 세션 30분", "스틱을 활용해 관절 부하를 줄이며 걷는 법.", 30, 50),
+        ("파티원과 함께 고강도 릿지 인터벌 35분", "지속적인 오르막 걸음으로 체력을 끌어올리세요.", 35, 50),
+        ("파티원과 함께 주말 롱 트레킹 40분", "자연의 정취를 만끽하며 완주하는 장거리 코스.", 40, 50),
+        ("파티원과 함께 무릎 & 발목 스트레칭 25분", "하산 후 관절과 근육을 달래는 쿨다운 루틴.", 25, 40),
+    ],
+}
+
+
 # 3) 솔로 주간 미션 4개 시즌 로테이션 풀 (1번 출석 누적 고정 + 9개 AI 미션 매주 변경)
 SOLO_WEEKLY_SEASON_POOLS = [
     # Cycle 0: [지구력 & 마일리지 시즌]
@@ -837,16 +1026,31 @@ def sync_mission_progress(user):
 def generate_party_daily_missions(party, today=None):
     """
     파티 일일 미션 3개 생성 (출석 미션 제외, 매일 변경):
-    1. AI 파티 협동 유산소 미션: 요일별 로테이션 러닝 세션 (30~40분)
-    2. AI 파티 협동 근력/스포츠 미션: 요일별 로테이션 웨이트/트레이닝 세션 (25~40분)
-    3. AI 파티 시설 연계 또는 데일리 협동 챌린지: 공공체육시설 순환 또는 파티 챌린지 루틴 (매일 변경)
+    파티의 운동 종목(party.workout_type)에 100% 맞춤 생성됩니다.
+    1. AI 파티 협동 메인 유산소/스포츠 세션 (30분)
+    2. AI 파티 협동 강화/인터벌 세션 (30분)
+    3. AI 파티 공공체육시설 연계 또는 데일리 챌린지 (25~30분)
     """
     if today is None:
         today = timezone.localdate()
 
+    p_workout = (party.workout_type or "러닝").strip()
     existing = list(DailyQuest.objects.filter(
         party=party, period_type="DAILY", quest_date=today, is_active=True
     ))
+
+    # 기존 미션이 다른 운동 종목으로 생성되어 있다면 파티 종목에 맞게 업데이트
+    for q in existing:
+        if p_workout and q.workout_type != p_workout and p_workout != "기타":
+            q.workout_type = p_workout
+            if "러닝" in q.title and p_workout != "러닝":
+                q.title = q.title.replace("러닝", p_workout)
+            elif "웨이트" in q.title and p_workout != "헬스":
+                q.title = q.title.replace("웨이트", p_workout)
+            elif "농구" in q.title and p_workout != "농구":
+                q.title = q.title.replace("농구", p_workout)
+            q.save(update_fields=["workout_type", "title"])
+
     if len(existing) >= 3:
         return existing[:3]
 
@@ -861,15 +1065,22 @@ def generate_party_daily_missions(party, today=None):
     weekday = today.weekday()
     day_seed = today.year * 1000 + today.timetuple().tm_yday
 
-    # 1. 파티 협동 유산소 (요일별 매일 변경)
-    c_title, c_desc, c_type, c_mins, c_pts = PARTY_DAILY_CARDIO_POOLS[weekday % len(PARTY_DAILY_CARDIO_POOLS)]
+    # 1. 파티 협동 메인 미션 (파티 운동 종목 맞춤)
+    templates = WORKOUT_PARTY_DAILY_TEMPLATES.get(p_workout)
+    if templates:
+        c_title, c_desc, c_mins, c_pts = templates[weekday % len(templates)]
+    else:
+        c_title = f"파티 협동 {p_workout} 30분"
+        c_desc = f"새로운 한 주를 여는 파티원들과의 30분 {p_workout} 협동 세션!"
+        c_mins, c_pts = 30, 50
+
     if len(created_missions) < 1 and c_title not in existing_titles:
         q1 = DailyQuest.objects.create(
             party=party,
             creator=party.owner,
             title=c_title,
             description=c_desc,
-            workout_type=c_type,
+            workout_type=p_workout,
             target_minutes=c_mins,
             period_type="DAILY",
             mission_category="WORKOUT",
@@ -882,15 +1093,22 @@ def generate_party_daily_missions(party, today=None):
         created_missions.append(q1)
         existing_titles.add(c_title)
 
-    # 2. 파티 협동 근력/스포츠 (요일별 매일 변경)
-    s_title, s_desc, s_type, s_mins, s_pts = PARTY_DAILY_STRENGTH_POOLS[weekday % len(PARTY_DAILY_STRENGTH_POOLS)]
+    # 2. 파티 협동 강화/테크닉 세션 (파티 운동 종목 맞춤)
+    strength_templates = WORKOUT_PARTY_SECONDARY_TEMPLATES.get(p_workout)
+    if strength_templates:
+        s_title, s_desc, s_mins, s_pts = strength_templates[weekday % len(strength_templates)]
+    else:
+        s_title = f"파티원과 함께 {p_workout} 인터벌 & 체력 강화 30분"
+        s_desc = f"파티원들과 함께 {p_workout} 세션을 집중 완수해보세요."
+        s_mins, s_pts = 30, 50
+
     if len(created_missions) < 2 and s_title not in existing_titles:
         q2 = DailyQuest.objects.create(
             party=party,
             creator=party.owner,
             title=s_title,
             description=s_desc,
-            workout_type=s_type,
+            workout_type=p_workout,
             target_minutes=s_mins,
             period_type="DAILY",
             mission_category="WORKOUT",
@@ -903,21 +1121,25 @@ def generate_party_daily_missions(party, today=None):
         created_missions.append(q2)
         existing_titles.add(s_title)
 
-    # 3. 파티 체육시설 연계 또는 데일리 챌린지 (매일 변경)
+    # 3. 파티 체육시설 연계 또는 데일리 챌린지 (매일 변경, 파티 운동 종목 맞춤)
     if len(created_missions) < 3:
         if facilities:
             nearby_facility = facilities[day_seed % len(facilities)]
-            fac_actions = [
-                (f"[{nearby_facility.name}] 파티 체육시설 방문 및 협동 운동 25분", f"{owner_area} 체육시설에서 함께 땀 흘려보세요!", "기타", "체육시설 방문 협동운동", 25, 40, "FACILITY", nearby_facility),
-                (f"[{nearby_facility.name}] 파티 체육시설 현장 인증 및 러닝 30분", f"{owner_area} 체육시설 트랙에서 파티원들과 함께 달려보세요.", "러닝", "체육시설 파티 러닝", 30, 50, "FACILITY", nearby_facility),
-                (f"[{nearby_facility.name}] 파티 체육시설 스포츠 교류전 30분", f"{owner_area} 체육시설에서 파티원들과 스포츠를 즐기세요.", "기타", "체육시설 스포츠 교류", 30, 50, "FACILITY", nearby_facility),
-            ]
-            f_title, f_desc, f_type, f_cname, f_mins, f_pts, f_cat, f_fac = fac_actions[day_seed % len(fac_actions)]
+            f_title = f"[{nearby_facility.name}] 파티 체육시설 현장 인증 및 {p_workout} 30분"
+            f_desc = f"{owner_area} 체육시설에서 파티원들과 함께 {p_workout}을 즐기며 인증해보세요."
+            f_mins = 30
+            f_pts = 50
+            f_cat = "FACILITY"
+            f_fac = nearby_facility
+            f_cname = f"체육시설 파티 {p_workout}"
         else:
-            f_title, f_desc, f_type, f_mins, f_pts = PARTY_DAILY_NO_FACILITY_THEMES[weekday % len(PARTY_DAILY_NO_FACILITY_THEMES)]
-            f_cname = ""
+            f_title = f"파티 {p_workout} 데일리 챌린지 25분"
+            f_desc = f"파티원 전원이 힘을 모아 25분 {p_workout} 루틴을 완수하세요."
+            f_mins = 25
+            f_pts = 40
             f_cat = "WORKOUT"
             f_fac = None
+            f_cname = ""
 
         if f_title not in existing_titles:
             q3 = DailyQuest.objects.create(
@@ -925,7 +1147,7 @@ def generate_party_daily_missions(party, today=None):
                 creator=party.owner,
                 title=f_title,
                 description=f_desc,
-                workout_type=f_type,
+                workout_type=p_workout,
                 custom_workout_name=f_cname,
                 target_minutes=f_mins,
                 period_type="DAILY",
@@ -946,14 +1168,24 @@ def generate_party_daily_missions(party, today=None):
 def generate_party_weekly_missions(party, week_start=None):
     """
     파티 주간 미션 10개 생성 (출석 누적 제외, 매주 변경):
-    - 주차(ISO Week % 4) 시즌 로테이션에 따라 매주 10개 파티 협동/합산 미션이 변경됩니다.
+    - 파티의 운동 종목(party.workout_type)을 반영하여 매주 10개 파티 협동/합산 미션이 생성됩니다.
     """
     if week_start is None:
         week_start, _ = get_current_week_bounds()
 
+    p_workout = (party.workout_type or "러닝").strip()
     existing = list(DailyQuest.objects.filter(
         party=party, period_type="WEEKLY", week_start=week_start, is_active=True
     ))
+
+    # 기존 주간 미션 중 종목 업데이트가 필요한 항목 동기화
+    for q in existing:
+        if p_workout and q.workout_type not in ["기타", p_workout] and p_workout != "기타":
+            q.workout_type = p_workout
+            if "러닝" in q.title and p_workout != "러닝":
+                q.title = q.title.replace("러닝", p_workout)
+            q.save(update_fields=["workout_type", "title"])
+
     if len(existing) >= 10:
         return existing[:10]
 
@@ -976,6 +1208,16 @@ def generate_party_weekly_missions(party, week_start=None):
             break
         title = item["title"].replace("{facility_name}", facility_name)
         desc = item["description"].replace("{owner_area}", owner_area)
+        w_type = item["workout_type"]
+
+        if p_workout and p_workout != "기타":
+            if w_type != "기타":
+                w_type = p_workout
+            if p_workout != "러닝":
+                title = title.replace("러닝/산책 거리 20km 완주하기", f"{p_workout} 150분 완주하기")
+                title = title.replace("러닝/산책 거리 25km 돌파하기", f"{p_workout} 180분 돌파하기")
+                title = title.replace("러닝", p_workout)
+                desc = desc.replace("러닝", p_workout)
 
         if title in existing_titles:
             continue
@@ -985,7 +1227,7 @@ def generate_party_weekly_missions(party, week_start=None):
             creator=party.owner,
             title=title,
             description=desc,
-            workout_type=item["workout_type"],
+            workout_type=w_type,
             target_minutes=item["target_minutes"],
             period_type="WEEKLY",
             mission_category=item["category"],
@@ -1007,6 +1249,7 @@ def sync_party_mission_progress(party, current_user):
     """
     파티원 전원의 오늘 및 이번 주 운동 데이터를 집계하여
     파티 일일 미션(3개)과 파티 주간 미션(10개)의 진행률, 달성 현황 및 파티원 실시간 모니터링을 동기화합니다.
+    파티원들의 실시간 순위(rank)와 챌린지 점수(score)도 함께 계산하여 바인딩합니다.
     """
     today = timezone.localdate()
     week_start, week_end = get_current_week_bounds(today)
@@ -1020,6 +1263,36 @@ def sync_party_mission_progress(party, current_user):
     # 오늘 및 이번 주 파티원 운동 기록
     party_today_records = list(WorkoutRecord.objects.filter(user_id__in=member_ids, created_at__date=today))
     party_week_records = list(WorkoutRecord.objects.filter(user_id__in=member_ids, created_at__date__range=(week_start, week_end)))
+
+    # 파티 배지 내기 스코어 및 순위 집계
+    if party.challenge_start and party.challenge_end:
+        points_map = dict(
+            BadgeAward.objects.filter(
+                user__in=members,
+                awarded_at__date__range=(party.challenge_start, party.challenge_end),
+            )
+            .values("user_id")
+            .annotate(total=Sum("points"))
+            .values_list("user_id", "total")
+        )
+    else:
+        points_map = dict(
+            BadgeAward.objects.filter(user__in=members)
+            .values("user_id")
+            .annotate(total=Sum("points"))
+            .values_list("user_id", "total")
+        )
+
+    # 점수 내림차순 정렬
+    member_points_list = []
+    for m in members:
+        pts = points_map.get(m.id, 0) or 0
+        member_points_list.append((m, pts))
+    member_points_list.sort(key=lambda x: x[1], reverse=True)
+
+    member_rank_map = {}
+    for idx, (m, pts) in enumerate(member_points_list, start=1):
+        member_rank_map[m.id] = (idx, pts)
 
     # 파티 주간 합산 지표
     party_week_total_minutes = sum(r.minutes for r in party_week_records)
@@ -1053,16 +1326,19 @@ def sync_party_mission_progress(party, current_user):
         q.progress_percent = 100 if is_done else (min(100, int((done_mins / q.target_minutes * 100))) if q.target_minutes else 0)
         q.done_label = f"{q.done_value}/{q.target_minutes}분"
 
-        # 파티원 실시간 모니터링
+        # 파티원 실시간 모니터링 (순위 및 점수 포함, 1위부터 순위순 정렬)
         members_status = []
-        for m in members:
+        for m, pts in member_points_list:
             m_done = (q.id, m.id) in award_map
+            rank, score = member_rank_map[m.id]
             members_status.append({
                 "user": m,
                 "name": m.profile.display_name or m.username,
                 "level": getattr(getattr(m, "charactercard", None), "level", 1),
                 "is_done": m_done,
                 "is_me": (m.id == current_user.id),
+                "rank": rank,
+                "score": score,
             })
         q.members_monitoring = members_status
 
@@ -1139,16 +1415,19 @@ def sync_party_mission_progress(party, current_user):
             q.done_label = "0/1"
             q.progress_percent = 100 if is_done else 0
 
-        # 파티원 실시간 모니터링
+        # 파티원 실시간 모니터링 (순위 및 점수 포함, 1위부터 순위순 정렬)
         members_status = []
-        for m in members:
+        for m, pts in member_points_list:
             m_done = (q.id, m.id) in award_map
+            rank, score = member_rank_map[m.id]
             members_status.append({
                 "user": m,
                 "name": m.profile.display_name or m.username,
                 "level": getattr(getattr(m, "charactercard", None), "level", 1),
                 "is_done": m_done,
                 "is_me": (m.id == current_user.id),
+                "rank": rank,
+                "score": score,
             })
         q.members_monitoring = members_status
 
@@ -1156,5 +1435,6 @@ def sync_party_mission_progress(party, current_user):
         "daily_missions": party_daily_missions,
         "weekly_missions": party_weekly_missions,
     }
+
 
 

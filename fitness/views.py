@@ -250,6 +250,9 @@ def dashboard(request):
     }
 
     party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
+    active_challenge = None
+    if active_party:
+        active_challenge = next((c for c in party_challenges if c["party"].id == active_party.id), None)
 
     # 🔔 대기 중인 친구 요청 및 파티 초대
     pending_friend_requests = FriendRequest.objects.filter(
@@ -293,6 +296,7 @@ def dashboard(request):
         "badge_summary": badge_summary(request.user),
         "party_challenges": party_challenges,
         "active_challenges": active_challenges,
+        "active_challenge": active_challenge,
         "ended_challenges": ended_challenges,
         "weather_latitude": latitude, "weather_longitude": longitude,
         "pending_friend_requests": pending_friend_requests,

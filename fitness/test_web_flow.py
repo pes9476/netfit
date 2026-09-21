@@ -850,6 +850,68 @@ class WebFlowTests(TestCase):
         tennis_data = tennis_res.json()
         self.assertIn("올림픽 테니스 코트", [f["name"] for f in tennis_data["facilities"]])
 
+    def test_party_missions_match_workout_type_and_monitoring_rank_scores(self):
+        import datetime
+        from fitness.services import generate_party_daily_missions, sync_party_mission_progress
+        host = User.objects.create_user(username="run_host", password=None)
+        member = User.objects.create_user(username="run_member", password=None)
+        
+        # 1. 러닝 파티 생성 -> 일일 미션 3개 모두 러닝 종목인지 검증
+        run_party = Party.objects.create(
+            name="러닝크루",
+            owner=host,
+            workout_type="러닝",
+            challenge_start=timezone.localdate(),
+            challenge_end=timezone.localdate() + datetime.timedelta(days=7),
+            challenge_reward="커피 쏘기",
+        )
+        run_party.members.add(host, member)
+
+        run_daily = generate_party_daily_missions(run_party)
+        self.assertEqual(len(run_daily), 3)
+        for m in run_daily:
+            self.assertEqual(m.workout_type, "러닝")
+            self.assertIn("러닝", m.title)
+
+        # 2. 수영 파티 생성 -> 일일 미션 3개 모두 수영 종목인지 검증
+        swim_party = Party.objects.create(
+            name="물개파티",
+            owner=host,
+            workout_type="수영",
+            challenge_start=timezone.localdate(),
+            challenge_end=timezone.localdate() + datetime.timedelta(days=7),
+            challenge_reward="치킨 내기",
+        )
+        swim_party.members.add(host, member)
+
+        swim_daily = generate_party_daily_missions(swim_party)
+        self.assertEqual(len(swim_daily), 3)
+        for m in swim_daily:
+            self.assertEqual(m.workout_type, "수영")
+            self.assertIn("수영", m.title)
+
+        # 3. 파티원 모니터링 순위 및 점수 바인딩 검증
+        party_data = sync_party_mission_progress(run_party, host)
+        monitoring = party_data["daily_missions"][0].members_monitoring
+        self.assertEqual(len(monitoring), 2)
+        self.assertIn("rank", monitoring[0])
+        self.assertIn("score", monitoring[0])
+        self.assertEqual(monitoring[0]["rank"], 1)
+
+        # 4. 대시보드 렌더링 검증:
+        #    - '상세보기' 버튼 존재
+        #    - 순위와 점수 텍스트 표시
+        #    - 2번째 사진 정보(PARTY CHALLENGE, 배지 내기, 운동 종목, 보상) 포함
+        #    - 3번째 사진의 중복 섹션(party-scoreboard) 제거 확인
+        self.client.force_login(host)
+        dash = self.client.get(reverse("dashboard") + f"?party_id={run_party.id}")
+        self.assertContains(dash, "상세보기")
+        self.assertContains(dash, "1위")
+        self.assertContains(dash, "0점")
+        self.assertContains(dash, "러닝크루 배지 내기")
+        self.assertContains(dash, "커피 쏘기")
+        self.assertNotContains(dash, "panel party-scoreboard")
+
 
 
 
