@@ -252,6 +252,8 @@ function requestFacilitiesGPS() {
       currentUrl.searchParams.set('loc_name', '실시간 현재 GPS');
       currentUrl.searchParams.delete('preset');
       window.location.href = currentUrl.toString();
+    }, (err) => {
+      if (btnText) btnText.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 실시간 GPS 위치 확인';
     });
   } else {
     if (!navigator.geolocation) {

@@ -394,8 +394,16 @@ document.getElementById('activityLocationButton')?.addEventListener('click', () 
     });
   };
 
+  const onGpsError = (err) => {
+    if (btn) btn.disabled = false;
+    if (status) {
+      status.textContent = '🔒 위치 사용을 허용하지 않았습니다. 기본 등록 지역 기준으로 추천합니다.';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+    }
+  };
+
   if (typeof openGPSPermissionModal === "function") {
-    openGPSPermissionModal(onGpsSuccess);
+    openGPSPermissionModal(onGpsSuccess, onGpsError);
   } else if (navigator.geolocation) {
     if (btn) btn.disabled = true;
     navigator.geolocation.getCurrentPosition(
@@ -403,9 +411,8 @@ document.getElementById('activityLocationButton')?.addEventListener('click', () 
         if (btn) btn.disabled = false;
         onGpsSuccess(pos.coords);
       },
-      () => {
-        if (btn) btn.disabled = false;
-        if (status) status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
+      (err) => {
+        onGpsError(err);
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
     );

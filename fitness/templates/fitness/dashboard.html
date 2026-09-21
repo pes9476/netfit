@@ -1446,6 +1446,11 @@ function syncWeatherWithGPS(isAuto = false) {
   if (typeof openGPSPermissionModal === "function") {
     openGPSPermissionModal(coords => {
       fetchWeatherWithCoords(coords.latitude, coords.longitude);
+    }, (err) => {
+      if (btnText) {
+        btnText.textContent = "위치 미허용";
+        if (btnIcon) btnIcon.className = "fa-solid fa-location-dot";
+      }
     });
   } else {
     if (!navigator.geolocation) {

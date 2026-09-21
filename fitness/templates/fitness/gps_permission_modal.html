@@ -57,28 +57,28 @@
 
     <!-- 3. iOS 스타일 3단 세로 분할 버튼 바 -->
     <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column;">
-      <!-- 버튼 1: 한 번 허용 -->
-      <button type="button" id="btnIosOnce" onclick="handleGPSPermissionChoice('once')" 
+      <!-- 버튼 1: 항상 허용 -->
+      <button type="button" id="btnIosAlways" onclick="handleGPSPermissionChoice('always')" 
               style="background: none; border: none; padding: 13px 14px; color: #38BDF8; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: background 0.15s; outline: none;" 
               onmouseover="this.style.background='rgba(56,189,248,0.1)'" 
               onmouseout="this.style.background='none'">
-        <span id="btnIosOnceText">한 번 허용</span>
+        <span id="btnIosAlwaysText">항상 허용</span>
       </button>
 
-      <!-- 버튼 2: 사이트를 사용하는 동안 허용 -->
-      <button type="button" id="btnIosAlways" onclick="handleGPSPermissionChoice('always')" 
+      <!-- 버튼 2: 사이트에 있는 동안 허용 -->
+      <button type="button" id="btnIosSession" onclick="handleGPSPermissionChoice('session')" 
               style="background: none; border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 13px 14px; color: #38BDF8; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: background 0.15s; outline: none;" 
               onmouseover="this.style.background='rgba(56,189,248,0.1)'" 
               onmouseout="this.style.background='none'">
-        <span id="btnIosAlwaysText">사이트를 사용하는 동안 허용</span>
+        <span id="btnIosSessionText">사이트에 있는 동안 허용</span>
       </button>
 
       <!-- 버튼 3: 허용 안 함 -->
-      <button type="button" onclick="closeGPSPermissionModal(true)" 
+      <button type="button" id="btnIosDeny" onclick="handleGPSPermissionChoice('deny')" 
               style="background: none; border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 14px; color: #94A3B8; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; outline: none;" 
               onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
               onmouseout="this.style.background='none'">
-        허용 안 함
+        <span>허용 안 함</span>
       </button>
     </div>
 
@@ -113,24 +113,33 @@
 <script>
 let isHighAccuracy = true;
 let activeGpsSuccessCallback = null;
+let activeGpsErrorCallback = null;
 
-// GPS 권한 허용 여부 전역 확인 (세션 or 로컬스토리지 v2)
+// GPS 권한 허용 여부 전역 확인:
+// - "ALWAYS": localStorage에 영구 보관 (브라우저를 껐다 켜도 유지)
+// - "SESSION": sessionStorage에만 보관 (탭/브라우저 닫으면 즉시 소멸되어 다음 방문 시 다시 질문)
+// - "DENIED": sessionStorage에 거부 보관 (위치 조회 안 함)
 function isNetfitGPSAllowed() {
   try {
-    return sessionStorage.getItem("netfit_gps_allowed") === "true" ||
-           localStorage.getItem("netfit_gps_allowed_v2") === "true";
+    const sessionPerm = sessionStorage.getItem("netfit_gps_perm");
+    if (sessionPerm === "DENIED") return false;
+    if (sessionPerm === "SESSION" || sessionPerm === "ALWAYS") return true;
+    const localPerm = localStorage.getItem("netfit_gps_perm");
+    if (localPerm === "ALWAYS") return true;
+    return false;
   } catch(e) {
     return false;
   }
 }
 
-// GPS 권한 모달 열기 (force=true 또는 첫 요청 시 모달 노출)
-function openGPSPermissionModal(onSuccessCallback, force = false) {
+// GPS 권한 모달 열기 (force=true 시 이미 허용된 상태라도 권한 선택 창 노출)
+function openGPSPermissionModal(onSuccessCallback, onErrorCallback = null, force = false) {
   activeGpsSuccessCallback = onSuccessCallback;
+  activeGpsErrorCallback = onErrorCallback;
 
-  // 이미 허용된 상태이고 강제 표시가 아닌 경우 바로 콜백 실행
+  // 이미 항상 허용되었거나, 이번 세션에서 '사이트에 있는 동안 허용'을 누른 경우 모달 없이 즉시 실행
   if (!force && isNetfitGPSAllowed()) {
-    executeGPSFetch(activeGpsSuccessCallback);
+    executeGPSFetch(activeGpsSuccessCallback, activeGpsErrorCallback);
     return;
   }
 
@@ -145,13 +154,7 @@ function openGPSPermissionModal(onSuccessCallback, force = false) {
   }
 }
 
-function closeGPSPermissionModal(isExplicitDeny = false) {
-  if (isExplicitDeny) {
-    try {
-      sessionStorage.removeItem("netfit_gps_allowed");
-      localStorage.removeItem("netfit_gps_allowed_v2");
-    } catch(e) {}
-  }
+function closeGPSPermissionModal() {
   const modal = document.getElementById("gpsPermissionModal");
   const card = document.getElementById("gpsPermissionCard");
   if (modal && card) {
@@ -163,39 +166,61 @@ function closeGPSPermissionModal(isExplicitDeny = false) {
   }
 }
 
-// '한 번 허용' or '사이트를 사용하는 동안 허용' 선택 시
-function handleGPSPermissionChoice(mode) {
-  if (mode === 'always') {
-    try {
-      localStorage.setItem("netfit_gps_allowed_v2", "true");
-      sessionStorage.setItem("netfit_gps_allowed", "true");
-    } catch(e) {}
-  } else {
-    try {
-      sessionStorage.setItem("netfit_gps_allowed", "true");
-    } catch(e) {}
-  }
+// 1. 항상 허용 / 2. 사이트에 있는 동안 허용 / 3. 허용 안 함 선택 처리
+function handleGPSPermissionChoice(choice) {
+  const btnAlways = document.getElementById("btnIosAlwaysText");
+  const btnSession = document.getElementById("btnIosSessionText");
 
-  const btnOnceText = document.getElementById("btnIosOnceText");
-  const btnAlwaysText = document.getElementById("btnIosAlwaysText");
-  if (mode === 'always') {
-    if (btnAlwaysText) btnAlwaysText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 수신 중...';
-  } else {
-    if (btnOnceText) btnOnceText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 수신 중...';
-  }
+  if (choice === 'always') {
+    // 🌟 1. '항상 허용': localStorage에 영구 보관 (브라우저를 닫고 다시 와도 유지)
+    try {
+      localStorage.setItem("netfit_gps_perm", "ALWAYS");
+      sessionStorage.setItem("netfit_gps_perm", "ALWAYS");
+    } catch(e) {}
 
-  executeGPSFetch((coords) => {
+    if (btnAlways) btnAlways.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 확인 중...';
+
+    executeGPSFetch((coords) => {
+      closeGPSPermissionModal();
+      if (btnAlways) btnAlways.textContent = "항상 허용";
+      if (activeGpsSuccessCallback) activeGpsSuccessCallback(coords);
+    }, (err) => {
+      closeGPSPermissionModal();
+      if (btnAlways) btnAlways.textContent = "항상 허용";
+      if (activeGpsErrorCallback) activeGpsErrorCallback(err);
+    });
+
+  } else if (choice === 'session') {
+    // 🌐 2. '사이트에 있는 동안 허용': sessionStorage에만 저장 (탭이나 브라우저를 닫으면 소멸되어 재방문 시 다시 질문)
+    try {
+      localStorage.removeItem("netfit_gps_perm");
+      sessionStorage.setItem("netfit_gps_perm", "SESSION");
+    } catch(e) {}
+
+    if (btnSession) btnSession.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위치 확인 중...';
+
+    executeGPSFetch((coords) => {
+      closeGPSPermissionModal();
+      if (btnSession) btnSession.textContent = "사이트에 있는 동안 허용";
+      if (activeGpsSuccessCallback) activeGpsSuccessCallback(coords);
+    }, (err) => {
+      closeGPSPermissionModal();
+      if (btnSession) btnSession.textContent = "사이트에 있는 동안 허용";
+      if (activeGpsErrorCallback) activeGpsErrorCallback(err);
+    });
+
+  } else {
+    // 🚫 3. '허용 안 함': 위치 조회를 일체 수행하지 않고 거부 상태 기록 후 즉시 닫음
+    try {
+      localStorage.removeItem("netfit_gps_perm");
+      sessionStorage.setItem("netfit_gps_perm", "DENIED");
+    } catch(e) {}
+
     closeGPSPermissionModal();
-    if (btnOnceText) btnOnceText.textContent = "한 번 허용";
-    if (btnAlwaysText) btnAlwaysText.textContent = "사이트를 사용하는 동안 허용";
-    if (activeGpsSuccessCallback) {
-      activeGpsSuccessCallback(coords);
+    if (activeGpsErrorCallback) {
+      activeGpsErrorCallback({ code: 1, message: "사용자가 위치 권한을 허용하지 않았습니다." });
     }
-  }, (err) => {
-    closeGPSPermissionModal();
-    if (btnOnceText) btnOnceText.textContent = "한 번 허용";
-    if (btnAlwaysText) btnAlwaysText.textContent = "사이트를 사용하는 동안 허용";
-  });
+  }
 }
 
 // 실제 브라우저 Geolocation API 호출
