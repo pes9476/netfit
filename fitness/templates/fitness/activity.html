@@ -57,7 +57,10 @@
   <!-- AI 시설 추천 -->
   <article class="panel ai-facility-panel">
     <div class="ai-facility-head">
-      <span>✨ AI FACILITY PICK</span>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+        <span>✨ AI FACILITY PICK</span>
+        <span id="aiFacilityCategoryBadge" style="font-size: 10.5px; font-weight: 800; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 1px 7px;">{{ selected_workout|default:'러닝' }} 맞춤</span>
+      </div>
       <h2>내 주변 공공체육시설 추천</h2>
       <div class="ai-facility-actions">
         <button class="button secondary" type="button" id="activityLocationButton">
@@ -226,8 +229,10 @@ function fetchFacilityRecommendations(workoutType, lat = null, lon = null) {
     if (listContainer) listContainer.style.opacity = '1';
     if (data.status === 'success' && data.facilities) {
       renderRecommendedFacilities(data.facilities);
+      const badge = document.getElementById('aiFacilityCategoryBadge');
+      if (badge) badge.textContent = `${data.workout_type || selectedWorkout} 맞춤`;
       if (status) {
-        status.textContent = `🎯 '${selectedWorkout}' 종목에 맞춘 추천 시설로 갱신되었습니다.`;
+        status.textContent = `🎯 '${data.workout_type || selectedWorkout}' 종목에 맞춘 추천 시설로 갱신되었습니다.`;
         setTimeout(() => { if (status) status.textContent = ''; }, 3000);
       }
     }

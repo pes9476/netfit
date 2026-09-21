@@ -836,5 +836,20 @@ class WebFlowTests(TestCase):
         facility_names = [f["name"] for f in data["facilities"]]
         self.assertIn("올림픽 수영장", facility_names)
 
+        # 5. 축구와 테니스도 각각 종목 전용 시설을 우선 추천하는지 검증
+        Facility.objects.create(name="잠실 축구 전용구장", facility_type="축구장", region=user.profile.area, is_active=True)
+        Facility.objects.create(name="올림픽 테니스 코트", facility_type="테니스장", region=user.profile.area, is_active=True)
+
+        soccer_res = self.client.get(reverse("activity") + "?workout_type=축구&ajax=1", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(soccer_res.status_code, 200)
+        soccer_data = soccer_res.json()
+        self.assertIn("잠실 축구 전용구장", [f["name"] for f in soccer_data["facilities"]])
+
+        tennis_res = self.client.get(reverse("activity") + "?workout_type=테니스&ajax=1", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(tennis_res.status_code, 200)
+        tennis_data = tennis_res.json()
+        self.assertIn("올림픽 테니스 코트", [f["name"] for f in tennis_data["facilities"]])
+
+
 
 

@@ -346,18 +346,64 @@ def profile_view(request):
     })
 
 
-WORKOUT_FACILITY_KEYWORDS = {
-    "러닝": ["육상", "트랙", "운동장", "공원", "간이운동장"],
-    "걷기": ["공원", "산책", "간이운동장", "운동장", "게이트볼"],
-    "수영": ["수영", "물놀이", "풀"],
-    "배드민턴": ["배드민턴", "체육관", "간이운동장"],
-    "테니스": ["테니스", "라켓"],
-    "자전거": ["자전거", "사이클", "트랙", "간이운동장", "공원"],
-    "헬스": ["체력단련", "헬스", "피트니스", "체육관"],
-    "등산": ["등산", "산", "공원", "간이운동장"],
-    "축구": ["축구", "풋살", "구장", "간이운동장"],
-    "농구": ["농구", "구기", "체육관", "간이운동장"],
-    "요가": ["체육관", "문화", "생활체육"],
+SPORT_FACILITY_CONFIG = {
+    "수영": {
+        "primary_types": ["수영장"],
+        "name_keywords": ["수영", "물놀이", "아쿠아", "풀장"],
+    },
+    "테니스": {
+        "primary_types": ["테니스장"],
+        "name_keywords": ["테니스", "라켓"],
+    },
+    "축구": {
+        "primary_types": ["축구장", "풋살장"],
+        "name_keywords": ["축구", "풋살"],
+    },
+    "농구": {
+        "primary_types": ["구기체육관"],
+        "name_keywords": ["농구", "구기"],
+        "secondary_types": ["생활체육관"],
+    },
+    "배드민턴": {
+        "primary_types": ["생활체육관"],
+        "name_keywords": ["배드민턴", "셔틀콕"],
+        "secondary_types": ["구기체육관"],
+    },
+    "헬스": {
+        "primary_types": ["기타체육시설(체력단련장)"],
+        "name_keywords": ["체력단련", "헬스", "웨이트", "피트니스"],
+        "secondary_types": ["생활체육관"],
+    },
+    "러닝": {
+        "primary_types": ["육상경기장"],
+        "name_keywords": ["육상", "트랙", "러닝", "달리기"],
+        "secondary_keywords": ["운동장", "체육공원"],
+    },
+    "걷기": {
+        "primary_types": ["전천후게이트볼장", "파크골프장"],
+        "name_keywords": ["산책", "둘레길", "공원", "게이트볼"],
+        "secondary_keywords": ["쉼터", "녹지"],
+    },
+    "만보": {
+        "primary_types": ["전천후게이트볼장", "파크골프장"],
+        "name_keywords": ["산책", "둘레길", "공원", "게이트볼"],
+        "secondary_keywords": ["쉼터", "녹지"],
+    },
+    "자전거": {
+        "primary_types": ["사이클경기장", "롤러스케이트장"],
+        "name_keywords": ["자전거", "사이클", "벨로드롬"],
+        "secondary_keywords": ["인라인", "스케이트"],
+    },
+    "등산": {
+        "primary_types": ["실외인공암벽장", "실내인공암벽장"],
+        "name_keywords": ["등산", "암벽", "클라이밍", "산악"],
+        "secondary_keywords": ["산", "고개", "봉"],
+    },
+    "요가": {
+        "primary_types": ["생활체육관"],
+        "name_keywords": ["요가", "필라테스", "명상", "스트레칭", "문화체육"],
+        "secondary_types": ["구기체육관"],
+    },
 }
 
 
@@ -372,24 +418,35 @@ def activity_view(request):
         current_lat = current_lon = None
         use_current_location = False
 
-    # 운동 종류 맞춤 시설 쿼리 필터링
-    kws = WORKOUT_FACILITY_KEYWORDS.get(selected_workout, [])
-    workout_q = Q()
-    for kw in kws:
-        workout_q |= Q(facility_type__icontains=kw) | Q(name__icontains=kw)
+    # 운동 종목 맞춤 시설 필터링 (1순위 전문시설 -> 2순위 연관시설 -> 3순위 일반시설 순)
+    cfg = SPORT_FACILITY_CONFIG.get(selected_workout, {})
+    primary_q = Q()
+    if "primary_types" in cfg:
+        primary_q |= Q(facility_type__in=cfg["primary_types"])
+    for kw in cfg.get("name_keywords", []):
+        primary_q |= Q(name__icontains=kw) | Q(facility_type__icontains=kw)
 
-    base_qs = Facility.objects.filter(is_active=True)
-    matched_qs = base_qs.filter(workout_q) if kws else base_qs
+    secondary_q = Q()
+    if "secondary_types" in cfg:
+        secondary_q |= Q(facility_type__in=cfg["secondary_types"])
+    for kw in cfg.get("secondary_keywords", []):
+        secondary_q |= Q(name__icontains=kw)
+
+    # 사전 정의에 없는 커스텀 운동 종목인 경우 이름/유형 검색
+    if not cfg and selected_workout:
+        primary_q = Q(name__icontains=selected_workout) | Q(facility_type__icontains=selected_workout)
 
     recommendations = []
     if use_current_location:
-        # GPS 위치 기준 거리 계산
-        pool = list(matched_qs[:400])
+        # GPS 위치 기준: 전문 시설 풀에서 최단거리 우선 탐색
+        qs = Facility.objects.filter(is_active=True, latitude__isnull=False, longitude__isnull=False)
+        pool = list(qs.filter(primary_q)[:400]) if primary_q else []
+        if len(pool) < 10 and secondary_q:
+            pool += list(qs.filter(secondary_q).exclude(id__in=[f.id for f in pool])[:200])
         if len(pool) < 3:
-            pool += list(base_qs.exclude(id__in=[f.id for f in pool])[:200])
+            pool += list(qs.exclude(id__in=[f.id for f in pool])[:100])
+
         for facility in pool:
-            if facility.latitude is None or facility.longitude is None:
-                continue
             lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
             dlat, dlon = lat2 - lat1, math.radians(facility.longitude - current_lon)
             value = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
@@ -404,14 +461,18 @@ def activity_view(request):
         recommendations.sort(key=lambda item: item.distance_km)
         recommendations = recommendations[:3]
     else:
-        # 지역 기준 추천 (운동 종류 맞춤 우선 배치)
-        regional_matched = list(matched_qs.filter(region=request.user.profile.area)[:3])
-        if len(regional_matched) < 3:
-            needed = 3 - len(regional_matched)
-            fallback = list(base_qs.filter(region=request.user.profile.area).exclude(id__in=[f.id for f in regional_matched])[:needed])
-            recommendations = regional_matched + fallback
-        else:
-            recommendations = regional_matched
+        # 지역 기준: 1순위 전문 시설 -> 2순위 연관 시설 -> 3순위 지역 일반 시설 순으로 보충
+        base_qs = Facility.objects.filter(is_active=True, region=request.user.profile.area)
+        matches = list(base_qs.filter(primary_q)[:3]) if primary_q else []
+        if len(matches) < 3 and secondary_q:
+            needed = 3 - len(matches)
+            sec_matches = list(base_qs.filter(secondary_q).exclude(id__in=[f.id for f in matches])[:needed])
+            matches.extend(sec_matches)
+        if len(matches) < 3:
+            needed = 3 - len(matches)
+            fallback = list(base_qs.exclude(id__in=[f.id for f in matches])[:needed])
+            matches.extend(fallback)
+        recommendations = matches[:3]
         for facility in recommendations:
             query = quote(f"{facility.name} {facility.address}".strip(), safe="")
             facility.kakao_map_url = (
@@ -424,6 +485,7 @@ def activity_view(request):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.GET.get("ajax") == "1":
         return JsonResponse({
             "status": "success",
+            "workout_type": selected_workout,
             "facilities": [
                 {
                     "id": f.id,
@@ -443,6 +505,7 @@ def activity_view(request):
 
     return render(request, "fitness/activity.html", {
         "workout_form": WorkoutForm(),
+        "selected_workout": selected_workout,
         "records": WorkoutRecord.objects.filter(user=request.user).order_by("-created_at")[:20],
         "recommended_facilities": recommendations,
         "use_current_location": use_current_location,
