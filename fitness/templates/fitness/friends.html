@@ -112,31 +112,318 @@
 <section class="section-head" id="friend-list">
   <div>
     <h2><i class="fa-solid fa-address-book" style="color: #38BDF8; margin-right: 8px;"></i>내 친구 목록 ({{ friends|length }}명)</h2>
-    <p>친구는 서로의 친구 랭킹에서 볼 수 있습니다.</p>
+    <p>운동 친구들의 실시간 캐릭터 카드와 운동 목표를 확인하고 함께 파티에 참여해보세요.</p>
   </div>
-  <a class="button secondary" href="{% url 'ranking' %}?scope=friends">
+  <a class="button secondary" href="{% url 'ranking' %}?scope=friends" style="font-weight: 800; border-color: rgba(245, 158, 11, 0.4); color: var(--trophy-gold);">
     <i class="fa-solid fa-trophy"></i>
     <span>친구 랭킹 보기</span>
   </a>
 </section>
 
-<article class="panel">
-  {% for friend in friends %}
-    <div class="friend-item">
-      <div class="friend-main">
-        <div class="friend-avatar">
-          <i class="fa-solid fa-user"></i>
+{% if friends %}
+  <div class="friend-cards-grid">
+    {% for friend in friends %}
+      <article class="friend-rich-card">
+        <!-- 상단: 아바타 + 닉네임 + 캐릭터 레벨/티어 -->
+        <div class="friend-card-header">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <div class="friend-card-avatar tier-avatar-{{ friend.charactercard.card_tier|default:'새싹' }}">
+              {% if friend.profile.character_label == '백곰' %}
+                🐻
+              {% elif friend.profile.character_label == '아기공룡' %}
+                🦖
+              {% elif friend.profile.character_label == '햄스터' %}
+                🐹
+              {% else %}
+                🐯
+              {% endif %}
+            </div>
+            <div style="min-width: 0;">
+              <b class="friend-card-name" title="{{ friend.profile.display_name|default:friend.username }}">
+                {{ friend.profile.display_name|default:friend.username }}
+              </b>
+              <small class="friend-card-handle">
+                @{{ friend.username }} · {{ friend.profile.area }}
+              </small>
+            </div>
+          </div>
+
+          <div style="text-align: right; flex-shrink: 0;">
+            <span class="friend-tier-pill tier-badge-{{ friend.charactercard.card_tier|default:'새싹' }}">
+              Lv.{{ friend.charactercard.level|default:1 }} {{ friend.charactercard.card_tier|default:'새싹' }}
+            </span>
+            <small style="display: block; color: var(--text-muted); font-size: 11px; margin-top: 3px;">
+              {{ friend.charactercard.title|default:'러닝 새싹' }}
+            </small>
+          </div>
         </div>
-        <div>
-          <b>{{ friend.profile.display_name|default:friend.username }}</b>
-          <small style="display: block; color: var(--text-muted); margin-top: 3px;">
-            {{ friend.profile.area }}
-          </small>
+
+        <!-- 중단: 운동 정보 뱃지 (목표, 주기, 파트너) -->
+        <div class="friend-card-badges">
+          <span class="f-badge f-badge-goal" title="운동 목표">
+            🎯 {{ friend.profile.get_workout_goal_display|default:'건강 증진' }}
+          </span>
+          <span class="f-badge f-badge-days" title="주당 운동 목표일">
+            🔥 주 {{ friend.profile.workout_days|default:3 }}일
+          </span>
+          <span class="f-badge f-badge-pet" title="캐릭터 파트너">
+            🐾 {{ friend.profile.character_label|default:'백호' }}
+          </span>
         </div>
-      </div>
+
+        <!-- 하단: 인터랙티브 액션 (파티 초대 / 1:1 카드 배틀) -->
+        <div class="friend-card-actions">
+          {% if active_party %}
+            {% if friend.id in party_member_ids %}
+              <span class="party-status-badge in-party" title="현재 '{{ active_party.name }}' 파티에 함께 소속되어 있습니다.">
+                <i class="fa-solid fa-users"></i> 파티원
+              </span>
+            {% else %}
+              <form method="post" action="{% url 'invite_party_member' active_party.id %}" style="margin: 0; flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="friend_code" value="{{ friend.username }}">
+                <input type="hidden" name="next" value="friends">
+                <button type="submit" class="button secondary btn-invite-party" title="'{{ active_party.name }}' 파티에 초대하기">
+                  <i class="fa-solid fa-user-plus"></i> 파티 초대
+                </button>
+              </form>
+            {% endif %}
+          {% else %}
+            <a class="button secondary btn-create-party" href="{% url 'onboarding_group' %}" title="새로운 파티를 만들어 함께 운동하세요">
+              <i class="fa-solid fa-plus"></i> 파티 생성
+            </a>
+          {% endif %}
+
+          <a class="button secondary btn-friend-battle" href="{% url 'battle' %}?opponent={{ friend.username }}" title="{{ friend.username }}님에게 1:1 배틀 신청하기">
+            <i class="fa-solid fa-hand-fist"></i> 1:1 배틀
+          </a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <article class="panel" style="text-align: center; padding: 40px 20px; background: rgba(16, 24, 39, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px;">
+    <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: #38BDF8;">
+      <i class="fa-solid fa-user-plus"></i>
     </div>
-  {% empty %}
-    <p style="color: var(--text-muted); margin: 12px 0;">아직 친구가 없어요. 친구의 닉네임을 입력해 추가해보세요.</p>
-  {% endfor %}
-</article>
+    <h3 style="color: #FFFFFF; font-size: 16px; margin: 0 0 6px;">아직 등록된 친구가 없습니다</h3>
+    <p style="color: var(--text-muted); font-size: 13.5px; margin: 0 0 18px; max-width: 440px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+      상단 '친구 추가'에 친구의 닉네임이나 아이디를 입력하여 친구 요청을 보내보세요!<br>
+      함께 파티 미션을 달성하고 실시간 랭킹 경쟁도 펼칠 수 있습니다.
+    </p>
+    <a class="button btn-mint" href="#friend-add" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800;">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span>친구 추가하러 가기</span>
+    </a>
+  </article>
+{% endif %}
+
+<style>
+.friend-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.friend-rich-card {
+  background: rgba(16, 24, 39, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.friend-rich-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.friend-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.friend-card-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tier-avatar-새싹 {
+  border: 2px solid var(--neon-mint);
+  background: rgba(0, 245, 155, 0.1);
+}
+.tier-avatar-실버 {
+  border: 2px solid #94A3B8;
+  background: rgba(148, 163, 184, 0.12);
+}
+.tier-avatar-골드 {
+  border: 2px solid #F59E0B;
+  background: rgba(245, 158, 11, 0.12);
+}
+.tier-avatar-마스터 {
+  border: 2px solid #A855F7;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.friend-card-name {
+  font-size: 15px;
+  color: #FFFFFF;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-card-handle {
+  display: block;
+  color: #94A3B8;
+  font-size: 12px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-tier-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.tier-badge-새싹 {
+  background: rgba(0, 245, 155, 0.15);
+  color: var(--neon-mint);
+  border: 1px solid rgba(0, 245, 155, 0.35);
+}
+.tier-badge-실버 {
+  background: rgba(148, 163, 184, 0.15);
+  color: #E2E8F0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.tier-badge-골드 {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FDE047;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.tier-badge-마스터 {
+  background: rgba(168, 85, 247, 0.15);
+  color: #D8B4FE;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.friend-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.f-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.f-badge-goal {
+  background: rgba(56, 189, 248, 0.1);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.f-badge-days {
+  background: rgba(245, 158, 11, 0.1);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.f-badge-pet {
+  background: rgba(255, 255, 255, 0.05);
+  color: #CBD5E1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.friend-card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.party-status-badge.in-party {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--neon-mint);
+  background: rgba(0, 245, 155, 0.12);
+  border: 1px solid rgba(0, 245, 155, 0.3);
+  border-radius: 8px;
+}
+
+.btn-invite-party {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #38BDF8;
+  border-color: rgba(56, 189, 248, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.btn-create-party {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #94A3B8;
+  border-color: rgba(255, 255, 255, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.btn-friend-battle {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--trophy-gold);
+  border-color: rgba(245, 158, 11, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+</style>
 {% endblock %}

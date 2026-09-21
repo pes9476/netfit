@@ -106,6 +106,47 @@ def login_view(request):
     return render(request, "fitness/login.html", {"form": form, "next": next_url})
 
 
+def get_user_party_challenges(user):
+    party_challenges = []
+    today = timezone.localdate()
+    for party in user.parties.all():
+        if not party.challenge_start or not party.challenge_end:
+            continue
+        rows = []
+        for member in party.members.select_related("profile"):
+            points = BadgeAward.objects.filter(
+                user=member,
+                awarded_at__date__range=(party.challenge_start, party.challenge_end),
+            ).aggregate(total=Sum("points"))["total"] or 0
+            rows.append({
+                "user_id": member.id,
+                "name": member.profile.display_name or member.username,
+                "username": member.username,
+                "points": points,
+                "is_me": member == user,
+            })
+        rows.sort(key=lambda row: row["points"], reverse=True)
+        my_rank = None
+        my_points = 0
+        for idx, row in enumerate(rows, start=1):
+            row["rank"] = idx
+            if row["is_me"]:
+                my_rank = idx
+                my_points = row["points"]
+        is_ended = bool(party.challenge_end and party.challenge_end < today)
+        party_challenges.append({
+            "party": party,
+            "rows": rows,
+            "is_ended": is_ended,
+            "my_rank": my_rank or (len(rows) if rows else 1),
+            "my_points": my_points,
+            "total_members": len(rows),
+        })
+    active_challenges = [c for c in party_challenges if not c["is_ended"]]
+    ended_challenges = [c for c in party_challenges if c["is_ended"]]
+    return party_challenges, active_challenges, ended_challenges
+
+
 def dashboard(request):
     if not request.user.is_authenticated:
         return render(request, "fitness/home.html")
@@ -164,41 +205,7 @@ def dashboard(request):
         if getattr(q, 'is_completed', False)
     }
 
-    party_challenges = []
-    today = timezone.localdate()
-    for party in request.user.parties.all():
-        if not party.challenge_start or not party.challenge_end:
-            continue
-        rows = []
-        for member in party.members.select_related("profile"):
-            points = BadgeAward.objects.filter(
-                user=member,
-                awarded_at__date__range=(party.challenge_start, party.challenge_end),
-            ).aggregate(total=Sum("points"))["total"] or 0
-            rows.append({
-                "user_id": member.id,
-                "name": member.profile.display_name or member.username,
-                "username": member.username,
-                "points": points,
-                "is_me": member == request.user,
-            })
-        rows.sort(key=lambda row: row["points"], reverse=True)
-        my_rank = None
-        my_points = 0
-        for idx, row in enumerate(rows, start=1):
-            row["rank"] = idx
-            if row["is_me"]:
-                my_rank = idx
-                my_points = row["points"]
-        is_ended = bool(party.challenge_end and party.challenge_end < today)
-        party_challenges.append({
-            "party": party,
-            "rows": rows,
-            "is_ended": is_ended,
-            "my_rank": my_rank or (len(rows) if rows else 1),
-            "my_points": my_points,
-            "total_members": len(rows),
-        })
+    party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
 
     # 🔔 대기 중인 친구 요청 및 파티 초대
     pending_friend_requests = FriendRequest.objects.filter(
@@ -235,7 +242,10 @@ def dashboard(request):
         "group_quests": group_quests, "personal_quests": personal_quests,
         "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
         "badge_summary": badge_summary(request.user),
-        "party_challenges": party_challenges, "weather_latitude": latitude, "weather_longitude": longitude,
+        "party_challenges": party_challenges,
+        "active_challenges": active_challenges,
+        "ended_challenges": ended_challenges,
+        "weather_latitude": latitude, "weather_longitude": longitude,
         "pending_friend_requests": pending_friend_requests,
         "pending_party_invitations": pending_party_invitations,
         "accepted_friend_requests": accepted_friend_requests,
@@ -317,11 +327,25 @@ def activity_view(request):
     if use_current_location:
         recommendations.sort(key=lambda item: item.distance_km)
         recommendations = recommendations[:3]
+
+    party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
+    ended_count = len(ended_challenges)
+    wins_count = sum(1 for c in ended_challenges if c["my_rank"] == 1)
+    podium_count = sum(1 for c in ended_challenges if c["my_rank"] in (1, 2, 3))
+
     return render(request, "fitness/activity.html", {
         "workout_form": WorkoutForm(),
         "records": WorkoutRecord.objects.filter(user=request.user).order_by("-created_at")[:20],
         "recommended_facilities": recommendations,
         "use_current_location": use_current_location,
+        "party_challenges": party_challenges,
+        "active_challenges": active_challenges,
+        "ended_challenges": ended_challenges,
+        "challenge_stats": {
+            "total_ended": ended_count,
+            "wins": wins_count,
+            "podium": podium_count,
+        },
     })
 
 
@@ -765,12 +789,16 @@ def outfit_shop(request):
 @login_required
 def friends_view(request):
     friends = User.objects.filter(received_friend_links__user=request.user).select_related("profile", "charactercard")
+    active_party = request.user.parties.order_by("-id").first()
+    party_member_ids = set(active_party.members.values_list("id", flat=True)) if active_party else set()
     pending_received_requests = FriendRequest.objects.filter(to_user=request.user, status="PENDING").select_related("from_user__profile", "from_user__charactercard")
     pending_sent_requests = FriendRequest.objects.filter(from_user=request.user, status="PENDING").select_related("to_user__profile")
     accepted_requests = FriendRequest.objects.filter(from_user=request.user, status="ACCEPTED", sender_viewed=False).select_related("to_user__profile")
     return render(request, "fitness/friends.html", {
         "friend_form": FriendForm(),
         "friends": friends,
+        "active_party": active_party,
+        "party_member_ids": party_member_ids,
         "pending_received_requests": pending_received_requests,
         "pending_sent_requests": pending_sent_requests,
         "accepted_requests": accepted_requests,
