@@ -226,7 +226,7 @@
                   {% endif %}
 
                   {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
-                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
                       <i class="fa-solid fa-stopwatch"></i> 타이머
                     </a>
                   {% endif %}
@@ -287,10 +287,9 @@
                       </form>
                     {% endif %}
                   </div>
-                {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                {% elif quest.progress_percent >= 100 %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
                     {% csrf_token %}
-                    <!-- 사진 미리보기 박스 -->
                     <div id="preview_box_personal_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
                       <div style="position: relative; display: inline-block; flex-shrink: 0;">
                         <img id="preview_img_personal_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
@@ -300,14 +299,42 @@
                       </div>
                       <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
                     </div>
-
                     <div style="display: flex; gap: 6px;">
                       <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                         <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
                         <span>사진</span>
                         <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'personal_{{ quest.id }}')">
                       </label>
-                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900;">
+                        <i class="fa-solid fa-gift"></i> 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                      </button>
+                    </div>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                      {% if quest.target_minutes %}
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(0,245,155,0.25);">
+                          {% if quest.progress_percent > 0 %}
+                            <i class="fa-solid fa-person-running"></i>
+                            <span>운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
+                          {% else %}
+                            <i class="fa-solid fa-play"></i>
+                            <span>미션 시작 (타이머)</span>
+                          {% endif %}
+                        </a>
+                      {% else %}
+                        <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                          <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                        </a>
+                      {% endif %}
+
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
+                        <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
+                        <span>인증</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                      </label>
                     </div>
                   </form>
                 {% endif %}
@@ -400,16 +427,28 @@
                   </button>
                 </form>
               {% else %}
-                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                   {% csrf_token %}
-                  <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                  {% if quest.target_minutes %}
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                      {% if quest.progress_percent > 0 %}
+                        <i class="fa-solid fa-person-running"></i>
+                        <span>운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
+                      {% else %}
+                        <i class="fa-solid fa-play"></i>
+                        <span>미션 시작 (타이머)</span>
+                      {% endif %}
+                    </a>
+                  {% else %}
+                    <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                      <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                    </a>
+                  {% endif %}
+                  <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
                     <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
                     <span>인증</span>
                     <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
                   </label>
-                  <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
-                    수동 완료 & 배지 받기
-                  </button>
                 </form>
               {% endif %}
             </article>
@@ -670,7 +709,7 @@
                     {% if quest.is_completed %}
                       <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
                     {% elif quest.target_minutes %}
-                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
                         <i class="fa-solid fa-stopwatch"></i> 타이머
                       </a>
                     {% endif %}
@@ -741,10 +780,9 @@
                       </form>
                     {% endif %}
                   </div>
-                {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                {% elif quest.progress_percent >= 100 %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
                     {% csrf_token %}
-                    <!-- 사진 미리보기 박스 -->
                     <div id="preview_box_group_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
                       <div style="position: relative; display: inline-block; flex-shrink: 0;">
                         <img id="preview_img_group_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
@@ -754,14 +792,42 @@
                       </div>
                       <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
                     </div>
-
                     <div style="display: flex; gap: 6px;">
                       <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                         <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
                         <span>사진</span>
                         <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'group_{{ quest.id }}')">
                       </label>
-                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900;">
+                        <i class="fa-solid fa-gift"></i> 파티 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                      </button>
+                    </div>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                      {% if quest.target_minutes %}
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                          {% if quest.progress_percent > 0 %}
+                            <i class="fa-solid fa-person-running"></i>
+                            <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
+                          {% else %}
+                            <i class="fa-solid fa-play"></i>
+                            <span>파티 미션 시작 (타이머)</span>
+                          {% endif %}
+                        </a>
+                      {% else %}
+                        <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                          <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                        </a>
+                      {% endif %}
+
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
+                        <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
+                        <span>인증</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                      </label>
                     </div>
                   </form>
                 {% endif %}
@@ -878,16 +944,28 @@
                     </button>
                   </form>
                 {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                     {% csrf_token %}
+                    {% if quest.target_minutes %}
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(245,158,11,0.25);">
+                        {% if quest.progress_percent > 0 %}
+                          <i class="fa-solid fa-person-running"></i>
+                          <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
+                        {% else %}
+                          <i class="fa-solid fa-play"></i>
+                          <span>파티 미션 시작 (타이머)</span>
+                        {% endif %}
+                      </a>
+                    {% else %}
+                      <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                        <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                      </a>
+                    {% endif %}
                     <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                       <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
                       <span>인증</span>
                       <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
                     </label>
-                    <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
-                      수동 완료 & 배지 받기
-                    </button>
                   </form>
                 {% endif %}
               </article>
@@ -1877,6 +1955,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }}
                 </span>
+                {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1920,7 +2003,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'ATTENDANCE' %}var(--neon-mint){% elif quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
               {{ quest.get_mission_category_display }} · {{ quest.reward_points }}P
             </span>
-            <div>
+            <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-circle-check"></i> 완료
@@ -1929,6 +2012,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
+                {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1981,11 +2069,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
                 </span>
-              {% endif %}
-              {% if quest.target_minutes %}
-                <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                  <i class="fa-solid fa-stopwatch"></i> 타이머
-                </a>
+                {% if quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -2047,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
               {% if quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}주간 누적 · {{ quest.reward_points }}P{% endif %}
             </span>
-            <div>
+            <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-circle-check"></i> 완료
@@ -2056,6 +2144,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
+                {% if quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}&autostart=1" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>

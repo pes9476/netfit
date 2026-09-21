@@ -6,7 +6,7 @@
 </section>
 
 <!-- ⏱️ 실시간 운동 타이머 위젯 -->
-<article class="panel workout-timer-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(16, 26, 44, 0.95) 0%, rgba(10, 18, 32, 0.98) 100%); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 18px; padding: 20px 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+<article id="workoutTimerPanel" class="panel workout-timer-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(16, 26, 44, 0.95) 0%, rgba(10, 18, 32, 0.98) 100%); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 18px; padding: 20px 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
     <div style="display: flex; align-items: center; gap: 10px;">
       <span style="width: 32px; height: 32px; border-radius: 10px; background: rgba(0,245,155,0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; color: var(--neon-mint); font-size: 15px;">
@@ -458,10 +458,11 @@ function saveTimerState() {
 }
 
 function loadSavedTimerOrParams() {
-  // URL 파라미터 확인: ?workout_type=러닝&target=30
+  // URL 파라미터 확인: ?workout_type=러닝&target=30&autostart=1
   const urlParams = new URLSearchParams(window.location.search);
   const paramWorkout = urlParams.get('workout_type');
   const paramTarget = urlParams.get('target');
+  const autostart = urlParams.get('autostart') === '1' || urlParams.get('start') === '1';
 
   if (paramWorkout && workoutSelect) {
     workoutSelect.value = paramWorkout;
@@ -475,6 +476,21 @@ function loadSavedTimerOrParams() {
       setTargetMinutes(targetMins);
       const customInput = document.getElementById("customTargetInput");
       if (customInput) customInput.value = targetMins;
+
+      // 미션 시작 시 타이머 섹션으로 부드럽게 스크롤
+      const timerPanel = document.getElementById("workoutTimerPanel") || document.getElementById("timerDisplay");
+      if (timerPanel) {
+        timerPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // autostart 파라미터가 있으면 0.4초 후 자동 카운트다운 시작
+      if (autostart) {
+        setTimeout(() => {
+          if (!isTimerRunning) {
+            startTimer();
+          }
+        }, 400);
+      }
       return;
     }
   }
