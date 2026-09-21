@@ -2165,7 +2165,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- 🏆 파티 내기 게임 종료 순위 결과 및 축하 팝업 모달 -->
 <div id="partyResultModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 16, 0.88); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) closePartyResultModal();">
-  <div style="background: linear-gradient(180deg, #131E35 0%, #0D1322 100%); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 22px; max-width: 520px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.15); overflow: hidden; animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); margin: auto;">
+  <!-- 🎆 1등 달성 시 화려하게 터지는 폭죽 캔버스 -->
+  <canvas id="fireworksCanvas" style="position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10005;"></canvas>
+
+  <div style="background: linear-gradient(180deg, #131E35 0%, #0D1322 100%); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 22px; max-width: 520px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.15); overflow: hidden; animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); margin: auto; position: relative; z-index: 10006;">
     
     <!-- 모달 상단 헤더 -->
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(56, 189, 248, 0.08));">
@@ -2336,7 +2339,7 @@ function renderRankCardContent(rank, scoreText, rewardText) {
   if (rank === 1) {
     card.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.12) 100%)';
     card.style.border = '1px solid rgba(245, 158, 11, 0.55)';
-    card.style.boxShadow = '0 8px 30px rgba(245, 158, 11, 0.2)';
+    card.style.boxShadow = '0 8px 30px rgba(245, 158, 11, 0.25)';
     icon.innerHTML = '👑 <span style="font-size:32px;">🏆</span>';
     badge.style.background = 'rgba(245, 158, 11, 0.3)';
     badge.style.color = '#FDE047';
@@ -2345,7 +2348,9 @@ function renderRankCardContent(rank, scoreText, rewardText) {
     title.style.color = '#FDE047';
     title.textContent = '축하드립니다! 영광의 1등을 차지하셨습니다!';
     message.textContent = `파티원들과의 치열한 경쟁 끝에 최고 점수로 당당히 우승을 거두었습니다! 약속된 공식 보상 [${rewardText}]을 기분 좋게 쟁취하세요!`;
+    triggerFireworks();
   } else if (rank === 2) {
+    stopFireworks();
     card.style.background = 'linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(71, 85, 105, 0.12) 100%)';
     card.style.border = '1px solid rgba(203, 213, 225, 0.45)';
     card.style.boxShadow = '0 8px 30px rgba(148, 163, 184, 0.15)';
@@ -2358,6 +2363,7 @@ function renderRankCardContent(rank, scoreText, rewardText) {
     title.textContent = '정말 아깝네요! 2위로 멋지게 완주하셨습니다!';
     message.textContent = '조금만 더 달렸다면 1등이었을 텐데 정말 아깝습니다! 하지만 누구보다 뜨거운 땀방울을 흘리셨습니다. 다음 내기에서 꼭 1등에 도전해보세요!';
   } else if (rank === 3) {
+    stopFireworks();
     card.style.background = 'linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(139, 69, 19, 0.12) 100%)';
     card.style.border = '1px solid rgba(205, 127, 50, 0.45)';
     card.style.boxShadow = '0 8px 30px rgba(205, 127, 50, 0.15)';
@@ -2370,6 +2376,7 @@ function renderRankCardContent(rank, scoreText, rewardText) {
     title.textContent = '값진 3위 입상! 훌륭한 레이스였습니다!';
     message.textContent = '끝까지 포기하지 않고 최선을 다해 3위를 기록하셨습니다! 함께 땀 흘려준 파티원들과 함께 서로 격려의 박수를 나눠보세요.';
   } else {
+    stopFireworks();
     card.style.background = 'linear-gradient(135deg, rgba(0, 245, 155, 0.14) 0%, rgba(16, 185, 129, 0.08) 100%)';
     card.style.border = '1px solid rgba(0, 245, 155, 0.4)';
     card.style.boxShadow = '0 8px 30px rgba(0, 245, 155, 0.1)';
@@ -2381,6 +2388,191 @@ function renderRankCardContent(rank, scoreText, rewardText) {
     title.style.color = 'var(--neon-mint)';
     title.textContent = `${rank}위 완주 축하! 끝까지 달린 멋진 파티원!`;
     message.textContent = '비록 순위권은 아니지만, 마지막 날까지 포기하지 않고 달린 당신이 진정한 스포츠맨입니다! 매일의 운동은 당신을 더 강하게 만듭니다.';
+  }
+}
+
+// -------------------------------------------------------------
+// 🎆 1등 전용 화려한 폭죽 & 축하 컨페티 애니메이션 엔진
+// -------------------------------------------------------------
+let fireworksAnimId = null;
+let fireworksInterval = null;
+let fwParticles = [];
+let fwRockets = [];
+let fwConfetti = [];
+
+function triggerFireworks() {
+  const canvas = document.getElementById('fireworksCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  stopFireworks();
+
+  fwParticles = [];
+  fwRockets = [];
+  fwConfetti = [];
+
+  const vibrantColors = [
+    '#F59E0B', '#FDE047', '#EF4444', '#00F59B',
+    '#38BDF8', '#A855F7', '#EC4899', '#FFA500', '#FFFFFF'
+  ];
+
+  function createExplosion(x, y, baseColor) {
+    const pCount = 55;
+    for (let i = 0; i < pCount; i++) {
+      const angle = (Math.PI * 2 / pCount) * i + (Math.random() - 0.5) * 0.5;
+      const speed = Math.random() * 7 + 2;
+      fwParticles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        alpha: 1,
+        color: Math.random() > 0.4 ? baseColor : vibrantColors[Math.floor(Math.random() * vibrantColors.length)],
+        size: Math.random() * 3.5 + 1.8,
+        decay: Math.random() * 0.016 + 0.012,
+        gravity: 0.14
+      });
+    }
+  }
+
+  function launchRocket() {
+    const startX = window.innerWidth * (0.15 + Math.random() * 0.7);
+    const startY = window.innerHeight;
+    const targetX = startX + (Math.random() - 0.5) * 160;
+    const targetY = window.innerHeight * (0.12 + Math.random() * 0.28);
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = 15;
+
+    fwRockets.push({
+      x: startX,
+      y: startY,
+      vx: (dx / dist) * speed,
+      vy: (dy / dist) * speed,
+      targetY: targetY,
+      color: vibrantColors[Math.floor(Math.random() * vibrantColors.length)]
+    });
+  }
+
+  // 쏟아지는 축하 컨페티 리본 추가
+  for (let c = 0; c < 40; c++) {
+    fwConfetti.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * -window.innerHeight * 0.5,
+      vx: (Math.random() - 0.5) * 2,
+      vy: Math.random() * 2.5 + 2,
+      w: Math.random() * 10 + 6,
+      h: Math.random() * 6 + 4,
+      rotation: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 8,
+      color: vibrantColors[Math.floor(Math.random() * vibrantColors.length)]
+    });
+  }
+
+  // 초기 연속 폭죽 8발 발사
+  launchRocket();
+  let count = 0;
+  fireworksInterval = setInterval(() => {
+    launchRocket();
+    count++;
+    if (count >= 10) clearInterval(fireworksInterval);
+  }, 240);
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 로켓 업데이트
+    for (let i = fwRockets.length - 1; i >= 0; i--) {
+      const r = fwRockets[i];
+      r.x += r.vx;
+      r.y += r.vy;
+
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = r.color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = r.color;
+      ctx.fill();
+
+      if (r.y <= r.targetY || r.vy >= 0) {
+        createExplosion(r.x, r.y, r.color);
+        fwRockets.splice(i, 1);
+      }
+    }
+
+    // 폭죽 스파크 파티클 업데이트
+    for (let i = fwParticles.length - 1; i >= 0; i--) {
+      const p = fwParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.vx *= 0.98;
+      p.alpha -= p.decay;
+
+      if (p.alpha <= 0) {
+        fwParticles.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 살랑살랑 떨어지는 컨페티 업데이트
+    for (let i = fwConfetti.length - 1; i >= 0; i--) {
+      const c = fwConfetti[i];
+      c.x += c.vx;
+      c.y += c.vy;
+      c.rotation += c.rotSpeed;
+
+      if (c.y > window.innerHeight) {
+        c.y = -10;
+        c.x = Math.random() * window.innerWidth;
+      }
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate((c.rotation * Math.PI) / 180);
+      ctx.fillStyle = c.color;
+      ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      ctx.restore();
+    }
+
+    if (fwRockets.length > 0 || fwParticles.length > 0 || fwConfetti.length > 0) {
+      fireworksAnimId = requestAnimationFrame(loop);
+    }
+  }
+
+  loop();
+}
+
+function stopFireworks() {
+  if (fireworksInterval) {
+    clearInterval(fireworksInterval);
+    fireworksInterval = null;
+  }
+  if (fireworksAnimId) {
+    cancelAnimationFrame(fireworksAnimId);
+    fireworksAnimId = null;
+  }
+  fwParticles = [];
+  fwRockets = [];
+  fwConfetti = [];
+  const canvas = document.getElementById('fireworksCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
 
@@ -2447,6 +2639,7 @@ function simulatePartyRank(targetRank) {
 }
 
 function closePartyResultModal() {
+  stopFireworks();
   const modal = document.getElementById('partyResultModal');
   if (modal) modal.style.display = 'none';
 }
