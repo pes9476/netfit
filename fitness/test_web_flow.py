@@ -652,5 +652,104 @@ class WebFlowTests(TestCase):
         self.assertIn("50점만 더 따면 1위", ch2["reversal_guide"])
         self.assertEqual(ch2["gap_to_lead"], 50)
 
+    def test_notifications_api_polling_and_ajax_dismiss(self):
+        """실시간 알림 폴링 API 및 AJAX dismiss/수락 동작을 검증한다."""
+        sender = User.objects.create_user(username="noti_sender", password="password123")
+        receiver = User.objects.create_user(username="noti_receiver", password="password123")
 
+        # 1. 콕 찌르기 생성
+        poke = PokeNotification.objects.create(
+            sender=sender,
+            receiver=receiver,
+            message="오늘 같이 운동해요!",
+        )
+
+        # 2. 친구 요청 생성
+        friend_req = FriendRequest.objects.create(
+            from_user=sender,
+            to_user=receiver,
+            status="PENDING",
+        )
+
+        # 3. 파티 초대 생성
+        party = Party.objects.create(name="러닝 크루", owner=sender)
+        party.members.add(sender)
+        party_inv = PartyInvitation.objects.create(
+            party=party,
+            inviter=sender,
+            invitee=receiver,
+            status="PENDING",
+        )
+
+        # 수신자로 로그인 후 /api/notifications/ 호출
+        self.client.force_login(receiver)
+        res = self.client.get(reverse("notifications_api"))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["total_count"], 3)
+        self.assertEqual(len(data["unread_pokes"]), 1)
+        self.assertEqual(data["unread_pokes"][0]["id"], poke.id)
+        self.assertEqual(data["unread_pokes"][0]["sender_name"], "noti_sender")
+        self.assertEqual(len(data["pending_friend_requests"]), 1)
+        self.assertEqual(data["pending_friend_requests"][0]["id"], friend_req.id)
+        self.assertEqual(len(data["pending_party_invitations"]), 1)
+        self.assertEqual(data["pending_party_invitations"][0]["id"], party_inv.id)
+
+        # AJAX 콕 찌르기 확인
+        ajax_poke_res = self.client.post(
+            reverse("dismiss_poke", args=[poke.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(ajax_poke_res.status_code, 200)
+        self.assertTrue(ajax_poke_res.json().get("success"))
+        poke.refresh_from_db()
+        self.assertTrue(poke.is_read)
+
+        # AJAX 친구 요청 수락
+        ajax_fr_res = self.client.post(
+            reverse("respond_friend_request", args=[friend_req.id, "accept"]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(ajax_fr_res.status_code, 200)
+        self.assertTrue(ajax_fr_res.json().get("success"))
+        friend_req.refresh_from_db()
+        self.assertEqual(friend_req.status, "ACCEPTED")
+
+        # AJAX 파티 초대 수락
+        ajax_party_res = self.client.post(
+            reverse("respond_party_invitation", args=[party_inv.id, "accept"]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(ajax_party_res.status_code, 200)
+        self.assertTrue(ajax_party_res.json().get("success"))
+        party_inv.refresh_from_db()
+        self.assertEqual(party_inv.status, "ACCEPTED")
+
+        # 발신자(sender)로 전환하여 수락 완료 알림 조회 및 AJAX dismiss 확인
+        self.client.force_login(sender)
+        res_sender = self.client.get(reverse("notifications_api"))
+        self.assertEqual(res_sender.status_code, 200)
+        sender_data = res_sender.json()
+        self.assertEqual(sender_data["total_count"], 2)
+        self.assertEqual(len(sender_data["accepted_friend_requests"]), 1)
+        self.assertEqual(len(sender_data["accepted_party_invitations"]), 1)
+
+        # AJAX 수락 알림 dismiss
+        ajax_dismiss_fr = self.client.post(
+            reverse("dismiss_friend_notification", args=[friend_req.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(ajax_dismiss_fr.status_code, 200)
+        self.assertTrue(ajax_dismiss_fr.json().get("success"))
+
+        ajax_dismiss_party = self.client.post(
+            reverse("dismiss_party_notification", args=[party_inv.id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(ajax_dismiss_party.status_code, 200)
+        self.assertTrue(ajax_dismiss_party.json().get("success"))
+
+        # 최종 확인: 알림이 모두 해제되어 total_count == 0
+        res_sender_final = self.client.get(reverse("notifications_api"))
+        self.assertEqual(res_sender_final.json()["total_count"], 0)
 

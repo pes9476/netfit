@@ -31,10 +31,9 @@
 </article>
 
 <!-- 🔔 대기 중인 친구 요청, 수락 알림, 파티 초대 및 콕 찌르기 알림 -->
-{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations or unread_pokes %}
-<section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+<section id="notificationAlertsContainer" class="notification-alerts-container" style="display: {% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations or unread_pokes %}flex{% else %}none{% endif %}; flex-direction: column; gap: 10px; margin-bottom: 20px;">
   {% for poke in unread_pokes %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15);">
+    <div class="notification-alert-box notification-item" data-id="poke_{{ poke.id }}" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(245, 158, 11, 0.2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.45);">👉</span>
         <div>
@@ -52,7 +51,7 @@
         <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
           <i class="fa-solid fa-play"></i> 지금 운동하기
         </a>
-        <form method="post" action="{% url 'dismiss_poke' poke.id %}" style="margin: 0;">
+        <form method="post" action="{% url 'dismiss_poke' poke.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #94A3B8; border-color: rgba(148, 163, 184, 0.3); cursor: pointer;">
             <i class="fa-solid fa-check"></i> 확인
@@ -63,7 +62,7 @@
   {% endfor %}
 
   {% for ainv in accepted_party_invitations %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12);">
+    <div class="notification-alert-box notification-item" data-id="party_acc_{{ ainv.id }}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">🎉</span>
         <div>
@@ -77,7 +76,7 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'dismiss_party_notification' ainv.id %}" style="margin: 0;">
+        <form method="post" action="{% url 'dismiss_party_notification' ainv.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #090D16; padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 확인
@@ -88,7 +87,7 @@
   {% endfor %}
 
   {% for acc in accepted_friend_requests %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
+    <div class="notification-alert-box notification-item" data-id="friend_acc_{{ acc.id }}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">🎉</span>
         <div>
@@ -102,7 +101,7 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" style="margin: 0;">
+        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 확인
@@ -113,7 +112,7 @@
   {% endfor %}
 
   {% for freq in pending_friend_requests %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
+    <div class="notification-alert-box notification-item" data-id="friend_req_{{ freq.id }}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">👋</span>
         <div>
@@ -127,13 +126,13 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 수락
           </button>
         </form>
-        <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
             <i class="fa-solid fa-xmark"></i> 거절
@@ -144,7 +143,7 @@
   {% endfor %}
 
   {% for inv in pending_party_invitations %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1);">
+    <div class="notification-alert-box notification-item" data-id="party_inv_{{ inv.id }}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4);">⚔️</span>
         <div>
@@ -158,13 +157,13 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'respond_party_invitation' inv.id 'accept' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'accept' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #0B1120; padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 수락
           </button>
         </form>
-        <form method="post" action="{% url 'respond_party_invitation' inv.id 'reject' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'reject' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
             <i class="fa-solid fa-xmark"></i> 거절
@@ -174,7 +173,6 @@
     </div>
   {% endfor %}
 </section>
-{% endif %}
 
 <section class="dash">
   <div class="dashboard-left" style="display: flex; flex-direction: column; gap: 20px;">

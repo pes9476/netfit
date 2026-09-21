@@ -186,6 +186,8 @@
     {% include "fitness/teunteun_popup.html" %}
     {% include "fitness/gps_permission_modal.html" %}
     {% include "fitness/logout_modal.html" %}
+    <!-- 🔔 실시간 플로팅 토스트 알림 컨테이너 -->
+    <div id="globalToastContainer" style="position: fixed; top: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; max-width: 380px; width: calc(100vw - 48px); pointer-events: none;"></div>
   {% endif %}
   <script src="{% static 'fitness/js/mascot-picker.js' %}" defer></script>
 
@@ -219,6 +221,370 @@
         timer = setTimeout(() => window.dismissNotice(notice), 2000);
       });
     });
+
+    {% if user.is_authenticated %}
+    // ==========================================
+    // 🔔 실시간 스마트 알림 폴링 (Smart Polling)
+    // ==========================================
+    (function initSmartNotificationPolling() {
+      const POLLING_INTERVAL = 10000; // 10초
+      const knownNotificationIds = new Set();
+      let isInitialScan = true;
+
+      // 화면에 이미 렌더링된 알림 ID 등록
+      document.querySelectorAll('.notification-item').forEach(el => {
+        if (el.dataset.id) knownNotificationIds.add(el.dataset.id);
+      });
+
+      window.handleNotificationAction = function(url, el) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (el) {
+            el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px) scale(0.96)';
+            setTimeout(() => {
+              el.remove();
+              const container = document.getElementById('notificationAlertsContainer');
+              if (container && container.querySelectorAll('.notification-item').length === 0) {
+                container.style.display = 'none';
+              }
+            }, 300);
+          }
+        })
+        .catch(err => {
+          console.warn('Action error, falling back:', err);
+          if (el && el.tagName === 'FORM') el.submit();
+          else window.location.reload();
+        });
+      };
+
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function showToast(icon, title, message, badgeColor) {
+        const container = document.getElementById('globalToastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'global-toast-item';
+        toast.style.cssText = `
+          background: rgba(15, 23, 42, 0.96);
+          border: 1px solid ${badgeColor || 'var(--neon-mint)'};
+          border-radius: 14px;
+          padding: 13px 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 245, 155, 0.15);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          pointer-events: auto;
+          cursor: pointer;
+          animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          transition: all 0.3s ease;
+        `;
+        toast.innerHTML = `
+          <span style="font-size: 24px; flex-shrink: 0;">${icon}</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 11.5px; font-weight: 800; color: ${badgeColor || 'var(--neon-mint)'};">${escapeHtml(title)}</div>
+            <div style="font-size: 13px; font-weight: 700; color: #FFFFFF; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(message)}</div>
+          </div>
+          <span style="color: #94A3B8; font-size: 14px; margin-left: 6px; padding: 2px;">✕</span>
+        `;
+        toast.onclick = function() {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(20px)';
+          setTimeout(() => toast.remove(), 300);
+        };
+        container.appendChild(toast);
+        setTimeout(() => {
+          if (toast && toast.parentNode) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(20px)';
+            setTimeout(() => toast.remove(), 300);
+          }
+        }, 6000);
+      }
+
+      function renderPokeCard(poke) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="poke_${poke.id}" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(245, 158, 11, 0.2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.45);">👉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.25); color: #FBBF24; padding: 2px 8px; border-radius: 6px;">콕 찌르기 도착!</span>
+                  ${poke.party_name ? `<span style="font-size: 11px; font-weight: 700; color: #94A3B8;">[${escapeHtml(poke.party_name)}]</span>` : ''}
+                  <span style="color: #94A3B8; font-size: 11px;">${poke.created_at}</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #FBBF24;">${escapeHtml(poke.sender_name)}</b>님이 콕 찔렀어요: <span style="color: #FDE68A; font-weight: 800;">"${escapeHtml(poke.message)}"</span>
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a href="/activity/" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-play"></i> 지금 운동하기
+              </a>
+              <button type="button" onclick="handleNotificationAction('${poke.dismiss_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #94A3B8; border-color: rgba(148, 163, 184, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAcceptedPartyCard(ainv) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="party_acc_${ainv.id}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">🎉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.25); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대 수락</span>
+                  <span style="color: #94A3B8; font-size: 11px;">새로운 파티원이 합류했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #38BDF8;">${escapeHtml(ainv.invitee_name)}</b>님이 <b style="color: #FFFFFF;">'${escapeHtml(ainv.party_name)}'</b> 파티 초대를 수락했습니다! 함께 협동 미션을 시작해보세요.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${ainv.dismiss_url}', this.closest('.notification-item'))" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #090D16; padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAcceptedFriendCard(acc) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="friend_acc_${acc.id}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">🎉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.25); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청 수락</span>
+                  <span style="color: #94A3B8; font-size: 11px;">상대방이 요청을 수락했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: var(--neon-mint);">${escapeHtml(acc.friend_name)}</b> (@${escapeHtml(acc.friend_username)})님이 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${acc.dismiss_url}', this.closest('.notification-item'))" class="button btn-mint" style="padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderPendingFriendCard(freq) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="friend_req_${freq.id}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">👋</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청</span>
+                  <span style="color: #94A3B8; font-size: 11px;">새로운 친구 요청이 도착했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: var(--neon-mint);">${escapeHtml(freq.from_name)}</b> (@${escapeHtml(freq.from_username)})님이 친구 추가를 요청했어요!
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${freq.accept_url}', this.closest('.notification-item'))" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 수락
+              </button>
+              <button type="button" onclick="handleNotificationAction('${freq.reject_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i> 거절
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderPendingPartyCard(inv) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="party_inv_${inv.id}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4);">⚔️</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.2); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대</span>
+                  <span style="color: #94A3B8; font-size: 11px;">파티 참여 요청</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #38BDF8;">${escapeHtml(inv.inviter_name)}</b>님이 <b style="color: #FFFFFF;">'${escapeHtml(inv.party_name)}'</b> 파티에 초대했습니다! 함께 참여하시겠습니까?
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${inv.accept_url}', this.closest('.notification-item'))" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #0B1120; padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 수락
+              </button>
+              <button type="button" onclick="handleNotificationAction('${inv.reject_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i> 거절
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function pollNotifications() {
+        if (document.visibilityState !== 'visible') return;
+
+        fetch('/api/notifications/', {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(data => {
+          if (!data) return;
+
+          const container = document.getElementById('notificationAlertsContainer');
+          const currentFetchedIds = new Set();
+
+          // 1. Pokes
+          data.unread_pokes.forEach(poke => {
+            const id = 'poke_' + poke.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('👉', '콕 찌르기 도착!', `${poke.sender_name}님: "${poke.message}"`, '#F59E0B');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPokeCard(poke));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 2. Accepted party
+          data.accepted_party_invitations.forEach(ainv => {
+            const id = 'party_acc_' + ainv.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('🎉', '파티 초대 수락!', `${ainv.invitee_name}님이 '${ainv.party_name}' 초대를 수락했습니다.`, '#38BDF8');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderAcceptedPartyCard(ainv));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 3. Accepted friend
+          data.accepted_friend_requests.forEach(acc => {
+            const id = 'friend_acc_' + acc.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('🎉', '친구 요청 수락!', `${acc.friend_name}님이 친구 요청을 수락했습니다.`, 'var(--neon-mint)');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderAcceptedFriendCard(acc));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 4. Pending friend
+          data.pending_friend_requests.forEach(freq => {
+            const id = 'friend_req_' + freq.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('👋', '새 친구 요청!', `${freq.from_name}님의 친구 추가 요청이 도착했습니다.`, 'var(--neon-mint)');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPendingFriendCard(freq));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 5. Pending party
+          data.pending_party_invitations.forEach(inv => {
+            const id = 'party_inv_' + inv.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('⚔️', '파티 초대 도착!', `${inv.inviter_name}님이 '${inv.party_name}' 파티에 초대했습니다.`, '#38BDF8');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPendingPartyCard(inv));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 다른 탭에서 이미 확인하여 DB에서 사라진 알림 정리
+          if (container) {
+            container.querySelectorAll('.notification-item').forEach(el => {
+              const id = el.dataset.id;
+              if (id && !currentFetchedIds.has(id)) {
+                el.remove();
+              }
+            });
+            if (container.querySelectorAll('.notification-item').length === 0) {
+              container.style.display = 'none';
+            }
+          }
+
+          isInitialScan = false;
+        })
+        .catch(err => console.debug('Polling check:', err));
+      }
+
+      setInterval(pollNotifications, POLLING_INTERVAL);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          pollNotifications();
+        }
+      });
+    })();
+    {% endif %}
   })();
   </script>
 </body>

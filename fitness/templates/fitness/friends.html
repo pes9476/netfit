@@ -171,7 +171,7 @@
           </span>
         </div>
 
-        <!-- 하단: 인터랙티브 액션 (파티 초대 / 1:1 카드 배틀) -->
+        <!-- 하단: 인터랙티브 액션 (파티 초대 / 콕 찌르기) -->
         <div class="friend-card-actions">
           {% if active_party %}
             {% if friend.id in party_member_ids %}
@@ -197,9 +197,6 @@
           <button type="button" class="button secondary btn-poke-friend" onclick="openPokeModal('{{ friend.id }}', '{{ friend.profile.display_name|default:friend.username|escapejs }}')" title="{{ friend.profile.display_name|default:friend.username }}님 콕 찌르기" style="flex: 1; padding: 7px 10px; font-size: 12px; font-weight: 800; color: #FBBF24; border-color: rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; background: rgba(245, 158, 11, 0.08); transition: all 0.2s;">
             👉 콕 찌르기
           </button>
-          <a class="button secondary btn-friend-battle" href="{% url 'battle' %}?opponent={{ friend.username }}" title="{{ friend.username }}님에게 1:1 배틀 신청하기">
-            <i class="fa-solid fa-hand-fist"></i> 배틀
-          </a>
         </div>
       </article>
     {% endfor %}
@@ -410,19 +407,6 @@
   font-weight: 800;
   color: #94A3B8;
   border-color: rgba(255, 255, 255, 0.15);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-.btn-friend-battle {
-  flex: 1;
-  padding: 7px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--trophy-gold);
-  border-color: rgba(245, 158, 11, 0.4);
   display: inline-flex;
   align-items: center;
   justify-content: center;

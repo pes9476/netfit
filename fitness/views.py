@@ -15,6 +15,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
@@ -896,6 +897,8 @@ def respond_friend_request(request, request_id, action):
             freq.status = "REJECTED"
             freq.save(update_fields=["status"])
             messages.info(request, f"{freq.from_user.username}님의 친구 요청을 거절했습니다.")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "action": action, "status": freq.status})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -905,6 +908,8 @@ def dismiss_friend_notification(request, request_id):
         freq = get_object_or_404(FriendRequest, pk=request_id, from_user=request.user, status="ACCEPTED")
         freq.sender_viewed = True
         freq.save(update_fields=["sender_viewed"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -923,6 +928,8 @@ def respond_party_invitation(request, invitation_id, action):
             inv.status = "REJECTED"
             inv.save(update_fields=["status"])
             messages.info(request, f"'{inv.party.name}' 파티 초대를 거절했습니다.")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "action": action, "status": inv.status})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -932,6 +939,8 @@ def dismiss_party_notification(request, invitation_id):
         inv = get_object_or_404(PartyInvitation, pk=invitation_id, inviter=request.user, status="ACCEPTED")
         inv.inviter_viewed = True
         inv.save(update_fields=["inviter_viewed"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -1020,7 +1029,106 @@ def dismiss_poke(request, poke_id):
         poke = get_object_or_404(PokeNotification, pk=poke_id, receiver=request.user)
         poke.is_read = True
         poke.save(update_fields=["is_read"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def notifications_api(request):
+    """실시간 알림(친구 요청, 파티 초대, 콕 찌르기) 스마트 폴링을 위한 경량 JSON API"""
+    user = request.user
+
+    # 1. 미확인 콕 찌르기 (최신 5개)
+    unread_pokes = PokeNotification.objects.filter(
+        receiver=user, is_read=False
+    ).select_related("sender__profile", "party")[:5]
+    poke_list = [
+        {
+            "id": poke.id,
+            "sender_name": poke.sender.profile.display_name or poke.sender.username,
+            "party_name": poke.party.name if poke.party else "",
+            "message": poke.message,
+            "created_at": poke.created_at.strftime("%m/%d %H:%M"),
+            "dismiss_url": reverse("dismiss_poke", args=[poke.id]),
+        }
+        for poke in unread_pokes
+    ]
+
+    # 2. 수락된 파티 초대 알림
+    accepted_party_invitations = PartyInvitation.objects.filter(
+        inviter=user, status="ACCEPTED", inviter_viewed=False
+    ).select_related("invitee__profile", "party")
+    accepted_party_list = [
+        {
+            "id": ainv.id,
+            "invitee_name": ainv.invitee.profile.display_name or ainv.invitee.username,
+            "party_name": ainv.party.name,
+            "dismiss_url": reverse("dismiss_party_notification", args=[ainv.id]),
+        }
+        for ainv in accepted_party_invitations
+    ]
+
+    # 3. 수락된 친구 요청 알림
+    accepted_friend_requests = FriendRequest.objects.filter(
+        from_user=user, status="ACCEPTED", sender_viewed=False
+    ).select_related("to_user__profile")
+    accepted_friend_list = [
+        {
+            "id": acc.id,
+            "friend_name": acc.to_user.profile.display_name or acc.to_user.username,
+            "friend_username": acc.to_user.username,
+            "dismiss_url": reverse("dismiss_friend_notification", args=[acc.id]),
+        }
+        for acc in accepted_friend_requests
+    ]
+
+    # 4. 받은 친구 요청
+    pending_friend_requests = FriendRequest.objects.filter(
+        to_user=user, status="PENDING"
+    ).select_related("from_user__profile")
+    pending_friend_list = [
+        {
+            "id": freq.id,
+            "from_name": freq.from_user.profile.display_name or freq.from_user.username,
+            "from_username": freq.from_user.username,
+            "accept_url": reverse("respond_friend_request", args=[freq.id, "accept"]),
+            "reject_url": reverse("respond_friend_request", args=[freq.id, "reject"]),
+        }
+        for freq in pending_friend_requests
+    ]
+
+    # 5. 받은 파티 초대
+    pending_party_invitations = PartyInvitation.objects.filter(
+        invitee=user, status="PENDING"
+    ).select_related("party", "inviter__profile")
+    pending_party_list = [
+        {
+            "id": inv.id,
+            "inviter_name": inv.inviter.profile.display_name or inv.inviter.username,
+            "party_name": inv.party.name,
+            "accept_url": reverse("respond_party_invitation", args=[inv.id, "accept"]),
+            "reject_url": reverse("respond_party_invitation", args=[inv.id, "reject"]),
+        }
+        for inv in pending_party_invitations
+    ]
+
+    total_count = (
+        len(poke_list)
+        + len(accepted_party_list)
+        + len(accepted_friend_list)
+        + len(pending_friend_list)
+        + len(pending_party_list)
+    )
+
+    return JsonResponse({
+        "total_count": total_count,
+        "unread_pokes": poke_list,
+        "accepted_party_invitations": accepted_party_list,
+        "accepted_friend_requests": accepted_friend_list,
+        "pending_friend_requests": pending_friend_list,
+        "pending_party_invitations": pending_party_list,
+    })
 
 
 PRESET_LOCATIONS = {
