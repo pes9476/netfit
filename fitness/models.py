@@ -615,3 +615,15 @@ class PartyInvitation(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
+
+class PokeNotification(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_pokes")
+    receiver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_pokes")
+    party = models.ForeignKey(Party, on_delete=models.CASCADE, null=True, blank=True, related_name="pokes")
+    message = models.CharField(max_length=150, default="얼른 운동하고 내기 점수 올려라! 🔥")
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+

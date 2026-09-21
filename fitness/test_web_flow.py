@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from .models import (
     BadgeAward, DailyQuest, Facility, FriendLink, FriendRequest,
-    OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord,
+    OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, PokeNotification, WorkoutRecord,
 )
 
 
@@ -571,5 +571,86 @@ class WebFlowTests(TestCase):
         ch2 = next(c for c in res2.context["party_challenges"] if c["party"].id == party.id)
         self.assertEqual(ch2["my_rank"], 2)
         self.assertEqual(ch2["my_points"], 50)
+
+    def test_poke_user_flow_and_anti_spam(self):
+        """콕 찌르기 발송, 2분 스팸 방지, 알림 수신 및 알림 닫기(dismiss) 흐름을 검증한다."""
+        sender = User.objects.create_user(username="sender_tiger", password="password123")
+        receiver = User.objects.create_user(username="receiver_bear", password="password123")
+        self.client.force_login(sender)
+
+        # 1. 콕 찌르기 발송 (고유 메시지 사용)
+        unique_msg = "오늘 운동 안 뛰면 꼴찌 확정이다! [테스트고유찌르기] 🏃‍♂️"
+        res = self.client.post(reverse("poke_user", args=[receiver.id]), {
+            "poke_message": unique_msg,
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(PokeNotification.objects.filter(sender=sender, receiver=receiver).count(), 1)
+        poke = PokeNotification.objects.get(sender=sender, receiver=receiver)
+        self.assertEqual(poke.message, unique_msg)
+        self.assertFalse(poke.is_read)
+
+        # 2. 2분 이내 중복 발송 시 차단 (Anti-spam)
+        res_spam = self.client.post(reverse("poke_user", args=[receiver.id]), {
+            "poke_message": "또 찌른다!",
+        })
+        self.assertEqual(res_spam.status_code, 302)
+        self.assertEqual(PokeNotification.objects.filter(sender=sender, receiver=receiver).count(), 1)
+
+        # 3. 수신자(receiver) 로그인 후 대시보드에서 콕 찌르기 알림 확인
+        self.client.force_login(receiver)
+        dash_res = self.client.get(reverse("dashboard"))
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertContains(dash_res, "콕 찌르기 도착!")
+        self.assertContains(dash_res, unique_msg)
+
+        # 4. 확인(dismiss) 처리
+        dismiss_res = self.client.post(reverse("dismiss_poke", args=[poke.id]))
+        self.assertEqual(dismiss_res.status_code, 302)
+        poke.refresh_from_db()
+        self.assertTrue(poke.is_read)
+
+        # 다시 대시보드 접속 시 미확인 알림에 노출되지 않음
+        dash_res2 = self.client.get(reverse("dashboard"))
+        self.assertNotContains(dash_res2, unique_msg)
+
+    def test_active_party_challenge_reversal_guide_and_dday(self):
+        """진행 중인 내기에서 D-Day 임박 알림 및 1등/추격자 역전 가이드가 올바르게 계산되는지 검증한다."""
+        user1 = User.objects.create_user(username="lead_user", password="password123")
+        user2 = User.objects.create_user(username="chase_user", password="password123")
+        today = timezone.localdate()
+
+        # D-Day (오늘 종료) 파티 생성
+        party = Party.objects.create(
+            name="D-Day 러닝 대결",
+            owner=user1,
+            challenge_start=today - timedelta(days=3),
+            challenge_end=today,
+            challenge_reward="치킨 기프티콘 🍗",
+        )
+        party.members.add(user1, user2)
+
+        # 점수 부여: user1 = 100점(GOLD), user2 = 50점(SILVER) (격차 50점)
+        b1 = BadgeAward.objects.create(user=user1, badge_type=BadgeAward.GOLD, points=100, source="DAILY_QUEST")
+        BadgeAward.objects.filter(id=b1.id).update(awarded_at=timezone.now() - timedelta(days=1))
+        b2 = BadgeAward.objects.create(user=user2, badge_type=BadgeAward.SILVER, points=50, source="DAILY_QUEST")
+        BadgeAward.objects.filter(id=b2.id).update(awarded_at=timezone.now() - timedelta(days=1))
+
+        # 1. 1위(lead_user) 로그인 시: pursuit_warning 존재 ("2위 chase_user님이 단 50점 차로 맹추격 중"), is_dday=True
+        self.client.force_login(user1)
+        dash1 = self.client.get(reverse("dashboard"))
+        ch1 = next(c for c in dash1.context["active_challenges"] if c["party"].id == party.id)
+        self.assertTrue(ch1["is_dday"])
+        self.assertIsNotNone(ch1["pursuit_warning"])
+        self.assertIn("50점 차", ch1["pursuit_warning"])
+
+        # 2. 2위(chase_user) 로그인 시: reversal_guide 존재 ("50점만 더 따면 1위 lead_user님 역전 가능"), is_dday=True
+        self.client.force_login(user2)
+        dash2 = self.client.get(reverse("dashboard"))
+        ch2 = next(c for c in dash2.context["active_challenges"] if c["party"].id == party.id)
+        self.assertTrue(ch2["is_dday"])
+        self.assertIsNotNone(ch2["reversal_guide"])
+        self.assertIn("50점만 더 따면 1위", ch2["reversal_guide"])
+        self.assertEqual(ch2["gap_to_lead"], 50)
+
 
 

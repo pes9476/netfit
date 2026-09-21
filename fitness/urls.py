@@ -9,6 +9,7 @@ from .views import (
     outfit_shop, profile_view, ranking_view, record_workout, region_view,
     register_view, respond_friend_request, respond_party_invitation,
     dismiss_party_notification, invite_party_member,
+    poke_user, dismiss_poke,
     sports_news_api, weather_api,
 )
 
@@ -43,6 +44,8 @@ urlpatterns = [
     path("party/invitation/<int:invitation_id>/<str:action>/", respond_party_invitation, name="respond_party_invitation"),
     path("party/notification/<int:invitation_id>/dismiss/", dismiss_party_notification, name="dismiss_party_notification"),
     path("party/<int:party_id>/invite/", invite_party_member, name="invite_party_member"),
+    path("poke/<int:user_id>/", poke_user, name="poke_user"),
+    path("poke/dismiss/<int:poke_id>/", dismiss_poke, name="dismiss_poke"),
     path("facilities/", facilities_view, name="facilities"),
     path("region/", region_view, name="region"),
     path("battle/", battle_view, name="battle"),

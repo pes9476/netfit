@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
-from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord, needs_kakao_nickname
+from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, PokeNotification, WorkoutRecord, needs_kakao_nickname
 from .services import (
     add_xp, battle_power, calculate_workout_xp, card_stats,
     check_in_daily_attendance, get_sports_news, get_weather_data,
@@ -134,6 +134,41 @@ def get_user_party_challenges(user):
                 my_rank = idx
                 my_points = row["points"]
         is_ended = bool(party.challenge_end and party.challenge_end < today)
+        days_left = (party.challenge_end - today).days if party.challenge_end else 0
+        is_dday = bool(not is_ended and days_left == 0)
+        is_urgent = bool(not is_ended and 0 <= days_left <= 2)
+
+        # 실시간 역전 가이드 & 추격 위기 분석
+        reversal_guide = None
+        pursuit_warning = None
+        gap_to_lead = 0
+        leader = rows[0] if rows else None
+        runner_up = rows[1] if len(rows) > 1 else None
+
+        if not is_ended and len(rows) > 1:
+            if my_rank == 1 and runner_up:
+                gap = my_points - runner_up["points"]
+                if gap <= 0:
+                    pursuit_warning = f"⚠️ {runner_up['name']}님과 공동 1위! 지금 운동하고 단독 1위를 굳히세요!"
+                elif gap <= 50:
+                    pursuit_warning = f"⚠️ 2위 {runner_up['name']}님이 단 {gap}점 차로 맹추격 중! 방심은 금물입니다!"
+                else:
+                    pursuit_warning = f"👑 2위와 +{gap}점 격차로 독보적인 1위 질주 중!"
+            elif my_rank and my_rank > 1 and leader:
+                gap_to_lead = leader["points"] - my_points
+                if gap_to_lead == 0:
+                    reversal_guide = f"🔥 1위 {leader['name']}님과 동점! 지금 30분만 운동하면 즉시 단독 1위 역전!"
+                else:
+                    if gap_to_lead <= 30:
+                        suggested_mins = 30
+                    elif gap_to_lead <= 50:
+                        suggested_mins = 60
+                    elif gap_to_lead <= 100:
+                        suggested_mins = 90
+                    else:
+                        suggested_mins = (gap_to_lead // 100 + 1) * 90
+                    reversal_guide = f"🔥 {gap_to_lead}점만 더 따면 1위 {leader['name']}님 역전 가능! (러닝 {suggested_mins}분 추천)"
+
         party_challenges.append({
             "party": party,
             "rows": rows,
@@ -141,6 +176,12 @@ def get_user_party_challenges(user):
             "my_rank": my_rank or (len(rows) if rows else 1),
             "my_points": my_points,
             "total_members": len(rows),
+            "days_left": max(0, days_left),
+            "is_dday": is_dday,
+            "is_urgent": is_urgent,
+            "reversal_guide": reversal_guide,
+            "pursuit_warning": pursuit_warning,
+            "gap_to_lead": gap_to_lead,
         })
     active_challenges = [c for c in party_challenges if not c["is_ended"]]
     ended_challenges = [c for c in party_challenges if c["is_ended"]]
@@ -225,6 +266,11 @@ def dashboard(request):
         inviter=request.user, status="ACCEPTED", inviter_viewed=False
     ).select_related("invitee__profile", "party")
 
+    # 👉 콕 찌르기 (Poke) 미확인 알림
+    unread_pokes = PokeNotification.objects.filter(
+        receiver=request.user, is_read=False
+    ).select_related("sender__profile", "party")[:5]
+
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
@@ -250,6 +296,7 @@ def dashboard(request):
         "pending_party_invitations": pending_party_invitations,
         "accepted_friend_requests": accepted_friend_requests,
         "accepted_party_invitations": accepted_party_invitations,
+        "unread_pokes": unread_pokes,
     })
 
 
@@ -928,6 +975,51 @@ def invite_party_member(request, party_id):
             )
             target_display = target_user.profile.display_name or target_user.username
             messages.success(request, f"'{party.name}' 파티에 {target_display}님을 성공적으로 초대했습니다!")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def poke_user(request, user_id):
+    if request.method == "POST":
+        target = get_object_or_404(User, pk=user_id)
+        if target == request.user:
+            messages.error(request, "자신을 콕 찌를 수는 없어요.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        # 최근 2분 내 중복 찌르기 방지
+        recent_poke = PokeNotification.objects.filter(
+            sender=request.user,
+            receiver=target,
+            created_at__gte=timezone.now() - timedelta(minutes=2),
+        ).exists()
+        if recent_poke:
+            target_display = target.profile.display_name or target.username
+            messages.info(request, f"방금 {target_display}님을 콕 찔렀어요! 잠시 후 다시 찔러주세요. 👉")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        party_id = request.POST.get("party_id")
+        party = None
+        if party_id:
+            party = Party.objects.filter(id=party_id, members=request.user).first()
+
+        message = request.POST.get("poke_message", "").strip() or "얼른 운동하고 내기 점수 올려라! 🔥"
+        PokeNotification.objects.create(
+            sender=request.user,
+            receiver=target,
+            party=party,
+            message=message,
+        )
+        target_display = target.profile.display_name or target.username
+        messages.success(request, f"👉 {target_display}님을 콕 찔렀습니다! ('{message}')")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def dismiss_poke(request, poke_id):
+    if request.method == "POST":
+        poke = get_object_or_404(PokeNotification, pk=poke_id, receiver=request.user)
+        poke.is_read = True
+        poke.save(update_fields=["is_read"])
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 

@@ -30,9 +30,38 @@
   </div>
 </article>
 
-<!-- 🔔 대기 중인 친구 요청, 수락 알림 및 파티 초대 알림 -->
-{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations %}
+<!-- 🔔 대기 중인 친구 요청, 수락 알림, 파티 초대 및 콕 찌르기 알림 -->
+{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations or unread_pokes %}
 <section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  {% for poke in unread_pokes %}
+    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(245, 158, 11, 0.2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.45);">👉</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.25); color: #FBBF24; padding: 2px 8px; border-radius: 6px;">콕 찌르기 도착!</span>
+            {% if poke.party %}<span style="font-size: 11px; font-weight: 700; color: #94A3B8;">[{{ poke.party.name }}]</span>{% endif %}
+            <span style="color: #94A3B8; font-size: 11px;">{{ poke.created_at|date:"m/d H:i" }}</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: #FBBF24;">{{ poke.sender.profile.display_name|default:poke.sender.username }}</b>님이 콕 찔렀어요: <span style="color: #FDE68A; font-weight: 800;">"{{ poke.message }}"</span>
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-play"></i> 지금 운동하기
+        </a>
+        <form method="post" action="{% url 'dismiss_poke' poke.id %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #94A3B8; border-color: rgba(148, 163, 184, 0.3); cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
   {% for ainv in accepted_party_invitations %}
     <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12);">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -1024,6 +1053,54 @@
         </button>
       </div>
     </div>
+
+    <!-- ⏱️ D-Day / 마감 임박 알림 배너 -->
+    {% if challenge.is_dday %}
+      <div style="background: linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.15)); border: 2px solid #EF4444; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">🚨</span>
+          <div>
+            <b style="color: #EF4444; font-size: 14px;">D-DAY 오늘 자정 내기 종료!</b>
+            <p style="margin: 2px 0 0; color: #FCA5A5; font-size: 12px; font-weight: 700;">마지막 역전의 기회! 오늘 쌓은 배지 점수가 최종 승부를 결정합니다.</p>
+          </div>
+        </div>
+        <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 7px 16px; font-size: 12px; font-weight: 900; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #EF4444; border-color: #EF4444; color: #FFFFFF;">
+          <i class="fa-solid fa-fire"></i> 막판 스퍼트 운동
+        </a>
+      </div>
+    {% elif challenge.is_urgent %}
+      <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: #FDE68A;">
+          <span>⏱️</span>
+          <span>내기 종료까지 단 <b style="color: #FBBF24; font-size: 14px;">D-{{ challenge.days_left }}일</b> 남았습니다!</span>
+        </div>
+        <span style="font-size: 11px; color: #94A3B8;">마지막까지 방심하지 마세요!</span>
+      </div>
+    {% endif %}
+
+    <!-- ⚡ 실시간 역전 가이드 & 추격 위기 알림 배너 -->
+    {% if challenge.pursuit_warning %}
+      <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #F59E0B; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">👑</span>
+          <span style="font-size: 13px; font-weight: 800; color: #FDE68A;">{{ challenge.pursuit_warning }}</span>
+        </div>
+        <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 6px 14px; font-size: 12px; font-weight: 800; border-radius: 8px; text-decoration: none;">
+          1위 굳히기 ▶
+        </a>
+      </div>
+    {% elif challenge.reversal_guide %}
+      <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">🔥</span>
+          <span style="font-size: 13px; font-weight: 800; color: #FCA5A5;">{{ challenge.reversal_guide }}</span>
+        </div>
+        <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 6px 14px; font-size: 12px; font-weight: 800; border-radius: 8px; text-decoration: none;">
+          역전 도전 ▶
+        </a>
+      </div>
+    {% endif %}
+
     <ol>
       {% for row in challenge.rows %}
         <li{% if row.is_me %} class="is-me"{% endif %}>
@@ -1042,7 +1119,14 @@
               <span style="font-size: 10px; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 800; border: 1px solid rgba(0,245,155,0.3);">나</span>
             {% endif %}
           </span>
-          <b style="color: var(--trophy-gold);">{{ row.points }}점</b>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <b style="color: var(--trophy-gold);">{{ row.points }}점</b>
+            {% if not row.is_me %}
+              <button type="button" onclick="openPokeModal('{{ row.user_id }}', '{{ row.name|escapejs }}', '{{ challenge.party.id }}')" title="{{ row.name }}님 콕 찌르기" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FBBF24; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(245, 158, 11, 0.28)'" onmouseout="this.style.background='rgba(245, 158, 11, 0.15)'">
+                👉 <span>콕</span>
+              </button>
+            {% endif %}
+          </div>
         </li>
       {% endfor %}
     </ol>
@@ -2279,4 +2363,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 {% include "fitness/party_challenge_modals.html" %}
+{% include "fitness/poke_modal.html" %}
 {% endblock %}
