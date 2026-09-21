@@ -358,20 +358,15 @@ function renderRecommendedFacilities(facilities) {
   }).join('');
 }
 
-// 🌐 현재 위치로 다시 추천 클릭 시 페이지 새로고침 없이(입력 폼 데이터 보존) 비동기 AJAX 갱신
+// 🌐 현재 위치로 다시 추천 클릭 시 iOS 감성 위치 권한 모달을 띄우고 비동기 AJAX 갱신
 document.getElementById('activityLocationButton')?.addEventListener('click', () => {
   const status = document.getElementById('activityLocationStatus');
   const btn = document.getElementById('activityLocationButton');
-  if (!navigator.geolocation) {
-    if (status) status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
-    return;
-  }
   if (status) status.textContent = '현재 위치를 확인하고 있어요…';
-  if (btn) btn.disabled = true;
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude.toFixed(6);
-    const lon = pos.coords.longitude.toFixed(6);
+  const onGpsSuccess = (coords) => {
+    const lat = coords.latitude.toFixed(6);
+    const lon = coords.longitude.toFixed(6);
     userLat = lat;
     userLon = lon;
 
@@ -384,7 +379,9 @@ document.getElementById('activityLocationButton')?.addEventListener('click', () 
       if (btn) btn.disabled = false;
       if (data.status === 'success' && data.facilities) {
         renderRecommendedFacilities(data.facilities);
-        if (status) status.textContent = `📍 현재 위치 기준 '${selectedWorkout}' 맞춤 시설로 갱신되었습니다!`;
+        const badge = document.getElementById('aiFacilityCategoryBadge');
+        if (badge) badge.textContent = `${data.workout_type || selectedWorkout} 맞춤`;
+        if (status) status.textContent = `📍 현재 위치 기준 '${data.workout_type || selectedWorkout}' 맞춤 시설로 갱신되었습니다!`;
         setTimeout(() => { if (status) status.textContent = ''; }, 4000);
       } else {
         if (status) status.textContent = '주변 시설 정보를 가져오지 못했습니다.';
@@ -395,10 +392,26 @@ document.getElementById('activityLocationButton')?.addEventListener('click', () 
       console.error('Facility fetch error:', err);
       if (status) status.textContent = '추천 시설을 불러오는 중 오류가 발생했습니다.';
     });
-  }, () => {
-    if (btn) btn.disabled = false;
-    if (status) status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
-  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+  };
+
+  if (typeof openGPSPermissionModal === "function") {
+    openGPSPermissionModal(onGpsSuccess);
+  } else if (navigator.geolocation) {
+    if (btn) btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        if (btn) btn.disabled = false;
+        onGpsSuccess(pos.coords);
+      },
+      () => {
+        if (btn) btn.disabled = false;
+        if (status) status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  } else {
+    if (status) status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+  }
 });
 </script>
 
