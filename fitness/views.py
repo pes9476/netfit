@@ -378,6 +378,22 @@ def activity_view(request):
         recommendations.sort(key=lambda item: item.distance_km)
         recommendations = recommendations[:3]
 
+    # AJAX 요청인 경우 JSON 응답 반환 (페이지 새로고침 방지 & 입력 데이터 보존)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.GET.get("ajax") == "1":
+        return JsonResponse({
+            "status": "success",
+            "facilities": [
+                {
+                    "id": f.id,
+                    "name": f.name,
+                    "facility_type": f.facility_type or "공공체육시설",
+                    "distance_km": f.distance_km if hasattr(f, "distance_km") else None,
+                    "kakao_map_url": f.kakao_map_url,
+                }
+                for f in recommendations
+            ]
+        })
+
     party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
     ended_count = len(ended_challenges)
     wins_count = sum(1 for c in ended_challenges if c["my_rank"] == 1)

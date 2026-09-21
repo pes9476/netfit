@@ -70,13 +70,16 @@
     </div>
     <div class="activity-facility-list">
       {% for facility in recommended_facilities %}
-        <article>
+        <article class="facility-picker-card" onclick="selectFacilityToLocation('{{ facility.name|escapejs }}', this)" title="클릭하면 운동 장소로 자동 입력됩니다" style="cursor: pointer; transition: all 0.2s ease;">
           <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
-          <div>
-            <b>{{ facility.name }}</b>
+          <div style="flex: 1; min-width: 0;">
+            <b class="facility-name-text">{{ facility.name }}</b>
             <small>{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</small>
           </div>
-          <a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('{{ facility.name|escapejs }}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>
+            <a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+          </div>
         </article>
       {% empty %}
         <p style="color: var(--text-muted); margin: 12px 0;">추천할 시설이 없습니다. 주변시설 페이지에서 검색해 보세요.</p>
@@ -254,20 +257,97 @@ function loadWorkoutParams() {
 }
 loadWorkoutParams();
 
-document.getElementById('activityLocationButton')?.addEventListener('click', () => {
-  const status = document.getElementById('activityLocationStatus');
-  if (!navigator.geolocation) {
-    status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+// 📍 추천 시설 클릭 시 운동 장소 입력창으로 자동 입력 (직접 수정/타이핑도 가능)
+window.selectFacilityToLocation = function(rawName, cardEl) {
+  const locInput = document.getElementById("id_location");
+  if (!locInput) return;
+  // 앞의 [18] 같은 인덱스 번호가 있으면 더 깔끔하게 정리 (예: [18]구로디지털단지역 -> 구로디지털단지역)
+  const cleanName = rawName.replace(/^\[\d+\]\s*/, '').trim();
+  locInput.value = cleanName;
+  locInput.focus();
+
+  // 입력창 시각 피드백 (네온 민트 글로우 효과)
+  locInput.style.transition = "all 0.3s ease";
+  locInput.style.borderColor = "var(--neon-mint)";
+  locInput.style.boxShadow = "0 0 12px rgba(0, 245, 155, 0.4)";
+  setTimeout(() => {
+    locInput.style.boxShadow = "";
+  }, 1200);
+
+  // 선택된 카드 하이라이트
+  document.querySelectorAll('.activity-facility-list article').forEach(a => a.style.borderColor = '');
+  if (cardEl) cardEl.style.borderColor = 'var(--neon-mint)';
+
+  if (typeof showToast === 'function') {
+    showToast('📍', '운동 장소 입력됨', `'${cleanName}'이(가) 운동 장소로 입력되었습니다.`, 'var(--neon-mint)');
+  }
+};
+
+function renderRecommendedFacilities(facilities) {
+  const listContainer = document.querySelector('.activity-facility-list');
+  if (!listContainer) return;
+  if (!facilities || facilities.length === 0) {
+    listContainer.innerHTML = '<p style="color: var(--text-muted); margin: 12px 0;">현재 위치 근처에 추천할 시설이 없습니다.</p>';
     return;
   }
-  status.textContent = '현재 위치를 확인하고 있어요…';
+  listContainer.innerHTML = facilities.map(f => {
+    const distText = f.distance_km != null ? ` · ${f.distance_km}km` : '';
+    const safeName = (f.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const safeType = (f.facility_type || '공공체육시설').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escapedAttr = safeName.replace(/'/g, "\\'");
+    return `
+      <article class="facility-picker-card" onclick="selectFacilityToLocation('${escapedAttr}', this)" title="클릭하면 운동 장소로 자동 입력됩니다" style="cursor: pointer; transition: all 0.2s ease;">
+        <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
+        <div style="flex: 1; min-width: 0;">
+          <b class="facility-name-text">${safeName}</b>
+          <small>${safeType}${distText}</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('${escapedAttr}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>
+          <a href="${f.kakao_map_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+// 🌐 현재 위치로 다시 추천 클릭 시 페이지 새로고침 없이(입력 폼 데이터 보존) 비동기 AJAX 갱신
+document.getElementById('activityLocationButton')?.addEventListener('click', () => {
+  const status = document.getElementById('activityLocationStatus');
+  const btn = document.getElementById('activityLocationButton');
+  if (!navigator.geolocation) {
+    if (status) status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+    return;
+  }
+  if (status) status.textContent = '현재 위치를 확인하고 있어요…';
+  if (btn) btn.disabled = true;
+
   navigator.geolocation.getCurrentPosition(pos => {
-    const url = new URL(location.href);
-    url.searchParams.set('lat', pos.coords.latitude.toFixed(6));
-    url.searchParams.set('lon', pos.coords.longitude.toFixed(6));
-    location.href = url;
+    const lat = pos.coords.latitude.toFixed(6);
+    const lon = pos.coords.longitude.toFixed(6);
+
+    fetch(`/activity/?lat=${lat}&lon=${lon}&ajax=1`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (btn) btn.disabled = false;
+      if (data.status === 'success' && data.facilities) {
+        renderRecommendedFacilities(data.facilities);
+        if (status) status.textContent = '📍 현재 위치 기준 추천 시설로 갱신되었습니다!';
+        setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+      } else {
+        if (status) status.textContent = '주변 시설 정보를 가져오지 못했습니다.';
+      }
+    })
+    .catch(err => {
+      if (btn) btn.disabled = false;
+      console.error('Facility fetch error:', err);
+      if (status) status.textContent = '추천 시설을 불러오는 중 오류가 발생했습니다.';
+    });
   }, () => {
-    status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
+    if (btn) btn.disabled = false;
+    if (status) status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
   }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
 });
 </script>
