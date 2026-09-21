@@ -2,13 +2,31 @@ import json
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-SECRET_KEY = "change-this-to-a-secret-key-before-deploying"
-DEBUG = True
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
+
+SECRET_KEY = os.getenv("SECRET_KEY", "change-this-to-a-secret-key-before-deploying")
+DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "testserver",
+    "netfit-production.up.railway.app",
+]
+_extra_hosts = os.getenv("ALLOWED_HOSTS", "")
+if _extra_hosts:
+    ALLOWED_HOSTS += [h.strip() for h in _extra_hosts.split(",") if h.strip()]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://netfit-production.up.railway.app",
+]
+_extra_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+if _extra_origins:
+    CSRF_TRUSTED_ORIGINS += [o.strip() for o in _extra_origins.split(",") if o.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -22,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -43,27 +62,40 @@ TEMPLATES = [{
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
-if os.getenv("POSTGRES_DB") and os.getenv("USE_SQLITE") != "1":
+
+if os.getenv("DATABASE_URL"):
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ["POSTGRES_DB"],
-            "USER": os.getenv("POSTGRES_USER", "netfit_user"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-            "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
-            "CONN_MAX_AGE": 60,
-        }
+        "default": dj_database_url.config(
+            default=os.environ["DATABASE_URL"],
+            conn_max_age=60,
+            ssl_require=True,
+        )
     }
 else:
-    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
 AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = "ko-kr"
 TIME_ZONE = "Asia/Seoul"
 USE_I18N = True
 USE_TZ = True
+
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
