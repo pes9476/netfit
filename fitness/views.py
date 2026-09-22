@@ -1,7 +1,7 @@
 import math
 import logging
 import random
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -17,10 +17,11 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import RegisterForm, BattleForm, FriendForm, ProfileForm, WorkoutForm
-from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, WorkoutRecord, needs_kakao_nickname
+from .models import BadgeAward, BodyMeasurement, CardBattle, DailyQuest, Facility, FriendLink, FriendRequest, OutfitPurchase, Party, PartyInvitation, PersonalDailyQuest, PokeNotification, WorkoutRecord, needs_kakao_nickname
 from .services import (
     add_xp, battle_power, calculate_workout_xp, card_stats,
     check_in_daily_attendance, get_sports_news, get_weather_data,
@@ -121,6 +122,102 @@ def login_view(request):
     return render(request, "fitness/login.html", {"form": form, "next": next_url})
 
 
+def get_user_party_challenges(user):
+    party_challenges = []
+    today = timezone.localdate()
+    for party in user.parties.all():
+        if not party.challenge_start or not party.challenge_end:
+            continue
+        members = list(party.members.select_related("profile"))
+        points_map = dict(
+            BadgeAward.objects.filter(
+                user__in=members,
+                awarded_at__date__range=(party.challenge_start, party.challenge_end),
+            )
+            .values("user_id")
+            .annotate(total=Sum("points"))
+            .values_list("user_id", "total")
+        )
+        rows = []
+        for member in members:
+            points = points_map.get(member.id, 0) or 0
+            rows.append({
+                "user_id": member.id,
+                "name": member.profile.display_name or member.username,
+                "username": member.username,
+                "points": points,
+                "is_me": member == user,
+            })
+        rows.sort(key=lambda row: row["points"], reverse=True)
+        my_rank = None
+        my_points = 0
+        for idx, row in enumerate(rows, start=1):
+            row["rank"] = idx
+            if row["is_me"]:
+                my_rank = idx
+                my_points = row["points"]
+        end_time = party.challenge_end_time or time(23, 59, 59)
+        deadline_dt = timezone.make_aware(datetime.combine(party.challenge_end, end_time))
+        now = timezone.now()
+        is_ended = bool(deadline_dt < now)
+        remaining_seconds = max(0, int((deadline_dt - now).total_seconds())) if not is_ended else 0
+        days_left = remaining_seconds // 86400
+        is_dday = bool(not is_ended and days_left == 0)
+        is_urgent = bool(not is_ended and 0 <= days_left <= 2)
+
+        # 실시간 역전 가이드 & 추격 위기 분석
+        reversal_guide = None
+        pursuit_warning = None
+        gap_to_lead = 0
+        leader = rows[0] if rows else None
+        runner_up = rows[1] if len(rows) > 1 else None
+
+        if not is_ended and len(rows) > 1:
+            if my_rank == 1 and runner_up:
+                gap = my_points - runner_up["points"]
+                if gap <= 0:
+                    pursuit_warning = f"⚠️ {runner_up['name']}님과 공동 1위! 지금 운동하고 단독 1위를 굳히세요!"
+                elif gap <= 50:
+                    pursuit_warning = f"⚠️ 2위 {runner_up['name']}님이 단 {gap}점 차로 맹추격 중! 방심은 금물입니다!"
+                else:
+                    pursuit_warning = f"👑 2위와 +{gap}점 격차로 독보적인 1위 질주 중!"
+            elif my_rank and my_rank > 1 and leader:
+                gap_to_lead = leader["points"] - my_points
+                if gap_to_lead == 0:
+                    reversal_guide = f"🔥 1위 {leader['name']}님과 동점! 지금 30분만 운동하면 즉시 단독 1위 역전!"
+                else:
+                    if gap_to_lead <= 30:
+                        suggested_mins = 30
+                    elif gap_to_lead <= 50:
+                        suggested_mins = 60
+                    elif gap_to_lead <= 100:
+                        suggested_mins = 90
+                    else:
+                        suggested_mins = (gap_to_lead // 100 + 1) * 90
+                    reversal_guide = f"🔥 {gap_to_lead}점만 더 따면 1위 {leader['name']}님 역전 가능! (러닝 {suggested_mins}분 추천)"
+
+        party_challenges.append({
+            "party": party,
+            "rows": rows,
+            "is_ended": is_ended,
+            "my_rank": my_rank or (len(rows) if rows else 1),
+            "my_points": my_points,
+            "total_members": len(rows),
+            "days_left": max(0, days_left),
+            "is_dday": is_dday,
+            "is_urgent": is_urgent,
+            "deadline_iso": deadline_dt.isoformat(),
+            "remaining_seconds": remaining_seconds,
+            "end_time_formatted": end_time.strftime("%H:%M"),
+            "reversal_guide": reversal_guide,
+            "pursuit_warning": pursuit_warning,
+            "gap_to_lead": gap_to_lead,
+        })
+    active_challenges = [c for c in party_challenges if not c["is_ended"]]
+    ended_challenges = [c for c in party_challenges if c["is_ended"]]
+    return party_challenges, active_challenges, ended_challenges
+
+
 def dashboard(request):
     if not request.user.is_authenticated:
         return render(request, "fitness/home.html")
@@ -140,17 +237,17 @@ def dashboard(request):
     completed_personal_ids = {q.id for q in daily_missions if q.is_completed}
 
     # 👥 파티 미션 허브 (일일 3개 + 주간 10개 순수 파티 협동 미션)
-    active_party = request.user.parties.filter(
-        Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
-    ).first() or request.user.parties.first()
-
-    if not active_party and not needs_kakao_nickname(request.user):
-        # 가입된 파티가 없는 경우 기본 파티('팀 넷핏 러너스')에 자동 가입하여 솔로와 1:1 대칭으로 즉시 일일(3개)/주간(10개) 파티 미션 허브 및 목록보기 제공
-        default_party = Party.objects.filter(name="팀 넷핏 러너스").first() or Party.objects.first()
-        if not default_party:
-            default_party = Party.objects.create(name="팀 넷핏 러너스", owner=request.user)
-        default_party.members.add(request.user)
-        active_party = default_party
+    party_id_param = request.GET.get("party_id")
+    if party_id_param and request.user.parties.filter(id=party_id_param).exists():
+        active_party = request.user.parties.get(id=party_id_param)
+        request.session["active_party_id"] = active_party.id
+    elif "active_party_id" in request.session and request.user.parties.filter(id=request.session["active_party_id"]).exists():
+        active_party = request.user.parties.get(id=request.session["active_party_id"])
+    else:
+        user_parties = request.user.parties.order_by("-id")
+        active_party = user_parties.filter(
+            Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
+        ).first() or user_parties.first()
 
     party_daily_missions = []
     party_weekly_missions = []
@@ -167,19 +264,10 @@ def dashboard(request):
         if getattr(q, 'is_completed', False)
     }
 
-    party_challenges = []
-    for party in request.user.parties.all():
-        if not party.challenge_start or not party.challenge_end:
-            continue
-        rows = []
-        for member in party.members.select_related("profile"):
-            points = BadgeAward.objects.filter(
-                user=member,
-                awarded_at__date__range=(party.challenge_start, party.challenge_end),
-            ).aggregate(total=Sum("points"))["total"] or 0
-            rows.append({"name": member.profile.display_name or member.username, "points": points, "is_me": member == request.user})
-        rows.sort(key=lambda row: row["points"], reverse=True)
-        party_challenges.append({"party": party, "rows": rows})
+    party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
+    active_challenge = None
+    if active_party:
+        active_challenge = next((c for c in party_challenges if c["party"].id == active_party.id), None)
 
     # 🔔 대기 중인 친구 요청 및 파티 초대
     pending_friend_requests = FriendRequest.objects.filter(
@@ -194,6 +282,16 @@ def dashboard(request):
         from_user=request.user, status="ACCEPTED", sender_viewed=False
     ).select_related("to_user__profile")
 
+    # 🎉 파티 초대 수락 완료 알림 (내가 보낸 파티 초대 중 상대방이 수락하여 아직 확인하지 않은 알림)
+    accepted_party_invitations = PartyInvitation.objects.filter(
+        inviter=request.user, status="ACCEPTED", inviter_viewed=False
+    ).select_related("invitee__profile", "party")
+
+    # 👉 콕 찌르기 (Poke) 미확인 알림
+    unread_pokes = PokeNotification.objects.filter(
+        receiver=request.user, is_read=False
+    ).select_related("sender__profile", "party")[:5]
+
     return render(request, "fitness/dashboard.html", {
         "card": card, "stats": stats, "power": battle_power(stats, card.level),
         "records": records.order_by("-created_at")[:5],
@@ -205,15 +303,22 @@ def dashboard(request):
         "today_attended": today_attended,
         "week_attendances": week_attendances,
         "active_party": active_party,
+        "user_all_parties": request.user.parties.all(),
         "party_daily_missions": party_daily_missions,
         "party_weekly_missions": party_weekly_missions,
         "group_quests": group_quests, "personal_quests": personal_quests,
         "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
         "badge_summary": badge_summary(request.user),
-        "party_challenges": party_challenges, "weather_latitude": latitude, "weather_longitude": longitude,
+        "party_challenges": party_challenges,
+        "active_challenges": active_challenges,
+        "active_challenge": active_challenge,
+        "ended_challenges": ended_challenges,
+        "weather_latitude": latitude, "weather_longitude": longitude,
         "pending_friend_requests": pending_friend_requests,
         "pending_party_invitations": pending_party_invitations,
         "accepted_friend_requests": accepted_friend_requests,
+        "accepted_party_invitations": accepted_party_invitations,
+        "unread_pokes": unread_pokes,
     })
 
 
@@ -260,8 +365,70 @@ def profile_view(request):
     })
 
 
+SPORT_FACILITY_CONFIG = {
+    "수영": {
+        "primary_types": ["수영장"],
+        "name_keywords": ["수영", "물놀이", "아쿠아", "풀장"],
+    },
+    "테니스": {
+        "primary_types": ["테니스장"],
+        "name_keywords": ["테니스", "라켓"],
+    },
+    "축구": {
+        "primary_types": ["축구장", "풋살장"],
+        "name_keywords": ["축구", "풋살"],
+    },
+    "농구": {
+        "primary_types": ["구기체육관"],
+        "name_keywords": ["농구", "구기"],
+        "secondary_types": ["생활체육관"],
+    },
+    "배드민턴": {
+        "primary_types": ["생활체육관"],
+        "name_keywords": ["배드민턴", "셔틀콕"],
+        "secondary_types": ["구기체육관"],
+    },
+    "헬스": {
+        "primary_types": ["기타체육시설(체력단련장)"],
+        "name_keywords": ["체력단련", "헬스", "웨이트", "피트니스"],
+        "secondary_types": ["생활체육관"],
+    },
+    "러닝": {
+        "primary_types": ["육상경기장"],
+        "name_keywords": ["육상", "트랙", "러닝", "달리기"],
+        "secondary_keywords": ["운동장", "체육공원"],
+    },
+    "걷기": {
+        "primary_types": ["전천후게이트볼장", "파크골프장"],
+        "name_keywords": ["산책", "둘레길", "공원", "게이트볼"],
+        "secondary_keywords": ["쉼터", "녹지"],
+    },
+    "만보": {
+        "primary_types": ["전천후게이트볼장", "파크골프장"],
+        "name_keywords": ["산책", "둘레길", "공원", "게이트볼"],
+        "secondary_keywords": ["쉼터", "녹지"],
+    },
+    "자전거": {
+        "primary_types": ["사이클경기장", "롤러스케이트장"],
+        "name_keywords": ["자전거", "사이클", "벨로드롬"],
+        "secondary_keywords": ["인라인", "스케이트"],
+    },
+    "등산": {
+        "primary_types": ["실외인공암벽장", "실내인공암벽장"],
+        "name_keywords": ["등산", "암벽", "클라이밍", "산악"],
+        "secondary_keywords": ["산", "고개", "봉"],
+    },
+    "요가": {
+        "primary_types": ["생활체육관"],
+        "name_keywords": ["요가", "필라테스", "명상", "스트레칭", "문화체육"],
+        "secondary_types": ["구기체육관"],
+    },
+}
+
+
 @login_required
 def activity_view(request):
+    selected_workout = request.GET.get("workout_type", "").strip() or "러닝"
     try:
         current_lat = float(request.GET.get("lat", ""))
         current_lon = float(request.GET.get("lon", ""))
@@ -269,33 +436,106 @@ def activity_view(request):
     except (TypeError, ValueError):
         current_lat = current_lon = None
         use_current_location = False
-    facilities = Facility.objects.filter(is_active=True)
-    if not use_current_location:
-        facilities = facilities.filter(region=request.user.profile.area)
+
+    # 운동 종목 맞춤 시설 필터링 (1순위 전문시설 -> 2순위 연관시설 -> 3순위 일반시설 순)
+    cfg = SPORT_FACILITY_CONFIG.get(selected_workout, {})
+    primary_q = Q()
+    if "primary_types" in cfg:
+        primary_q |= Q(facility_type__in=cfg["primary_types"])
+    for kw in cfg.get("name_keywords", []):
+        primary_q |= Q(name__icontains=kw) | Q(facility_type__icontains=kw)
+
+    secondary_q = Q()
+    if "secondary_types" in cfg:
+        secondary_q |= Q(facility_type__in=cfg["secondary_types"])
+    for kw in cfg.get("secondary_keywords", []):
+        secondary_q |= Q(name__icontains=kw)
+
+    # 사전 정의에 없는 커스텀 운동 종목인 경우 이름/유형 검색
+    if not cfg and selected_workout:
+        primary_q = Q(name__icontains=selected_workout) | Q(facility_type__icontains=selected_workout)
+
     recommendations = []
-    for facility in list(facilities[:500] if use_current_location else facilities[:3]):
-        if use_current_location:
-            if facility.latitude is None or facility.longitude is None:
-                continue
+    if use_current_location:
+        # GPS 위치 기준: 전문 시설 풀에서 최단거리 우선 탐색
+        qs = Facility.objects.filter(is_active=True, latitude__isnull=False, longitude__isnull=False)
+        pool = list(qs.filter(primary_q)[:400]) if primary_q else []
+        if len(pool) < 10 and secondary_q:
+            pool += list(qs.filter(secondary_q).exclude(id__in=[f.id for f in pool])[:200])
+        if len(pool) < 3:
+            pool += list(qs.exclude(id__in=[f.id for f in pool])[:100])
+
+        for facility in pool:
             lat1, lat2 = math.radians(current_lat), math.radians(facility.latitude)
             dlat, dlon = lat2 - lat1, math.radians(facility.longitude - current_lon)
             value = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
             facility.distance_km = round(6371 * 2 * math.asin(math.sqrt(value)), 1)
-        query = quote(f"{facility.name} {facility.address}".strip(), safe="")
-        facility.kakao_map_url = (
-            f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
-            if facility.latitude is not None and facility.longitude is not None
-            else f"https://map.kakao.com/link/search/{query}"
-        )
-        recommendations.append(facility)
-    if use_current_location:
+            query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+            facility.kakao_map_url = (
+                f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
+                if facility.latitude is not None and facility.longitude is not None
+                else f"https://map.kakao.com/link/search/{query}"
+            )
+            recommendations.append(facility)
         recommendations.sort(key=lambda item: item.distance_km)
         recommendations = recommendations[:3]
+    else:
+        # 지역 기준: 1순위 전문 시설 -> 2순위 연관 시설 -> 3순위 지역 일반 시설 순으로 보충
+        base_qs = Facility.objects.filter(is_active=True, region=request.user.profile.area)
+        matches = list(base_qs.filter(primary_q)[:3]) if primary_q else []
+        if len(matches) < 3 and secondary_q:
+            needed = 3 - len(matches)
+            sec_matches = list(base_qs.filter(secondary_q).exclude(id__in=[f.id for f in matches])[:needed])
+            matches.extend(sec_matches)
+        if len(matches) < 3:
+            needed = 3 - len(matches)
+            fallback = list(base_qs.exclude(id__in=[f.id for f in matches])[:needed])
+            matches.extend(fallback)
+        recommendations = matches[:3]
+        for facility in recommendations:
+            query = quote(f"{facility.name} {facility.address}".strip(), safe="")
+            facility.kakao_map_url = (
+                f"https://map.kakao.com/link/to/{quote(facility.name, safe='')},{facility.latitude},{facility.longitude}"
+                if facility.latitude is not None and facility.longitude is not None
+                else f"https://map.kakao.com/link/search/{query}"
+            )
+
+    # AJAX 요청인 경우 JSON 응답 반환 (페이지 새로고침 방지 & 입력 데이터 보존)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.GET.get("ajax") == "1":
+        return JsonResponse({
+            "status": "success",
+            "workout_type": selected_workout,
+            "facilities": [
+                {
+                    "id": f.id,
+                    "name": f.name,
+                    "facility_type": f.facility_type or "공공체육시설",
+                    "distance_km": f.distance_km if hasattr(f, "distance_km") else None,
+                    "kakao_map_url": f.kakao_map_url,
+                }
+                for f in recommendations
+            ]
+        })
+
+    party_challenges, active_challenges, ended_challenges = get_user_party_challenges(request.user)
+    ended_count = len(ended_challenges)
+    wins_count = sum(1 for c in ended_challenges if c["my_rank"] == 1)
+    podium_count = sum(1 for c in ended_challenges if c["my_rank"] in (1, 2, 3))
+
     return render(request, "fitness/activity.html", {
         "workout_form": WorkoutForm(),
+        "selected_workout": selected_workout,
         "records": WorkoutRecord.objects.filter(user=request.user).order_by("-created_at")[:20],
         "recommended_facilities": recommendations,
         "use_current_location": use_current_location,
+        "party_challenges": party_challenges,
+        "active_challenges": active_challenges,
+        "ended_challenges": ended_challenges,
+        "challenge_stats": {
+            "total_ended": ended_count,
+            "wins": wins_count,
+            "podium": podium_count,
+        },
     })
 
 
@@ -450,22 +690,11 @@ def ranking_view(request):
         users = users.filter(pk__in=list(friend_ids) + [current_user.pk])
 
     ranked = [{
-        "name": user.profile.display_name, "area": user.profile.area,
+        "name": user.profile.display_name or user.username, "area": user.profile.area,
         "level": user.charactercard.level,
         "total_score": BadgeAward.objects.filter(user=user).aggregate(total=Sum("points"))["total"] or 0,
         "is_me": user == current_user, "is_demo": False,
     } for user in users]
-    if scope == "friends":
-        demo_rows = DEMO_RANKINGS[:3]
-    elif scope == "party":
-        demo_rows = []
-    elif scope == "region":
-        demo_rows = [row for row in DEMO_RANKINGS if row["area"] == current_user.profile.area]
-        if not demo_rows:
-            demo_rows = [{"name": f"{current_user.profile.area} 운동친구", "area": current_user.profile.area, "level": 8, "total_xp": 2420}]
-    else:
-        demo_rows = DEMO_RANKINGS
-    ranked.extend({**row, "total_score": row["total_xp"], "is_me": False, "is_demo": True} for row in demo_rows)
     ranked.sort(key=lambda item: item["total_score"], reverse=True)
     for index, item in enumerate(ranked, 1):
         item["rank"] = index
@@ -745,12 +974,16 @@ def outfit_shop(request):
 @login_required
 def friends_view(request):
     friends = User.objects.filter(received_friend_links__user=request.user).select_related("profile", "charactercard")
+    active_party = request.user.parties.order_by("-id").first()
+    party_member_ids = set(active_party.members.values_list("id", flat=True)) if active_party else set()
     pending_received_requests = FriendRequest.objects.filter(to_user=request.user, status="PENDING").select_related("from_user__profile", "from_user__charactercard")
     pending_sent_requests = FriendRequest.objects.filter(from_user=request.user, status="PENDING").select_related("to_user__profile")
     accepted_requests = FriendRequest.objects.filter(from_user=request.user, status="ACCEPTED", sender_viewed=False).select_related("to_user__profile")
     return render(request, "fitness/friends.html", {
         "friend_form": FriendForm(),
         "friends": friends,
+        "active_party": active_party,
+        "party_member_ids": party_member_ids,
         "pending_received_requests": pending_received_requests,
         "pending_sent_requests": pending_sent_requests,
         "accepted_requests": accepted_requests,
@@ -814,6 +1047,8 @@ def respond_friend_request(request, request_id, action):
             freq.responded_at = timezone.now()
             freq.save(update_fields=["status", "responded_at"])
             messages.info(request, f"{freq.from_user.username}님의 친구 요청을 거절했습니다.")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "action": action, "status": freq.status})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -823,6 +1058,8 @@ def dismiss_friend_notification(request, request_id):
         freq = get_object_or_404(FriendRequest, pk=request_id, from_user=request.user, status="ACCEPTED")
         freq.sender_viewed = True
         freq.save(update_fields=["sender_viewed"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
 
 
@@ -853,15 +1090,217 @@ def respond_party_invitation(request, invitation_id, action):
                 return redirect(request.POST.get("next") or "dashboard")
             inv.status = "ACCEPTED"
             inv.responded_at = timezone.now()
-            inv.save(update_fields=["status", "responded_at"])
+            inv.inviter_viewed = False
+            inv.save(update_fields=["status", "responded_at", "inviter_viewed"])
             party.members.add(request.user)
-            messages.success(request, f"'{party.name}' 파티 초대를 수락했습니다! 파티 일일미션에 참여해보세요.")
+            request.session["active_party_id"] = party.id
+            messages.success(request, f"'{party.name}' 파티 초대를 수락했습니다! 파티 일일미션 및 내기 챌린지에 참여해보세요.")
         elif action == "reject":
             inv.status = "REJECTED"
             inv.responded_at = timezone.now()
             inv.save(update_fields=["status", "responded_at"])
             messages.info(request, f"'{inv.party.name}' 파티 초대를 거절했습니다.")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "action": action, "status": inv.status})
     return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def dismiss_party_notification(request, invitation_id):
+    if request.method == "POST":
+        inv = get_object_or_404(PartyInvitation, pk=invitation_id, inviter=request.user, status="ACCEPTED")
+        inv.inviter_viewed = True
+        inv.save(update_fields=["inviter_viewed"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def invite_party_member(request, party_id):
+    if request.method == "POST":
+        party = get_object_or_404(Party, pk=party_id)
+        if not party.members.filter(id=request.user.id).exists():
+            messages.error(request, "파티에 소속된 멤버만 친구를 초대할 수 있습니다.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        if party.members.count() >= party.max_members:
+            messages.error(request, f"파티 정원(최대 {party.max_members}명)이 가득 찼습니다.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        target_name = request.POST.get("friend_name", "").strip()
+        if not target_name:
+            messages.error(request, "초대할 친구의 닉네임 또는 아이디를 입력해 주세요.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        target_user = User.objects.filter(
+            Q(username__iexact=target_name) | Q(first_name__iexact=target_name)
+        ).first()
+
+        if not target_user:
+            messages.error(request, f"'{target_name}'에 해당하는 사용자를 찾을 수 없습니다. 닉네임 또는 아이디를 확인해주세요.")
+        elif target_user == request.user:
+            messages.error(request, "본인은 파티에 초대할 수 없습니다.")
+        elif party.members.filter(id=target_user.id).exists():
+            target_display = target_user.profile.display_name or target_user.username
+            messages.info(request, f"{target_display}님은 이미 '{party.name}' 파티의 멤버입니다.")
+        elif PartyInvitation.objects.filter(party=party, invitee=target_user, status="PENDING").exists():
+            target_display = target_user.profile.display_name or target_user.username
+            messages.info(request, f"{target_display}님에게 이미 초대를 보냈습니다. 수락 대기 중입니다.")
+        else:
+            PartyInvitation.objects.create(
+                party=party,
+                inviter=request.user,
+                invitee=target_user,
+                status="PENDING",
+            )
+            target_display = target_user.profile.display_name or target_user.username
+            messages.success(request, f"'{party.name}' 파티에 {target_display}님을 성공적으로 초대했습니다!")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def poke_user(request, user_id):
+    if request.method == "POST":
+        target = get_object_or_404(User, pk=user_id)
+        if target == request.user:
+            messages.error(request, "자신을 콕 찌를 수는 없어요.")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        # 최근 2분 내 중복 찌르기 방지
+        recent_poke = PokeNotification.objects.filter(
+            sender=request.user,
+            receiver=target,
+            created_at__gte=timezone.now() - timedelta(minutes=2),
+        ).exists()
+        if recent_poke:
+            target_display = target.profile.display_name or target.username
+            messages.info(request, f"방금 {target_display}님을 콕 찔렀어요! 잠시 후 다시 찔러주세요. 👉")
+            return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+        party_id = request.POST.get("party_id")
+        party = None
+        if party_id:
+            party = Party.objects.filter(id=party_id, members=request.user).first()
+
+        message = request.POST.get("poke_message", "").strip() or "얼른 운동하고 내기 점수 올려라! 🔥"
+        PokeNotification.objects.create(
+            sender=request.user,
+            receiver=target,
+            party=party,
+            message=message,
+        )
+        target_display = target.profile.display_name or target.username
+        messages.success(request, f"👉 {target_display}님을 콕 찔렀습니다! ('{message}')")
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def dismiss_poke(request, poke_id):
+    if request.method == "POST":
+        poke = get_object_or_404(PokeNotification, pk=poke_id, receiver=request.user)
+        poke.is_read = True
+        poke.save(update_fields=["is_read"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True})
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or "dashboard")
+
+
+@login_required
+def notifications_api(request):
+    """실시간 알림(친구 요청, 파티 초대, 콕 찌르기) 스마트 폴링을 위한 경량 JSON API"""
+    user = request.user
+
+    # 1. 미확인 콕 찌르기 (최신 5개)
+    unread_pokes = PokeNotification.objects.filter(
+        receiver=user, is_read=False
+    ).select_related("sender__profile", "party")[:5]
+    poke_list = [
+        {
+            "id": poke.id,
+            "sender_name": poke.sender.profile.display_name or poke.sender.username,
+            "party_name": poke.party.name if poke.party else "",
+            "message": poke.message,
+            "created_at": poke.created_at.strftime("%m/%d %H:%M"),
+            "dismiss_url": reverse("dismiss_poke", args=[poke.id]),
+        }
+        for poke in unread_pokes
+    ]
+
+    # 2. 수락된 파티 초대 알림
+    accepted_party_invitations = PartyInvitation.objects.filter(
+        inviter=user, status="ACCEPTED", inviter_viewed=False
+    ).select_related("invitee__profile", "party")
+    accepted_party_list = [
+        {
+            "id": ainv.id,
+            "invitee_name": ainv.invitee.profile.display_name or ainv.invitee.username,
+            "party_name": ainv.party.name,
+            "dismiss_url": reverse("dismiss_party_notification", args=[ainv.id]),
+        }
+        for ainv in accepted_party_invitations
+    ]
+
+    # 3. 수락된 친구 요청 알림
+    accepted_friend_requests = FriendRequest.objects.filter(
+        from_user=user, status="ACCEPTED", sender_viewed=False
+    ).select_related("to_user__profile")
+    accepted_friend_list = [
+        {
+            "id": acc.id,
+            "friend_name": acc.to_user.profile.display_name or acc.to_user.username,
+            "friend_username": acc.to_user.username,
+            "dismiss_url": reverse("dismiss_friend_notification", args=[acc.id]),
+        }
+        for acc in accepted_friend_requests
+    ]
+
+    # 4. 받은 친구 요청
+    pending_friend_requests = FriendRequest.objects.filter(
+        to_user=user, status="PENDING"
+    ).select_related("from_user__profile")
+    pending_friend_list = [
+        {
+            "id": freq.id,
+            "from_name": freq.from_user.profile.display_name or freq.from_user.username,
+            "from_username": freq.from_user.username,
+            "accept_url": reverse("respond_friend_request", args=[freq.id, "accept"]),
+            "reject_url": reverse("respond_friend_request", args=[freq.id, "reject"]),
+        }
+        for freq in pending_friend_requests
+    ]
+
+    # 5. 받은 파티 초대
+    pending_party_invitations = PartyInvitation.objects.filter(
+        invitee=user, status="PENDING"
+    ).select_related("party", "inviter__profile")
+    pending_party_list = [
+        {
+            "id": inv.id,
+            "inviter_name": inv.inviter.profile.display_name or inv.inviter.username,
+            "party_name": inv.party.name,
+            "accept_url": reverse("respond_party_invitation", args=[inv.id, "accept"]),
+            "reject_url": reverse("respond_party_invitation", args=[inv.id, "reject"]),
+        }
+        for inv in pending_party_invitations
+    ]
+
+    total_count = (
+        len(poke_list)
+        + len(accepted_party_list)
+        + len(accepted_friend_list)
+        + len(pending_friend_list)
+        + len(pending_party_list)
+    )
+
+    return JsonResponse({
+        "total_count": total_count,
+        "unread_pokes": poke_list,
+        "accepted_party_invitations": accepted_party_list,
+        "accepted_friend_requests": accepted_friend_list,
+        "pending_friend_requests": pending_friend_list,
+        "pending_party_invitations": pending_party_list,
+    })
 
 
 PRESET_LOCATIONS = {
@@ -1168,15 +1607,17 @@ def onboarding_group(request):
     ).select_related("profile").distinct()
     if request.method == "POST" and request.POST.get("action") == "add_friend":
         code = request.POST.get("friend_code", "").strip()
-        friend = User.objects.filter(username__iexact=code).first()
+        friend = User.objects.filter(
+            Q(username__iexact=code) | Q(first_name__iexact=code)
+        ).first()
         if not friend:
-            messages.error(request, "일치하는 친구를 찾지 못했어요.")
+            messages.error(request, f"'{code}'에 해당하는 친구를 찾지 못했어요. 닉네임 또는 아이디를 확인해 주세요.")
         elif friend == request.user:
             messages.error(request, "본인은 친구로 추가할 수 없어요.")
         elif FriendLink.objects.filter(user=request.user, friend=friend).exists():
-            messages.info(request, f"{friend.username}님과는 이미 친구예요.")
+            messages.info(request, f"{friend.profile.display_name or friend.username}님과는 이미 친구예요.")
         elif FriendRequest.objects.filter(from_user=request.user, to_user=friend, status="PENDING").exists():
-            messages.info(request, f"{friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
+            messages.info(request, f"{friend.profile.display_name or friend.username}님에게 이미 친구 요청을 보냈어요. 상대방의 수락을 기다리는 중입니다.")
         elif FriendRequest.objects.filter(from_user=friend, to_user=request.user, status="PENDING").exists():
             fr = FriendRequest.objects.get(from_user=friend, to_user=request.user, status="PENDING")
             fr.status = "ACCEPTED"
@@ -1185,13 +1626,13 @@ def onboarding_group(request):
             fr.save(update_fields=["status", "responded_at", "sender_viewed"])
             FriendLink.objects.get_or_create(user=request.user, friend=friend)
             FriendLink.objects.get_or_create(user=friend, friend=request.user)
-            messages.success(request, f"{friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
+            messages.success(request, f"{friend.profile.display_name or friend.username}님의 친구 요청을 수락하여 서로 친구가 되었어요!")
         else:
             try:
                 FriendRequest.objects.create(from_user=request.user, to_user=friend, status="PENDING")
-                messages.success(request, f"{friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
+                messages.success(request, f"{friend.profile.display_name or friend.username}님에게 친구 요청을 보냈습니다! 상대방이 수락하면 친구로 등록됩니다.")
             except IntegrityError:
-                messages.info(request, f"{friend.username}님에게 이미 처리 대기 중인 요청이 있습니다.")
+                messages.info(request, f"{friend.profile.display_name or friend.username}님에게 이미 처리 대기 중인 요청이 있습니다.")
         return redirect("onboarding_group")
     if request.method == "POST" and request.POST.get("action") == "create_room":
         room_name = request.POST.get("room_name", "").strip()[:100]
@@ -1201,6 +1642,22 @@ def onboarding_group(request):
             challenge_end = date.fromisoformat(request.POST.get("challenge_end", ""))
         except (TypeError, ValueError):
             challenge_start = challenge_end = None
+
+        raw_end_time = request.POST.get("challenge_end_time", "").strip()
+        challenge_end_time = None
+        if raw_end_time:
+            try:
+                challenge_end_time = time.fromisoformat(raw_end_time)
+            except (ValueError, TypeError):
+                challenge_end_time = time(23, 59, 59)
+        else:
+            challenge_end_time = time(23, 59, 59)
+
+        try:
+            target_timer_minutes = max(0, int(request.POST.get("target_timer_minutes", 0) or 0))
+        except (ValueError, TypeError):
+            target_timer_minutes = 0
+
         if not room_name or not challenge_start or not challenge_end or challenge_end < challenge_start:
             messages.error(request, "파티 이름과 올바른 내기 시작일·종료일을 입력해 주세요.")
         else:
@@ -1209,10 +1666,21 @@ def onboarding_group(request):
                 int(value) for value in request.POST.getlist("invitees")
                 if value.isdigit() and int(value) in friend_ids
             }
+            direct_invitee_name = request.POST.get("direct_invitee", "").strip()
+            if direct_invitee_name:
+                direct_user = User.objects.filter(
+                    Q(username__iexact=direct_invitee_name) | Q(first_name__iexact=direct_invitee_name)
+                ).exclude(id=request.user.id).first()
+                if direct_user:
+                    invited_ids.add(direct_user.id)
+                else:
+                    messages.warning(request, f"입력하신 '{direct_invitee_name}'님을 찾지 못하여 파티 초대 대상에서 제외되었습니다.")
             with transaction.atomic():
                 party = Party.objects.create(
                     name=room_name, owner=request.user,
                     challenge_start=challenge_start, challenge_end=challenge_end,
+                    challenge_end_time=challenge_end_time,
+                    target_timer_minutes=target_timer_minutes,
                     challenge_reward=challenge_reward,
                 )
                 party.members.add(request.user)
@@ -1226,10 +1694,8 @@ def onboarding_group(request):
                 profile = request.user.profile
                 profile.workout_mode = "GROUP"
                 profile.save(update_fields=["workout_mode"])
-            if invited_ids:
-                messages.success(request, f"'{party.name}' 파티를 만들고 {len(invited_ids)}명의 친구에게 초대를 보냈어요!")
-            else:
-                messages.success(request, f"'{party.name}' 파티를 만들었어요!")
+                request.session["active_party_id"] = party.id
+            # 1단계(기간·타이머) 완료 후 파티 생성 완료 알림을 띄우지 않고 자연스럽게 다음(미션 설정) 단계로 이동
             return redirect("onboarding_group_quest", party_id=party.id)
     return render(request, "fitness/onboarding_group.html", {
         "friends": friends, "friend_form": FriendForm(),
@@ -1246,11 +1712,13 @@ def onboarding_group_quest(request, party_id):
             from .services import generate_party_daily_missions, generate_party_weekly_missions
             generate_party_daily_missions(party)
             generate_party_weekly_missions(party)
+            party.workout_type = "러닝"
+            party.save(update_fields=["workout_type"])
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"{party.name}의 AI 일일(3개) & 주간(10개) 협동 미션을 설정했어요.")
+            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! AI 일일(3개) & 주간(10개) 협동 미션이 시작됩니다.")
             return redirect("dashboard")
 
         title = request.POST.get("title", "").strip()[:100]
@@ -1264,6 +1732,12 @@ def onboarding_group_quest(request, party_id):
         if not title or workout_type not in valid_types or (workout_type == "기타" and not custom_workout_name) or not 5 <= target_minutes <= 300:
             messages.error(request, "미션 이름, 운동 종류, 목표 시간(5~300분)을 확인해 주세요.")
         else:
+            # 파티의 대표 운동 종류 업데이트
+            party.workout_type = custom_workout_name if workout_type == "기타" else workout_type
+            if target_minutes and not party.target_timer_minutes:
+                party.target_timer_minutes = target_minutes
+            party.save(update_fields=["workout_type", "target_timer_minutes"])
+
             DailyQuest.objects.create(
                 party=party, creator=request.user, title=title,
                 workout_type=workout_type, custom_workout_name=custom_workout_name,
@@ -1279,7 +1753,7 @@ def onboarding_group_quest(request, party_id):
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"{party.name}의 파티 미션을 만들었어요.")
+            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! (운동 종목: {party.workout_type})")
             return redirect("dashboard")
     return render(request, "fitness/onboarding_group_quest.html", {
         "party": party, "workout_choices": workout_choices,
@@ -1290,10 +1764,18 @@ def onboarding_group_quest(request, party_id):
 @login_required
 def region_view(request):
     card = request.user.charactercard
+    real_region_users = User.objects.filter(profile__area=request.user.profile.area, profile__rank_participation=True).select_related("profile", "charactercard")[:10]
+    region_rows = [{
+        "name": u.profile.display_name or u.username,
+        "area": u.profile.area,
+        "level": u.charactercard.level,
+        "total_xp": BadgeAward.objects.filter(user=u).aggregate(total=Sum("points"))["total"] or 0,
+    } for u in real_region_users]
+    region_rows.sort(key=lambda r: r["total_xp"], reverse=True)
     return render(request, "fitness/region.html", {
         "card": card, "stats": card_stats(request.user),
         "power": battle_power(card_stats(request.user), card.level),
-        "region_rows": DEMO_RANKINGS[:5],
+        "region_rows": region_rows,
     })
 
 
@@ -1306,9 +1788,9 @@ def battle_view(request):
         "power": battle_power(card_stats(request.user), card.level),
         "battle_form": BattleForm(initial={
             "scope": request.GET.get("scope", "PARTY"),
-            "region_name": request.GET.get("region", ""),
-        }), "battles": battles,
-        "demo_opponents": DEMO_OPPONENTS,
+        }),
+        "battles": battles,
+        "demo_opponents": [],
     })
 
 
@@ -1404,3 +1886,8 @@ class UserLogoutView(LogoutView):
         for _ in storage:
             pass
         return super().dispatch(request, *args, **kwargs)
+
+
+def teunteun_popup_view(request):
+    """국민체력100 튼튼머니 실제 브라우저 팝업(window.open) 전용 가벼운 뷰"""
+    return render(request, "fitness/teunteun_window_popup.html")

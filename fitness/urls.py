@@ -8,7 +8,10 @@ from .views import (
     onboarding_intro, onboarding_mode, onboarding_profile, onboarding_solo,
     outfit_shop, profile_view, ranking_view, record_workout, region_view,
     register_view, respond_friend_request, respond_party_invitation,
-    sports_news_api, weather_api,
+    dismiss_party_notification, invite_party_member,
+    poke_user, dismiss_poke,
+    sports_news_api, weather_api, notifications_api,
+    teunteun_popup_view,
 )
 
 urlpatterns = [
@@ -35,11 +38,16 @@ urlpatterns = [
     path("outfits/", outfit_shop, name="outfit_shop"),
     path("api/news/", sports_news_api, name="sports_news_api"),
     path("api/weather/", weather_api, name="weather_api"),
+    path("api/notifications/", notifications_api, name="notifications_api"),
     path("friends/", friends_view, name="friends"),
     path("friends/add/", add_friend, name="add_friend"),
     path("friends/request/<int:request_id>/<str:action>/", respond_friend_request, name="respond_friend_request"),
     path("friends/dismiss/<int:request_id>/", dismiss_friend_notification, name="dismiss_friend_notification"),
     path("party/invitation/<int:invitation_id>/<str:action>/", respond_party_invitation, name="respond_party_invitation"),
+    path("party/notification/<int:invitation_id>/dismiss/", dismiss_party_notification, name="dismiss_party_notification"),
+    path("party/<int:party_id>/invite/", invite_party_member, name="invite_party_member"),
+    path("poke/<int:user_id>/", poke_user, name="poke_user"),
+    path("poke/dismiss/<int:poke_id>/", dismiss_poke, name="dismiss_poke"),
     path("facilities/", facilities_view, name="facilities"),
     path("region/", region_view, name="region"),
     path("battle/", battle_view, name="battle"),
@@ -48,4 +56,5 @@ urlpatterns = [
     path("demo/level/", demo_level, name="demo_level"),
     path("demo/level/<int:target_level>/", demo_level, name="demo_level_target"),
     path("demo/battle/", demo_battle, name="demo_battle"),
+    path("teunteun-popup/", teunteun_popup_view, name="teunteun_popup"),
 ]

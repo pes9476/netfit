@@ -5,6 +5,135 @@
   <p>내 정보와 비만도, 캐릭터 설정을 관리하세요.</p>
 </section>
 
+<style>
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+  align-items: start;
+}
+.preview-panel {
+  position: sticky;
+  top: 24px;
+  z-index: 10;
+}
+.preview-panel .mini-card {
+  position: relative;
+  height: 240px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 245, 155, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 245, 155, 0.05);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+}
+.preview-panel .mini-card::after {
+  content: "";
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, rgba(0, 245, 155, 0.45) 0%, rgba(56, 189, 248, 0.15) 50%, transparent 75%);
+  border-radius: 50%;
+  filter: blur(4px);
+  z-index: 2;
+  pointer-events: none;
+}
+.preview-panel .mini-card .avatar-roster {
+  position: absolute;
+  inset: 0 0 20px;
+  --mascot-size: 155px;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+}
+.preview-panel .mini-card .avatar-roster::before {
+  width: 155px;
+  max-width: 90%;
+}
+.preview-panel .mini-card .scene-caption {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+  left: auto;
+  z-index: 5;
+  background: rgba(11, 18, 32, 0.8);
+  border: 1px solid rgba(0, 245, 155, 0.35);
+  color: var(--neon-mint);
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 850px) {
+  .profile-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+  .preview-panel {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    order: -1 !important;
+    margin-bottom: 4px !important;
+  }
+  .preview-panel .mini-card {
+    height: 210px !important;
+    max-width: 100% !important;
+    margin: 12px 0 !important;
+  }
+  .preview-panel .mini-card .avatar-roster {
+    --mascot-size: 140px !important;
+  }
+  .preview-panel .mini-card .avatar-roster::before {
+    width: 140px !important;
+    max-width: 85% !important;
+  }
+  .preview-panel .mini-card::after {
+    width: 120px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .profile-grid.bmi-inputs {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .profile-grid.bmi-inputs .field:first-child {
+    grid-column: 1 / -1;
+  }
+  .form-grid .field {
+    margin: 0 !important;
+  }
+  .bmi-scale {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .bmi-scale span {
+    font-size: 10px !important;
+    padding: 6px 2px !important;
+    line-height: 1.25 !important;
+    word-break: keep-all !important;
+  }
+  .bmi-result {
+    font-size: 13px !important;
+    padding: 12px 14px !important;
+    text-align: center;
+    word-break: keep-all !important;
+  }
+}
+</style>
+
 <section class="profile-layout">
   <article class="panel">
     <h2><i class="fa-solid fa-user-gear" style="color: var(--neon-mint); margin-right: 8px;"></i>내 프로필</h2>
@@ -25,7 +154,7 @@
       <h2><i class="fa-solid fa-calculator" style="color: #38BDF8; margin-right: 8px;"></i>비만도 참고 계산</h2>
       <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">키와 몸무게로 계산한 BMI는 참고용 수치이며 의료 진단이 아닙니다.</p>
       
-      <div class="form-grid profile-grid">
+      <div class="form-grid profile-grid bmi-inputs">
         <div class="field">{{ form.measured_on.label_tag }}{{ form.measured_on }}</div>
         <div class="field">{{ form.height_cm.label_tag }}{{ form.height_cm }}</div>
         <div class="field">{{ form.weight_kg.label_tag }}{{ form.weight_kg }}</div>
@@ -44,7 +173,7 @@
 
       <hr>
       <h2><i class="fa-solid fa-paw" style="color: var(--neon-mint); margin-right: 8px;"></i>대표 마스코트 파이터 선택</h2>
-      <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 14px;">원하는 마스코트를 선택하면 우측 카드에서 뛰는 모습을 실시간으로 확인할 수 있습니다.</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 14px;">원하는 마스코트를 선택하면 미리보기 카드에서 뛰는 모습을 실시간으로 확인할 수 있습니다.</p>
       
       <div class="field full">
         {{ form.avatar_preference.label_tag }}
@@ -59,74 +188,6 @@
       </button>
     </form>
   </article>
-
-<style>
-.profile-layout {
-  display: grid !important;
-  grid-template-columns: 1.15fr 0.85fr !important;
-  gap: 24px !important;
-  align-items: start !important;
-}
-.preview-panel {
-  position: sticky !important;
-  top: 24px !important;
-  z-index: 10 !important;
-}
-.preview-panel .mini-card {
-  position: relative !important;
-  height: 240px !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(0, 245, 155, 0.25) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 245, 155, 0.05) !important;
-  overflow: hidden !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 16px 0 !important;
-}
-.preview-panel .mini-card::after {
-  content: "";
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 130px;
-  height: 20px;
-  background: radial-gradient(ellipse at center, rgba(0, 245, 155, 0.45) 0%, rgba(56, 189, 248, 0.15) 50%, transparent 75%);
-  border-radius: 50%;
-  filter: blur(4px);
-  z-index: 2;
-  pointer-events: none;
-}
-.preview-panel .mini-card .avatar-roster {
-  position: absolute !important;
-  inset: 0 0 20px !important;
-  --mascot-size: 155px !important;
-  display: grid !important;
-  place-items: center !important;
-  z-index: 3 !important;
-}
-.preview-panel .mini-card .avatar-roster::before {
-  width: 155px !important;
-  max-width: 90% !important;
-}
-.preview-panel .mini-card .scene-caption {
-  position: absolute !important;
-  top: 12px !important;
-  right: 12px !important;
-  bottom: auto !important;
-  left: auto !important;
-  z-index: 5 !important;
-  background: rgba(11, 18, 32, 0.8) !important;
-  border: 1px solid rgba(0, 245, 155, 0.35) !important;
-  color: var(--neon-mint) !important;
-  font-size: 11px !important;
-  padding: 4px 9px !important;
-  border-radius: 8px !important;
-  backdrop-filter: blur(4px) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-</style>
 
   <aside class="panel preview-panel">
     <h2><i class="fa-solid fa-eye" style="color: var(--trophy-gold); margin-right: 8px;"></i>내 캐릭터 미리보기</h2>
@@ -211,7 +272,18 @@
   }
 
   [h, w].forEach(el => el.addEventListener("input", updateBmi));
-  pref.addEventListener("change", updateMascot);
+  pref.addEventListener("change", () => {
+    updateMascot();
+    if (window.innerWidth <= 850) {
+      const previewPanel = document.querySelector(".preview-panel");
+      if (previewPanel) {
+        const rect = previewPanel.getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          previewPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }
+  });
   nickname.addEventListener("input", updateMascot);
   updateBmi();
   updateMascot();

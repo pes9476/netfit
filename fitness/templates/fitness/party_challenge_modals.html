@@ -1,0 +1,577 @@
+<!-- 📜 지난 파티 내기 기록 목록 모달 (미션 목록보기와 동일한 직관적인 스크롤 팝업) -->
+<div id="endedPartyHistoryModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.85); backdrop-filter: blur(8px); z-index: 9998; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeEndedPartyHistoryModal();">
+  <div class="panel modal-card" style="width: 100%; max-width: 680px; max-height: 85vh; display: flex; flex-direction: column; background: #0E1726; border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); padding: 0; overflow: hidden; animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    
+    <!-- 모달 헤더 -->
+    <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); display: flex; align-items: center; justify-content: center; color: var(--trophy-gold); font-size: 18px;">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </span>
+        <div>
+          <h2 style="font-size: 17px; margin: 0; color: #FFFFFF; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+            지난 파티 내기 기록 목록
+            <span style="font-size: 12px; font-weight: 800; background: rgba(245, 158, 11, 0.2); color: var(--trophy-gold); padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.35);">총 {{ ended_challenges|length }}건</span>
+          </h2>
+          <span style="font-size: 12px; color: #94A3B8; margin-top: 2px; display: block;">참여했던 파티 내기의 최종 순위, 획득 점수, 보상을 스크롤하여 언제든 확인하세요.</span>
+        </div>
+      </div>
+      <button type="button" onclick="closeEndedPartyHistoryModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 8px; line-height: 1;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 모달 바디 (스크롤 리스트) -->
+    <div style="padding: 20px 24px; overflow-y: auto; max-height: calc(85vh - 140px); display: flex; flex-direction: column; gap: 12px;">
+      {% for challenge in ended_challenges %}
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 10.5px; font-weight: 800; background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 1px 6px;">대결 종료 🏁</span>
+                <b style="color: #FFFFFF; font-size: 15px;">{{ challenge.party.name }}</b>
+              </div>
+              <small style="color: var(--text-muted); font-size: 12px; margin-top: 3px; display: block;">
+                {{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }} · 참가자 {{ challenge.total_members }}명
+              </small>
+            </div>
+
+            <!-- 내 최종 순위 배지 -->
+            <div>
+              {% if challenge.my_rank == 1 %}
+                <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(245, 158, 11, 0.2); color: #FDE047; border: 1px solid #F59E0B; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 900;">
+                  👑 1위 우승 ({{ challenge.my_points }}점)
+                </span>
+              {% elif challenge.my_rank == 2 %}
+                <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(148, 163, 184, 0.2); color: #F1F5F9; border: 1px solid #CBD5E1; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 900;">
+                  🥈 2위 준우승 ({{ challenge.my_points }}점)
+                </span>
+              {% elif challenge.my_rank == 3 %}
+                <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(205, 127, 50, 0.2); color: #FDBA74; border: 1px solid #CD7F32; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 900;">
+                  🥉 3위 입상 ({{ challenge.my_points }}점)
+                </span>
+              {% else %}
+                <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); color: #94A3B8; border: 1px solid rgba(255, 255, 255, 0.12); padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">
+                  💪 {{ challenge.my_rank }}위 완주 ({{ challenge.my_points }}점)
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- 중간 정보: 내기 보상 & 순위 버튼 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+            <span style="font-size: 12.5px; color: #CBD5E1;">
+              {% if challenge.party.challenge_reward %}
+                🎁 내기 보상: <b style="color: var(--trophy-gold);">{{ challenge.party.challenge_reward }}</b>
+              {% else %}
+                자유 내기
+              {% endif %}
+            </span>
+
+            <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ challenge.party.id }}')" style="padding: 6px 14px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer;">
+              <i class="fa-solid fa-trophy"></i>
+              <span>최종 순위 & 결과 보기</span>
+            </button>
+          </div>
+        </div>
+      {% empty %}
+        <div style="text-align: center; padding: 36px 10px; color: #94A3B8;">
+          <i class="fa-solid fa-hourglass-start" style="font-size: 32px; margin-bottom: 10px; display: block; color: #64748B;"></i>
+          <p style="margin: 0; font-size: 14px;">아직 종료된 파티 내기 기록이 없습니다.</p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- 모달 푸터 -->
+    <div style="padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: flex-end; background: rgba(0, 0, 0, 0.2);">
+      <button type="button" onclick="closeEndedPartyHistoryModal()" class="button secondary" style="padding: 7px 18px; font-size: 13px; font-weight: 800;">
+        닫기
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 🏆 파티 내기 게임 종료 순위 결과 및 축하 팝업 모달 -->
+<div id="partyResultModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 16, 0.88); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) closePartyResultModal();">
+  <!-- 🎆 1등 달성 시 화려하게 터지는 폭죽 캔버스 -->
+  <canvas id="fireworksCanvas" style="position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10005;"></canvas>
+
+  <div style="background: linear-gradient(180deg, #131E35 0%, #0D1322 100%); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 22px; max-width: 520px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.15); overflow: hidden; animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1); margin: auto; position: relative; z-index: 10006;">
+    
+    <!-- 모달 상단 헤더 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(56, 189, 248, 0.08));">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">🏆</span>
+        <div>
+          <b style="color: #FFFFFF; font-size: 15px; display: block;">파티 내기 대결 최종 결과</b>
+          <small id="modalPartySubtitle" style="color: var(--trophy-gold); font-weight: 700; font-size: 11px;">NETFIT PARTY CHALLENGE RESULT</small>
+        </div>
+      </div>
+      <button type="button" onclick="closePartyResultModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 2px;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 모달 본문 콘텐츠 -->
+    <div style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+      
+      <!-- 👑 내 순위 맞춤 축하 카드 (1등, 2등, 3등, 4등에 따라 동적 변경) -->
+      <div id="modalMyResultCard" style="border-radius: 16px; padding: 20px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease;">
+        <!-- 상단 뱃지 & 아이콘 -->
+        <div id="modalRankIcon" style="font-size: 44px; line-height: 1; margin-bottom: 8px;">👑</div>
+        <div id="modalRankBadge" style="display: inline-block; font-size: 12px; font-weight: 900; padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; letter-spacing: 0.5px;">
+          1등 챔피언 우승
+        </div>
+        
+        <!-- 맞춤 축하 헤드라인 & 멘트 -->
+        <h3 id="modalRankTitle" style="font-size: 19px; font-weight: 900; margin: 0 0 8px; letter-spacing: -0.3px;">
+          축하드립니다! 영광의 1등을 차지하셨습니다!
+        </h3>
+        <p id="modalRankMessage" style="font-size: 13.5px; line-height: 1.6; margin: 0 0 14px; color: #E2E8F0;">
+          파티원들과의 치열한 경쟁 끝에 최고 점수로 우승을 차지했습니다! 약속된 보상을 만끽하세요!
+        </p>
+
+        <!-- 내 점수 박스 -->
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12); padding: 6px 16px; border-radius: 12px;">
+          <span style="font-size: 12px; color: #94A3B8;">내 누적 획득 점수:</span>
+          <b id="modalMyScoreText" style="font-size: 16px; font-weight: 900; color: var(--trophy-gold);">0점</b>
+        </div>
+      </div>
+
+      <!-- 🎁 약속된 내기 보상 배너 -->
+      <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px;">🎁</span>
+        <div>
+          <span style="font-size: 11px; font-weight: 800; color: var(--trophy-gold); display: block;">공식 파티 내기 보상</span>
+          <b id="modalRewardText" style="color: #FFFFFF; font-size: 14px;">1등에게 치킨 쏘기</b>
+        </div>
+      </div>
+
+      <!-- 📊 전체 파티원 순위표 (시상대 & 리더보드) -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <b style="font-size: 13px; color: #E2E8F0; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-ranking-star" style="color: #38BDF8;"></i> 전체 파티원 최종 순위
+          </b>
+          <span id="modalDateRange" style="font-size: 11px; color: #94A3B8;">2026.09.15 ~ 2026.09.21</span>
+        </div>
+        
+        <div id="modalRankingList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- JS로 파티원 순위 행이 렌더링됩니다 -->
+        </div>
+      </div>
+
+      <!-- 🔍 순위별 멘트 체험 시뮬레이터 -->
+      <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; padding: 12px 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <small style="color: #94A3B8; font-weight: 800; font-size: 11px;">
+            <i class="fa-solid fa-sliders" style="color: var(--neon-mint); margin-right: 4px;"></i>순위별 팝업 멘트 바로 체험해보기:
+          </small>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+          <button type="button" onclick="simulatePartyRank(1)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(245, 158, 11, 0.4); color: var(--trophy-gold); text-align: center;">
+            👑 1등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(2)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(203, 213, 225, 0.4); color: #CBD5E1; text-align: center;">
+            🥈 2등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(3)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(205, 127, 50, 0.4); color: #CD7F32; text-align: center;">
+            🥉 3등 보기
+          </button>
+          <button type="button" onclick="simulatePartyRank(4)" class="button secondary" style="padding: 5px 4px; font-size: 11px; font-weight: 800; border-color: rgba(0, 245, 155, 0.35); color: var(--neon-mint); text-align: center;">
+            💪 4등 보기
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 모달 하단 닫기/확인 버튼 -->
+    <div style="padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
+      <a href="{% url 'onboarding_group' %}" class="button secondary" style="padding: 7px 14px; font-size: 12px; border-color: rgba(255,255,255,0.15);">
+        <i class="fa-solid fa-plus"></i> 새 내기 만들기
+      </a>
+      <button type="button" onclick="closePartyResultModal()" class="button btn-mint" style="padding: 8px 22px; font-size: 13px; font-weight: 800; cursor: pointer;">
+        확인 완료
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// -------------------------------------------------------------
+// 🏆 파티 내기 게임 종료 순위 결과 및 축하 팝업 모달 제어
+// -------------------------------------------------------------
+const PARTY_CHALLENGES_DATA = {
+  {% for challenge in party_challenges %}
+    "{{ challenge.party.id }}": {
+      "partyName": "{{ challenge.party.name|escapejs }}",
+      "startDate": "{{ challenge.party.challenge_start|date:'Y.m.d' }}",
+      "endDate": "{{ challenge.party.challenge_end|date:'Y.m.d' }}",
+      "reward": "{{ challenge.party.challenge_reward|default:'자유 내기'|escapejs }}",
+      "isEnded": {{ challenge.is_ended|yesno:"true,false" }},
+      "myRank": {{ challenge.my_rank }},
+      "myPoints": {{ challenge.my_points }},
+      "totalMembers": {{ challenge.total_members }},
+      "rows": [
+        {% for row in challenge.rows %}
+          {
+            "rank": {{ row.rank }},
+            "name": "{{ row.name|escapejs }}",
+            "username": "{{ row.username|escapejs }}",
+            "points": {{ row.points }},
+            "isMe": {{ row.is_me|yesno:"true,false" }}
+          }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+};
+
+let currentModalPartyId = null;
+
+function renderRankCardContent(rank, scoreText, rewardText) {
+  const card = document.getElementById("modalMyResultCard");
+  const icon = document.getElementById("modalRankIcon");
+  const badge = document.getElementById("modalRankBadge");
+  const title = document.getElementById("modalRankTitle");
+  const message = document.getElementById("modalRankMessage");
+  const score = document.getElementById("modalMyScoreText");
+
+  if (!card) return;
+  score.textContent = (scoreText !== undefined ? scoreText : '0') + '점';
+
+  if (rank === 1) {
+    card.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.12) 100%)';
+    card.style.border = '1px solid rgba(245, 158, 11, 0.55)';
+    card.style.boxShadow = '0 8px 30px rgba(245, 158, 11, 0.25)';
+    icon.innerHTML = '👑 <span style="font-size:32px;">🏆</span>';
+    badge.style.background = 'rgba(245, 158, 11, 0.3)';
+    badge.style.color = '#FDE047';
+    badge.style.border = '1px solid #F59E0B';
+    badge.textContent = '🏆 1등 챔피언 우승';
+    title.style.color = '#FDE047';
+    title.textContent = '축하드립니다! 영광의 1등을 차지하셨습니다!';
+    message.textContent = `파티원들과의 치열한 경쟁 끝에 최고 점수로 당당히 우승을 거두었습니다! 약속된 공식 보상 [${rewardText}]을 기분 좋게 쟁취하세요!`;
+    triggerFireworks();
+  } else if (rank === 2) {
+    stopFireworks();
+    card.style.background = 'linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(71, 85, 105, 0.12) 100%)';
+    card.style.border = '1px solid rgba(203, 213, 225, 0.45)';
+    card.style.boxShadow = '0 8px 30px rgba(148, 163, 184, 0.15)';
+    icon.innerHTML = '🥈';
+    badge.style.background = 'rgba(148, 163, 184, 0.3)';
+    badge.style.color = '#F1F5F9';
+    badge.style.border = '1px solid #CBD5E1';
+    badge.textContent = '🥈 2등 준우승 완주';
+    title.style.color = '#F1F5F9';
+    title.textContent = '정말 아깝네요! 2위로 멋지게 완주하셨습니다!';
+    message.textContent = '조금만 더 달렸다면 1등이었을 텐데 정말 아깝습니다! 하지만 누구보다 뜨거운 땀방울을 흘리셨습니다. 다음 내기에서 꼭 1등에 도전해보세요!';
+  } else if (rank === 3) {
+    stopFireworks();
+    card.style.background = 'linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(139, 69, 19, 0.12) 100%)';
+    card.style.border = '1px solid rgba(205, 127, 50, 0.45)';
+    card.style.boxShadow = '0 8px 30px rgba(205, 127, 50, 0.15)';
+    icon.innerHTML = '🥉';
+    badge.style.background = 'rgba(205, 127, 50, 0.3)';
+    badge.style.color = '#FDBA74';
+    badge.style.border = '1px solid #CD7F32';
+    badge.textContent = '🥉 3등 3위 입상';
+    title.style.color = '#FDBA74';
+    title.textContent = '값진 3위 입상! 훌륭한 레이스였습니다!';
+    message.textContent = '끝까지 포기하지 않고 최선을 다해 3위를 기록하셨습니다! 함께 땀 흘려준 파티원들과 함께 서로 격려의 박수를 나눠보세요.';
+  } else {
+    stopFireworks();
+    card.style.background = 'linear-gradient(135deg, rgba(0, 245, 155, 0.14) 0%, rgba(16, 185, 129, 0.08) 100%)';
+    card.style.border = '1px solid rgba(0, 245, 155, 0.4)';
+    card.style.boxShadow = '0 8px 30px rgba(0, 245, 155, 0.1)';
+    icon.innerHTML = '💪';
+    badge.style.background = 'rgba(0, 245, 155, 0.2)';
+    badge.style.color = 'var(--neon-mint)';
+    badge.style.border = '1px solid rgba(0, 245, 155, 0.4)';
+    badge.textContent = `💪 ${rank}등 완주 성공`;
+    title.style.color = 'var(--neon-mint)';
+    title.textContent = `${rank}위 완주 축하! 끝까지 달린 멋진 파티원!`;
+    message.textContent = '비록 순위권은 아니지만, 마지막 날까지 포기하지 않고 달린 당신이 진정한 스포츠맨입니다! 매일의 운동은 당신을 더 강하게 만듭니다.';
+  }
+}
+
+// -------------------------------------------------------------
+// 🎆 1등 전용 화려한 폭죽 & 축하 컨페티 애니메이션 엔진
+// -------------------------------------------------------------
+let fireworksAnimId = null;
+let fireworksInterval = null;
+let fwParticles = [];
+let fwRockets = [];
+let fwConfetti = [];
+
+function triggerFireworks() {
+  const canvas = document.getElementById("fireworksCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  stopFireworks();
+
+  fwParticles = [];
+  fwRockets = [];
+  fwConfetti = [];
+
+  const vibrantColors = [
+    '#F59E0B', '#FDE047', '#EF4444', '#00F59B',
+    '#38BDF8', '#A855F7', '#EC4899', '#FFA500', '#FFFFFF'
+  ];
+
+  function createExplosion(x, y, baseColor) {
+    const pCount = 55;
+    for (let i = 0; i < pCount; i++) {
+      const angle = (Math.PI * 2 / pCount) * i + (Math.random() - 0.5) * 0.5;
+      const speed = Math.random() * 7 + 2;
+      fwParticles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        alpha: 1,
+        color: Math.random() > 0.4 ? baseColor : vibrantColors[Math.floor(Math.random() * vibrantColors.length)],
+        size: Math.random() * 3.5 + 1.8,
+        decay: Math.random() * 0.016 + 0.012,
+        gravity: 0.14
+      });
+    }
+  }
+
+  function launchRocket() {
+    const startX = window.innerWidth * (0.15 + Math.random() * 0.7);
+    const startY = window.innerHeight;
+    const targetX = startX + (Math.random() - 0.5) * 160;
+    const targetY = window.innerHeight * (0.12 + Math.random() * 0.28);
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const speed = 15;
+
+    fwRockets.push({
+      x: startX,
+      y: startY,
+      vx: (dx / dist) * speed,
+      vy: (dy / dist) * speed,
+      targetY: targetY,
+      color: vibrantColors[Math.floor(Math.random() * vibrantColors.length)]
+    });
+  }
+
+  for (let i = 0; i < 90; i++) {
+    fwConfetti.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight * 0.8,
+      w: Math.random() * 9 + 5,
+      h: Math.random() * 5 + 3,
+      vx: (Math.random() - 0.5) * 3,
+      vy: Math.random() * 2.5 + 1.5,
+      rotSpeed: (Math.random() - 0.5) * 6,
+      rotation: Math.random() * 360,
+      color: vibrantColors[Math.floor(Math.random() * vibrantColors.length)]
+    });
+  }
+
+  launchRocket();
+  setTimeout(launchRocket, 280);
+  setTimeout(launchRocket, 560);
+  setTimeout(launchRocket, 850);
+
+  fireworksInterval = setInterval(() => {
+    if (Math.random() > 0.3) launchRocket();
+  }, 450);
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 로켓 업데이트
+    for (let i = fwRockets.length - 1; i >= 0; i--) {
+      const r = fwRockets[i];
+      r.x += r.vx;
+      r.y += r.vy;
+
+      ctx.save();
+      ctx.fillStyle = r.color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = r.color;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      if (r.y <= r.targetY || r.vy >= 0) {
+        createExplosion(r.x, r.y, r.color);
+        fwRockets.splice(i, 1);
+      }
+    }
+
+    // 폭죽 스파크 파티클 업데이트
+    for (let i = fwParticles.length - 1; i >= 0; i--) {
+      const p = fwParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.vx *= 0.98;
+      p.alpha -= p.decay;
+
+      if (p.alpha <= 0) {
+        fwParticles.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 살랑살랑 떨어지는 컨페티 업데이트
+    for (let i = fwConfetti.length - 1; i >= 0; i--) {
+      const c = fwConfetti[i];
+      c.x += c.vx;
+      c.y += c.vy;
+      c.rotation += c.rotSpeed;
+
+      if (c.y > window.innerHeight) {
+        c.y = -10;
+        c.x = Math.random() * window.innerWidth;
+      }
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate((c.rotation * Math.PI) / 180);
+      ctx.fillStyle = c.color;
+      ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      ctx.restore();
+    }
+
+    if (fwRockets.length > 0 || fwParticles.length > 0 || fwConfetti.length > 0) {
+      fireworksAnimId = requestAnimationFrame(loop);
+    }
+  }
+
+  loop();
+}
+
+function stopFireworks() {
+  if (fireworksInterval) {
+    clearInterval(fireworksInterval);
+    fireworksInterval = null;
+  }
+  if (fireworksAnimId) {
+    cancelAnimationFrame(fireworksAnimId);
+    fireworksAnimId = null;
+  }
+  const canvas = document.getElementById("fireworksCanvas");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  fwRockets = [];
+  fwParticles = [];
+  fwConfetti = [];
+}
+
+function openPartyResultModal(partyId) {
+  const modal = document.getElementById("partyResultModal");
+  if (!modal) return;
+
+  const pData = PARTY_CHALLENGES_DATA[partyId] || Object.values(PARTY_CHALLENGES_DATA)[0];
+  if (!pData) return;
+
+  currentModalPartyId = partyId;
+
+  // 타이틀 및 보상 세팅
+  document.getElementById("modalPartySubtitle").textContent = `${pData.partyName} · ${pData.isEnded ? '대결 종료 🏁' : '대결 진행 중 ⏱️'}`;
+  document.getElementById("modalDateRange").textContent = `${pData.startDate} ~ ${pData.endDate}`;
+  document.getElementById("modalRewardText").textContent = pData.reward;
+
+  // 내 순위 카드 렌더링
+  renderRankCardContent(pData.myRank, pData.myPoints, pData.reward);
+
+  // 전체 순위 리스트 렌더링
+  const listEl = document.getElementById("modalRankingList");
+  listEl.innerHTML = '';
+
+  pData.rows.forEach(r => {
+    const rowDiv = document.createElement("div");
+    rowDiv.style.display = 'flex';
+    rowDiv.style.justifyContent = 'space-between';
+    rowDiv.style.alignItems = 'center';
+    rowDiv.style.padding = '9px 14px';
+    rowDiv.style.borderRadius = '10px';
+    rowDiv.style.background = r.isMe ? 'rgba(0, 245, 155, 0.12)' : 'rgba(255, 255, 255, 0.04)';
+    rowDiv.style.border = r.isMe ? '1px solid rgba(0, 245, 155, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)';
+
+    let rankBadge = '';
+    if (r.rank === 1) rankBadge = '<b style="color: var(--trophy-gold); font-size: 14px; margin-right: 8px;">🏆 1위</b>';
+    else if (r.rank === 2) rankBadge = '<b style="color: #CBD5E1; font-size: 14px; margin-right: 8px;">🥈 2위</b>';
+    else if (r.rank === 3) rankBadge = '<b style="color: #CD7F32; font-size: 14px; margin-right: 8px;">🥉 3위</b>';
+    else rankBadge = `<span style="color: #94A3B8; font-size: 13px; font-weight: 700; margin-right: 8px;">${r.rank}위</span>`;
+
+    const meTag = r.isMe ? '<span style="background: var(--neon-mint); color: #090D16; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">나</span>' : '';
+
+    rowDiv.innerHTML = `
+      <div style="display: flex; align-items: center;">
+        ${rankBadge}
+        <span style="color: ${r.isMe ? '#FFFFFF' : '#CBD5E1'}; font-weight: ${r.isMe ? '800' : '600'}; font-size: 13px;">${r.name}</span>
+        ${meTag}
+      </div>
+      <b style="color: var(--trophy-gold); font-size: 13.5px;">${r.points}점</b>
+    `;
+    listEl.appendChild(rowDiv);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function simulatePartyRank(targetRank) {
+  const pData = (currentModalPartyId && PARTY_CHALLENGES_DATA[currentModalPartyId]) || Object.values(PARTY_CHALLENGES_DATA)[0] || {
+    "reward": "1등에게 치킨 쏘기 🍗",
+    "myPoints": targetRank === 1 ? 250 : targetRank === 2 ? 180 : targetRank === 3 ? 120 : 60
+  };
+  const simulatedScore = targetRank === 1 ? 250 : targetRank === 2 ? 180 : targetRank === 3 ? 120 : 60;
+  renderRankCardContent(targetRank, simulatedScore, pData.reward || "1등에게 치킨 쏘기 🍗");
+}
+
+function closePartyResultModal() {
+  stopFireworks();
+  const modal = document.getElementById("partyResultModal");
+  if (modal) modal.style.display = 'none';
+}
+
+function openEndedPartyHistoryModal() {
+  const modal = document.getElementById("endedPartyHistoryModal");
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEndedPartyHistoryModal() {
+  const modal = document.getElementById("endedPartyHistoryModal");
+  if (modal) modal.style.display = 'none';
+}
+
+// 자동 팝업: 종료된 파티가 있는 경우 사용자가 버튼을 누르지 않아도 대시보드 접속 시 자동으로 결과 축하 팝업 안내
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const endedParties = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
+    for (const partyId of endedParties) {
+      const storageKey = 'netfit_party_result_shown_' + partyId;
+      if (!sessionStorage.getItem(storageKey)) {
+        sessionStorage.setItem(storageKey, 'true');
+        setTimeout(() => openPartyResultModal(partyId), 600);
+        break;
+      }
+    }
+  } catch (e) {}
+});
+</script>

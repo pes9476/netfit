@@ -30,11 +30,64 @@
   </div>
 </article>
 
-<!-- 🔔 대기 중인 친구 요청, 수락 알림 및 파티 초대 알림 -->
-{% if pending_friend_requests or pending_party_invitations or accepted_friend_requests %}
-<section class="notification-alerts-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+<!-- 🔔 대기 중인 친구 요청, 수락 알림, 파티 초대 및 콕 찌르기 알림 -->
+<section id="notificationAlertsContainer" class="notification-alerts-container" style="display: {% if pending_friend_requests or pending_party_invitations or accepted_friend_requests or accepted_party_invitations or unread_pokes %}flex{% else %}none{% endif %}; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  {% for poke in unread_pokes %}
+    <div class="notification-alert-box notification-item" data-id="poke_{{ poke.id }}" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(245, 158, 11, 0.2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.45);">👉</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.25); color: #FBBF24; padding: 2px 8px; border-radius: 6px;">콕 찌르기 도착!</span>
+            {% if poke.party %}<span style="font-size: 11px; font-weight: 700; color: #94A3B8;">[{{ poke.party.name }}]</span>{% endif %}
+            <span style="color: #94A3B8; font-size: 11px;">{{ poke.created_at|date:"m/d H:i" }}</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: #FBBF24;">{{ poke.sender.profile.display_name|default:poke.sender.username }}</b>님이 콕 찔렀어요: <span style="color: #FDE68A; font-weight: 800;">"{{ poke.message }}"</span>
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="{% url 'activity' %}" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-play"></i> 지금 운동하기
+        </a>
+        <form method="post" action="{% url 'dismiss_poke' poke.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #94A3B8; border-color: rgba(148, 163, 184, 0.3); cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% for ainv in accepted_party_invitations %}
+    <div class="notification-alert-box notification-item" data-id="party_acc_{{ ainv.id }}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">🎉</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.25); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대 수락</span>
+            <span style="color: #94A3B8; font-size: 11px;">새로운 파티원이 합류했습니다</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+            <b style="color: #38BDF8;">{{ ainv.invitee.profile.display_name|default:ainv.invitee.username }}</b>님이 <b style="color: #FFFFFF;">'{{ ainv.party.name }}'</b> 파티 초대를 수락했습니다! 함께 협동 미션을 시작해보세요.
+          </p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <form method="post" action="{% url 'dismiss_party_notification' ainv.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #090D16; padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+            <i class="fa-solid fa-check"></i> 확인
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
   {% for acc in accepted_friend_requests %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
+    <div class="notification-alert-box notification-item" data-id="friend_acc_{{ acc.id }}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">🎉</span>
         <div>
@@ -48,7 +101,7 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" style="margin: 0;">
+        <form method="post" action="{% url 'dismiss_friend_notification' acc.id %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 확인
@@ -59,7 +112,7 @@
   {% endfor %}
 
   {% for freq in pending_friend_requests %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
+    <div class="notification-alert-box notification-item" data-id="friend_req_{{ freq.id }}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">👋</span>
         <div>
@@ -73,13 +126,13 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'accept' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 수락
           </button>
         </form>
-        <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_friend_request' freq.id 'reject' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
             <i class="fa-solid fa-xmark"></i> 거절
@@ -90,7 +143,7 @@
   {% endfor %}
 
   {% for inv in pending_party_invitations %}
-    <div class="notification-alert-box" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1);">
+    <div class="notification-alert-box notification-item" data-id="party_inv_{{ inv.id }}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1);">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4);">⚔️</span>
         <div>
@@ -104,13 +157,13 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <form method="post" action="{% url 'respond_party_invitation' inv.id 'accept' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'accept' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #0B1120; padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
             <i class="fa-solid fa-check"></i> 수락
           </button>
         </form>
-        <form method="post" action="{% url 'respond_party_invitation' inv.id 'reject' %}" style="margin: 0;">
+        <form method="post" action="{% url 'respond_party_invitation' inv.id 'reject' %}" onsubmit="event.preventDefault(); handleNotificationAction(this.action, this.closest('.notification-item'));" style="margin: 0;">
           {% csrf_token %}
           <button type="submit" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
             <i class="fa-solid fa-xmark"></i> 거절
@@ -120,7 +173,6 @@
     </div>
   {% endfor %}
 </section>
-{% endif %}
 
 <section class="dash">
   <div class="dashboard-left" style="display: flex; flex-direction: column; gap: 20px;">
@@ -201,8 +253,8 @@
                   {% endif %}
 
                   {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
-                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                      <i class="fa-solid fa-stopwatch"></i> 타이머
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="운동 기록하러 가기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                      <i class="fa-solid fa-pen-to-square"></i> 기록 바로가기
                     </a>
                   {% endif %}
                 </div>
@@ -262,10 +314,9 @@
                       </form>
                     {% endif %}
                   </div>
-                {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                {% elif quest.progress_percent >= 100 %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
                     {% csrf_token %}
-                    <!-- 사진 미리보기 박스 -->
                     <div id="preview_box_personal_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
                       <div style="position: relative; display: inline-block; flex-shrink: 0;">
                         <img id="preview_img_personal_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
@@ -275,14 +326,42 @@
                       </div>
                       <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
                     </div>
-
                     <div style="display: flex; gap: 6px;">
                       <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                         <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
                         <span>사진</span>
                         <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'personal_{{ quest.id }}')">
                       </label>
-                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900;">
+                        <i class="fa-solid fa-gift"></i> 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                      </button>
+                    </div>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'daily' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                      {% if quest.target_minutes %}
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(0,245,155,0.25);">
+                          {% if quest.progress_percent > 0 %}
+                            <i class="fa-solid fa-person-running"></i>
+                            <span>운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
+                          {% else %}
+                            <i class="fa-solid fa-play"></i>
+                            <span>미션 시작 (타이머)</span>
+                          {% endif %}
+                        </a>
+                      {% else %}
+                        <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                          <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                        </a>
+                      {% endif %}
+
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
+                        <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
+                        <span>인증</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                      </label>
                     </div>
                   </form>
                 {% endif %}
@@ -375,16 +454,28 @@
                   </button>
                 </form>
               {% else %}
-                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                <form method="post" action="{% url 'complete_daily_quest' 'weekly' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                   {% csrf_token %}
-                  <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
+                  {% if quest.target_minutes %}
+                    <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                      {% if quest.progress_percent > 0 %}
+                        <i class="fa-solid fa-person-running"></i>
+                        <span>운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
+                      {% else %}
+                        <i class="fa-solid fa-play"></i>
+                        <span>미션 시작 (타이머)</span>
+                      {% endif %}
+                    </a>
+                  {% else %}
+                    <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                      <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                    </a>
+                  {% endif %}
+                  <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
                     <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
                     <span>인증</span>
                     <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
                   </label>
-                  <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
-                    수동 완료 & 배지 받기
-                  </button>
                 </form>
               {% endif %}
             </article>
@@ -578,15 +669,20 @@
         <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
           <div>
             <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
-            <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <h2>우리 파티 미션</h2>
               <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); border-radius: 6px; padding: 1px 7px;">
                 <i class="fa-solid fa-users"></i> {{ active_party.name }}
               </span>
+              {% if active_party.workout_type %}
+                <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 1px 7px;">
+                  <i class="fa-solid fa-person-running"></i> {{ active_party.workout_type }}
+                </span>
+              {% endif %}
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <!-- 일일 / 주간 탭 스위처 -->
             <div style="display: inline-flex; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 3px; gap: 4px;">
               <button type="button" id="tabBtnPartyDaily" onclick="switchPartyMissionTab('daily')" style="border: none; background: rgba(56, 189, 248, 0.2); color: #38BDF8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
@@ -596,6 +692,12 @@
                 <i class="fa-solid fa-calendar-week"></i> 주간 ({{ party_weekly_missions|length }})
               </button>
             </div>
+            <a href="{% url 'activity' %}?workout_type={{ active_party.workout_type|default:'러닝'|urlencode }}&target={{ active_party.target_timer_minutes|default:'30' }}" class="button btn-mint" style="padding: 6px 12px; font-size: 11px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="파티 운동 인증하러 가기">
+              <i class="fa-solid fa-circle-check"></i> 인증하기
+            </a>
+            <button type="button" class="button secondary" onclick="openInvitePartyModal('{{ active_party.id }}', '{{ active_party.name|escapejs }}')" style="padding: 6px 10px; font-size: 11px; border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;" title="친구 닉네임으로 파티 초대">
+              <i class="fa-solid fa-user-plus"></i> 친구 초대
+            </button>
             <a class="button secondary" href="{% url 'onboarding_group' %}" style="padding: 6px 10px; font-size: 11px;">새 파티</a>
           </div>
         </div>
@@ -642,8 +744,8 @@
                     {% if quest.is_completed %}
                       <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
                     {% elif quest.target_minutes %}
-                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                        <i class="fa-solid fa-stopwatch"></i> 타이머
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="운동 기록하러 가기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
+                        <i class="fa-solid fa-pen-to-square"></i> 기록 바로가기
                       </a>
                     {% endif %}
                   </div>
@@ -666,33 +768,127 @@
                     </div>
                   </div>
 
-                  <!-- 👥 파티 참여자 실시간 모니터링 (슬림 접이식 details) -->
+                  <!-- 👥 파티 참여자 실시간 모니터링 & 파티 챌린지 상세 (Photo 1 & Photo 2 통합) -->
                   {% if quest.members_monitoring %}
-                    <details class="party-members-details" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
-                      <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-size: 11px; font-weight: 800; color: #94A3B8; list-style: none;">
-                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                    <div class="party-members-monitoring-box" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #94A3B8;">
                           <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 오늘 미션 현황 ({{ quest.members_monitoring|length }}명)
                         </span>
-                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #38BDF8;">
-                          <span>현황 보기</span>
-                          <i class="fa-solid fa-chevron-down" style="font-size: 9px;"></i>
-                        </span>
-                      </summary>
+                        <button type="button" onclick="togglePartyChallengeDetail(this, 'daily_{{ quest.id }}')" style="background: none; border: none; display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; color: #38BDF8; cursor: pointer; padding: 2px 4px;">
+                          <span>상세보기</span>
+                          <i class="fa-solid fa-chevron-down" style="font-size: 9px; transition: transform 0.2s;"></i>
+                        </button>
+                      </div>
+
+                      <!-- 파티원 칩 (순위 + 이름 + 점수 + 달성 현황) -->
                       <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
                         {% for member in quest.members_monitoring %}
                           <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                            {% if member.rank == 1 %}
+                              <span style="font-size: 11px; font-weight: 900; color: var(--trophy-gold);">🏆 1위</span>
+                            {% elif member.rank == 2 %}
+                              <span style="font-size: 11px; font-weight: 900; color: #CBD5E1;">🥈 2위</span>
+                            {% elif member.rank == 3 %}
+                              <span style="font-size: 11px; font-weight: 900; color: #CD7F32;">🥉 3위</span>
+                            {% elif member.rank %}
+                              <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">{{ member.rank }}위</span>
+                            {% endif %}
                             <span style="font-size: 11px; color: #CBD5E1; font-weight: 700;">
                               {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
                             </span>
+                            <b style="font-size: 10.5px; font-weight: 800; color: var(--trophy-gold);">{{ member.score }}점</b>
+                            <span style="color: rgba(255,255,255,0.2); font-size: 10px;">·</span>
                             {% if member.is_done %}
                               <span style="font-size: 10px; font-weight: 800; color: var(--neon-mint);">🏅 완료</span>
                             {% else %}
                               <span style="font-size: 10px; font-weight: 700; color: #94A3B8;">⏱️ 도전 중</span>
                             {% endif %}
+                            {% if not member.is_me and active_party %}
+                              <button type="button" onclick="openPokeModal('{{ member.user.id }}', '{{ member.name|escapejs }}', '{{ active_party.id }}')" title="{{ member.name }}님 콕 찌르기" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FBBF24; padding: 1px 5px; border-radius: 4px; font-size: 9.5px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 2px; margin-left: 2px;">
+                                👉 콕
+                              </button>
+                            {% endif %}
                           </div>
                         {% endfor %}
                       </div>
-                    </details>
+
+                      <!-- 2번째 사진 정보: 배지 내기 상세 정보 (상세보기 클릭 시 펼쳐짐) -->
+                      {% if active_challenge or active_party.challenge_start %}
+                        <div id="party_challenge_detail_daily_{{ quest.id }}" style="display: none; margin-top: 8px; padding: 10px; background: rgba(16, 25, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;">
+                          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                              <span style="color: var(--trophy-gold); font-size: 10.5px; font-weight: 900; letter-spacing: 0.8px;">PARTY CHALLENGE</span>
+                              <span style="background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 5px;">대결 진행 중 ⏱️</span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                              <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ active_party.id }}')" style="padding: 3px 10px; font-size: 10.5px; font-weight: 800; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer; border-radius: 6px; box-shadow: 0 2px 8px rgba(245,158,11,0.25);">
+                                <i class="fa-solid fa-trophy"></i> 순위 결과 보기
+                              </button>
+                              {% if ended_challenges %}
+                                <button type="button" class="button secondary" onclick="openEndedPartyHistoryModal()" style="padding: 3px 8px; font-size: 10.5px; font-weight: 700; color: #CBD5E1; border-radius: 6px; cursor: pointer;">
+                                  <i class="fa-solid fa-clock-rotate-left"></i> 지난 기록 ({{ ended_challenges|length }}건)
+                                </button>
+                              {% endif %}
+                            </div>
+                          </div>
+
+                          <div style="font-size: 13.5px; font-weight: 900; color: #FFFFFF; margin: 3px 0 6px;">
+                            <i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 5px;"></i>{{ active_party.name }} 배지 내기
+                          </div>
+
+                          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11px;">
+                            <span style="color: #94A3B8;">
+                              {{ active_party.challenge_start|date:'Y.m.d' }} ~ {{ active_party.challenge_end|date:'Y.m.d' }}
+                              {% if active_challenge.end_time_formatted %}
+                                <b style="color: #FBBF24;">({{ active_challenge.end_time_formatted }} 마감)</b>
+                              {% endif %}
+                            </span>
+                            {% if active_party.workout_type %}
+                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 1px 7px; border-radius: 5px;">
+                                <i class="fa-solid fa-person-running"></i> 운동 종목: {{ active_party.workout_type }}
+                              </span>
+                            {% endif %}
+                            {% if active_party.target_timer_minutes %}
+                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); padding: 1px 7px; border-radius: 5px;">
+                                <i class="fa-solid fa-hourglass-half"></i> 하루 목표 {{ active_party.target_timer_minutes }}분
+                              </span>
+                            {% endif %}
+                          </div>
+
+                          <!-- ⏱️ 내기 마감 타이머 (Image 2 style) -->
+                          {% if active_challenge.deadline_iso %}
+                            <div class="party-live-ticker-box" data-deadline="{{ active_challenge.deadline_iso }}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 245, 155, 0.08); border: 1px solid rgba(0, 245, 155, 0.3); border-radius: 6px; padding: 4px 10px; margin-bottom: 6px;">
+                              <i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); font-size: 12px;"></i>
+                              <span style="font-size: 11px; font-weight: 700; color: #94A3B8;">내기 마감 타이머:</span>
+                              <span class="party-live-ticker-text" style="font-family: 'Courier New', monospace; font-size: 12px; font-weight: 900; color: var(--neon-mint); letter-spacing: 0.5px;">계산 중...</span>
+                            </div>
+                          {% endif %}
+
+                          <!-- 🎁 내기 보상 (Image 2 style) -->
+                          {% if active_party.challenge_reward %}
+                            <div style="font-size: 11.5px; color: #E2E8F0; margin-top: 4px;">
+                              🎁 내기 보상: <b style="color: #F59E0B; font-weight: 900;">{{ active_party.challenge_reward }}</b>
+                            </div>
+                          {% endif %}
+
+                          <!-- D-Day 및 역전 가이드 알림 배너 -->
+                          {% if active_challenge.is_dday %}
+                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
+                              <span>🚨</span> <b>D-DAY 오늘 자정 내기 종료!</b> 오늘 쌓은 배지 점수가 최종 승부를 결정합니다.
+                            </div>
+                          {% elif active_challenge.reversal_guide %}
+                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
+                              <span>🔥</span> <b>{{ active_challenge.reversal_guide }}</b>
+                            </div>
+                          {% elif active_challenge.pursuit_warning %}
+                            <div style="margin-top: 8px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FDE68A; display: flex; align-items: center; gap: 6px;">
+                              <span>👑</span> <b>{{ active_challenge.pursuit_warning }}</b>
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </div>
                   {% endif %}
                 </div>
 
@@ -713,10 +909,9 @@
                       </form>
                     {% endif %}
                   </div>
-                {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px;">
+                {% elif quest.progress_percent >= 100 %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
                     {% csrf_token %}
-                    <!-- 사진 미리보기 박스 -->
                     <div id="preview_box_group_{{ quest.id }}" style="display: none; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(0,245,155,0.3); width: fit-content;">
                       <div style="position: relative; display: inline-block; flex-shrink: 0;">
                         <img id="preview_img_group_{{ quest.id }}" src="" alt="미리보기" style="width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--neon-mint); display: block;">
@@ -726,14 +921,42 @@
                       </div>
                       <span style="font-size: 11.5px; color: #E2E8F0; font-weight: 700;">사진 첨부됨 📸</span>
                     </div>
-
                     <div style="display: flex; gap: 6px;">
                       <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                         <i class="fa-solid fa-camera" style="color: var(--neon-mint);"></i>
                         <span>사진</span>
                         <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="handleQuestPhotoPreview(this, 'group_{{ quest.id }}')">
                       </label>
-                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px;">미션 완료 & 배지 받기</button>
+                      <button class="button btn-mint" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900;">
+                        <i class="fa-solid fa-gift"></i> 파티 목표 달성! 배지 & {{ quest.reward_points }}점 받기
+                      </button>
+                    </div>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+                    {% csrf_token %}
+                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                      {% if quest.target_minutes %}
+                        <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(56,189,248,0.25);">
+                          {% if quest.progress_percent > 0 %}
+                            <i class="fa-solid fa-person-running"></i>
+                            <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분 남음)</span>
+                          {% else %}
+                            <i class="fa-solid fa-play"></i>
+                            <span>파티 미션 시작 (타이머)</span>
+                          {% endif %}
+                        </a>
+                      {% else %}
+                        <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                          <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                        </a>
+                      {% endif %}
+
+                      <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 등록으로 완료">
+                        <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
+                        <span>인증</span>
+                        <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                      </label>
                     </div>
                   </form>
                 {% endif %}
@@ -808,33 +1031,127 @@
                     </div>
                   </div>
 
-                  <!-- 👥 파티 참여자 실시간 모니터링 (슬림 접이식 details) -->
+                  <!-- 👥 파티 참여자 실시간 모니터링 & 파티 챌린지 상세 (Photo 1 & Photo 2 통합) -->
                   {% if quest.members_monitoring %}
-                    <details class="party-members-details" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
-                      <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-size: 11px; font-weight: 800; color: #94A3B8; list-style: none;">
-                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                    <div class="party-members-monitoring-box" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #94A3B8;">
                           <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 이번 주 미션 현황 ({{ quest.members_monitoring|length }}명)
                         </span>
-                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #38BDF8;">
-                          <span>현황 보기</span>
-                          <i class="fa-solid fa-chevron-down" style="font-size: 9px;"></i>
-                        </span>
-                      </summary>
+                        <button type="button" onclick="togglePartyChallengeDetail(this, 'weekly_{{ quest.id }}')" style="background: none; border: none; display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; color: #38BDF8; cursor: pointer; padding: 2px 4px;">
+                          <span>상세보기</span>
+                          <i class="fa-solid fa-chevron-down" style="font-size: 9px; transition: transform 0.2s;"></i>
+                        </button>
+                      </div>
+
+                      <!-- 파티원 칩 (순위 + 이름 + 점수 + 달성 현황) -->
                       <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
                         {% for member in quest.members_monitoring %}
                           <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                            {% if member.rank == 1 %}
+                              <span style="font-size: 11px; font-weight: 900; color: var(--trophy-gold);">🏆 1위</span>
+                            {% elif member.rank == 2 %}
+                              <span style="font-size: 11px; font-weight: 900; color: #CBD5E1;">🥈 2위</span>
+                            {% elif member.rank == 3 %}
+                              <span style="font-size: 11px; font-weight: 900; color: #CD7F32;">🥉 3위</span>
+                            {% elif member.rank %}
+                              <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">{{ member.rank }}위</span>
+                            {% endif %}
                             <span style="font-size: 11px; color: #CBD5E1; font-weight: 700;">
                               {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
                             </span>
+                            <b style="font-size: 10.5px; font-weight: 800; color: var(--trophy-gold);">{{ member.score }}점</b>
+                            <span style="color: rgba(255,255,255,0.2); font-size: 10px;">·</span>
                             {% if member.is_done %}
                               <span style="font-size: 10px; font-weight: 800; color: var(--neon-mint);">🏅 완료</span>
                             {% else %}
                               <span style="font-size: 10px; font-weight: 700; color: #94A3B8;">⏱️ 도전 중</span>
                             {% endif %}
+                            {% if not member.is_me and active_party %}
+                              <button type="button" onclick="openPokeModal('{{ member.user.id }}', '{{ member.name|escapejs }}', '{{ active_party.id }}')" title="{{ member.name }}님 콕 찌르기" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FBBF24; padding: 1px 5px; border-radius: 4px; font-size: 9.5px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 2px; margin-left: 2px;">
+                                👉 콕
+                              </button>
+                            {% endif %}
                           </div>
                         {% endfor %}
                       </div>
-                    </details>
+
+                      <!-- 2번째 사진 정보: 배지 내기 상세 정보 (상세보기 클릭 시 펼쳐짐) -->
+                      {% if active_challenge or active_party.challenge_start %}
+                        <div id="party_challenge_detail_weekly_{{ quest.id }}" style="display: none; margin-top: 8px; padding: 10px; background: rgba(16, 25, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;">
+                          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                              <span style="color: var(--trophy-gold); font-size: 10.5px; font-weight: 900; letter-spacing: 0.8px;">PARTY CHALLENGE</span>
+                              <span style="background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 5px;">대결 진행 중 ⏱️</span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                              <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ active_party.id }}')" style="padding: 3px 10px; font-size: 10.5px; font-weight: 800; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer; border-radius: 6px; box-shadow: 0 2px 8px rgba(245,158,11,0.25);">
+                                <i class="fa-solid fa-trophy"></i> 순위 결과 보기
+                              </button>
+                              {% if ended_challenges %}
+                                <button type="button" class="button secondary" onclick="openEndedPartyHistoryModal()" style="padding: 3px 8px; font-size: 10.5px; font-weight: 700; color: #CBD5E1; border-radius: 6px; cursor: pointer;">
+                                  <i class="fa-solid fa-clock-rotate-left"></i> 지난 기록 ({{ ended_challenges|length }}건)
+                                </button>
+                              {% endif %}
+                            </div>
+                          </div>
+
+                          <div style="font-size: 13.5px; font-weight: 900; color: #FFFFFF; margin: 3px 0 6px;">
+                            <i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 5px;"></i>{{ active_party.name }} 배지 내기
+                          </div>
+
+                          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11px;">
+                            <span style="color: #94A3B8;">
+                              {{ active_party.challenge_start|date:'Y.m.d' }} ~ {{ active_party.challenge_end|date:'Y.m.d' }}
+                              {% if active_challenge.end_time_formatted %}
+                                <b style="color: #FBBF24;">({{ active_challenge.end_time_formatted }} 마감)</b>
+                              {% endif %}
+                            </span>
+                            {% if active_party.workout_type %}
+                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 1px 7px; border-radius: 5px;">
+                                <i class="fa-solid fa-person-running"></i> 운동 종목: {{ active_party.workout_type }}
+                              </span>
+                            {% endif %}
+                            {% if active_party.target_timer_minutes %}
+                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); padding: 1px 7px; border-radius: 5px;">
+                                <i class="fa-solid fa-hourglass-half"></i> 하루 목표 {{ active_party.target_timer_minutes }}분
+                              </span>
+                            {% endif %}
+                          </div>
+
+                          <!-- ⏱️ 내기 마감 타이머 (Image 2 style) -->
+                          {% if active_challenge.deadline_iso %}
+                            <div class="party-live-ticker-box" data-deadline="{{ active_challenge.deadline_iso }}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 245, 155, 0.08); border: 1px solid rgba(0, 245, 155, 0.3); border-radius: 6px; padding: 4px 10px; margin-bottom: 6px;">
+                              <i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); font-size: 12px;"></i>
+                              <span style="font-size: 11px; font-weight: 700; color: #94A3B8;">내기 마감 타이머:</span>
+                              <span class="party-live-ticker-text" style="font-family: 'Courier New', monospace; font-size: 12px; font-weight: 900; color: var(--neon-mint); letter-spacing: 0.5px;">계산 중...</span>
+                            </div>
+                          {% endif %}
+
+                          <!-- 🎁 내기 보상 (Image 2 style) -->
+                          {% if active_party.challenge_reward %}
+                            <div style="font-size: 11.5px; color: #E2E8F0; margin-top: 4px;">
+                              🎁 내기 보상: <b style="color: #F59E0B; font-weight: 900;">{{ active_party.challenge_reward }}</b>
+                            </div>
+                          {% endif %}
+
+                          <!-- D-Day 및 역전 가이드 알림 배너 -->
+                          {% if active_challenge.is_dday %}
+                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
+                              <span>🚨</span> <b>D-DAY 오늘 자정 내기 종료!</b> 오늘 쌓은 배지 점수가 최종 승부를 결정합니다.
+                            </div>
+                          {% elif active_challenge.reversal_guide %}
+                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
+                              <span>🔥</span> <b>{{ active_challenge.reversal_guide }}</b>
+                            </div>
+                          {% elif active_challenge.pursuit_warning %}
+                            <div style="margin-top: 8px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FDE68A; display: flex; align-items: center; gap: 6px;">
+                              <span>👑</span> <b>{{ active_challenge.pursuit_warning }}</b>
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </div>
                   {% endif %}
                 </div>
 
@@ -850,16 +1167,28 @@
                     </button>
                   </form>
                 {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px;">
+                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
                     {% csrf_token %}
+                    {% if quest.target_minutes %}
+                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(245,158,11,0.25);">
+                        {% if quest.progress_percent > 0 %}
+                          <i class="fa-solid fa-person-running"></i>
+                          <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
+                        {% else %}
+                          <i class="fa-solid fa-play"></i>
+                          <span>파티 미션 시작</span>
+                        {% endif %}
+                      </a>
+                    {% else %}
+                      <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                        <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
+                      </a>
+                    {% endif %}
                     <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
                       <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
                       <span>인증</span>
                       <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
                     </label>
-                    <button class="button secondary" type="submit" style="flex: 1; padding: 8px 10px; font-size: 11.5px; color: #94A3B8;">
-                      수동 완료 & 배지 받기
-                    </button>
                   </form>
                 {% endif %}
               </article>
@@ -886,29 +1215,7 @@
 
 
 
-<!-- 파티 배지 내기 스코어보드 -->
-{% for challenge in party_challenges %}
-  <section class="panel party-scoreboard" style="margin-top: 24px;">
-    <div class="section-heading" style="margin-bottom: 16px;">
-      <div>
-        <span style="color: var(--trophy-gold); font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY CHALLENGE</span>
-        <h2><i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 6px;"></i>{{ challenge.party.name }} 배지 내기</h2>
-        <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0;">{{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }}</p>
-        {% if challenge.party.challenge_reward %}
-          <p class="challenge-reward">🎁 내기 보상: <b>{{ challenge.party.challenge_reward }}</b></p>
-        {% endif %}
-      </div>
-    </div>
-    <ol>
-      {% for row in challenge.rows %}
-        <li{% if row.is_me %} class="is-me"{% endif %}>
-          <span>{% if forloop.first %}🏆{% else %}{{ forloop.counter }}위{% endif %} {{ row.name }}</span>
-          <b style="color: var(--trophy-gold);">{{ row.points }}점</b>
-        </li>
-      {% endfor %}
-    </ol>
-  </section>
-{% endfor %}
+
 
 <style>
 .weather-card {
@@ -997,6 +1304,12 @@
   margin-top: 6px;
   color: var(--trophy-gold);
   font-size: 13px;
+}
+details.ended-challenges-accordion summary::-webkit-details-marker {
+  display: none;
+}
+details.ended-challenges-accordion[open] .accordion-arrow {
+  transform: rotate(180deg);
 }
 /* 배지 히어로 섹션 (PC에서는 기존 2열 유지, 850px 이하 모바일에서만 1열로 세로 정렬) */
 .hero-badge-deck {
@@ -1159,6 +1472,11 @@ function syncWeatherWithGPS(isAuto = false) {
   if (typeof openGPSPermissionModal === "function") {
     openGPSPermissionModal(coords => {
       fetchWeatherWithCoords(coords.latitude, coords.longitude);
+    }, (err) => {
+      if (btnText) {
+        btnText.textContent = "위치 미허용";
+        if (btnIcon) btnIcon.className = "fa-solid fa-location-dot";
+      }
     });
   } else {
     if (!navigator.geolocation) {
@@ -1412,50 +1730,52 @@ function removeQuestPhotoPreview(questKey) {
   if (box) box.style.display = 'none';
 }
 
-// ⏱️ 실시간 운동 타이머 상태 동기화 (대시보드 일일미션 카드)
-(function syncLiveWorkoutTimer() {
-  function checkTimer() {
-    try {
-      const saved = localStorage.getItem('netfit_active_workout_timer');
-      if (!saved) {
-        document.querySelectorAll('.live-quest-timer-badge').forEach(b => b.style.display = 'none');
-        return;
-      }
-      const data = JSON.parse(saved);
-      if (!data.isTimerRunning) {
-        document.querySelectorAll('.live-quest-timer-badge').forEach(b => b.style.display = 'none');
-        return;
-      }
-      const now = Date.now();
-      const diffSec = Math.floor((now - data.updatedAt) / 1000);
-      const currentSec = data.timerSeconds + diffSec;
-      
-      document.querySelectorAll('.live-quest-timer-badge').forEach(badge => {
-        const questWorkout = badge.getAttribute('data-workout');
-        if (!data.workoutType || data.workoutType === '기타' || data.workoutType === questWorkout) {
-          badge.style.display = 'inline-flex';
-          const countdownVal = badge.querySelector('.timer-countdown-val');
-          if (countdownVal) {
-            if (data.mode === 'countdown' && data.targetSeconds > 0) {
-              const rem = Math.max(0, data.targetSeconds - currentSec);
-              const m = Math.floor(rem / 60);
-              const s = rem % 60;
-              countdownVal.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' 남음';
-            } else {
-              const m = Math.floor(currentSec / 60);
-              const s = currentSec % 60;
-              countdownVal.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' 경과';
-            }
-          }
-        } else {
-          badge.style.display = 'none';
-        }
-      });
-    } catch(e) {}
+// 🚩 파티 내기 상세보기 접기/펼치기 토글
+function togglePartyChallengeDetail(btn, id) {
+  const container = document.getElementById('party_challenge_detail_' + id);
+  if (!container) return;
+  const isHidden = (container.style.display === 'none' || !container.style.display);
+  container.style.display = isHidden ? 'block' : 'none';
+  const icon = btn.querySelector('i');
+  if (icon) {
+    icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
   }
-  setInterval(checkTimer, 1000);
-  checkTimer();
-})();
+}
+
+// ⏱️ 실시간 파티 내기 마감 타이머 위젯
+function updatePartyCountdownTickers() {
+  document.querySelectorAll('.party-live-ticker-box').forEach(box => {
+    const deadlineStr = box.getAttribute('data-deadline');
+    if (!deadlineStr) return;
+    const deadline = new Date(deadlineStr).getTime();
+    const now = Date.now();
+    const diff = deadline - now;
+    const textEl = box.querySelector('.party-live-ticker-text');
+    if (!textEl) return;
+
+    if (diff <= 0) {
+      textEl.textContent = "내기 종료됨 🏁";
+      textEl.style.color = "#EF4444";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    const parts = [];
+    if (days > 0) parts.push(days + "일");
+    parts.push(String(hours).padStart(2, '0') + "시간");
+    parts.push(String(mins).padStart(2, '0') + "분");
+    parts.push(String(secs).padStart(2, '0') + "초 남음");
+
+    textEl.textContent = parts.join(" ");
+  });
+}
+setInterval(updatePartyCountdownTickers, 1000);
+document.addEventListener('DOMContentLoaded', updatePartyCountdownTickers);
+updatePartyCountdownTickers();
 
 // 📸 등록된 인증 사진 팝업 모달 열기/닫기/수정/삭제
 function openProofModal(imgUrl, questKind, questId) {
@@ -1786,6 +2106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }}
                 </span>
+                {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1829,7 +2154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'ATTENDANCE' %}var(--neon-mint){% elif quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
               {{ quest.get_mission_category_display }} · {{ quest.reward_points }}P
             </span>
-            <div>
+            <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-circle-check"></i> 완료
@@ -1838,6 +2163,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
+                {% if quest.mission_category != 'ATTENDANCE' and quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1890,11 +2220,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-hourglass-half"></i> 남은 시간: {{ quest.remaining_minutes }}분
                 </span>
-              {% endif %}
-              {% if quest.target_minutes %}
-                <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" title="타이머로 바로 운동하기" style="font-size: 11px; color: #38BDF8; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 800;">
-                  <i class="fa-solid fa-stopwatch"></i> 타이머
-                </a>
+                {% if quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1914,7 +2244,19 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 {% for m in quest.members_monitoring %}
                   <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                    <span style="color: #CBD5E1;">{% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}</span>
+                    <span style="color: #CBD5E1; display: inline-flex; align-items: center; gap: 4px;">
+                      {% if m.rank == 1 %}
+                        <span style="color: var(--trophy-gold); font-weight: 800;">🥇 1위</span>
+                      {% elif m.rank == 2 %}
+                        <span style="color: #CBD5E1; font-weight: 800;">🥈 2위</span>
+                      {% elif m.rank == 3 %}
+                        <span style="color: #CD7F32; font-weight: 800;">🥉 3위</span>
+                      {% elif m.rank %}
+                        <span style="color: #94A3B8; font-weight: 700;">{{ m.rank }}위</span>
+                      {% endif %}
+                      {% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}
+                      <b style="color: var(--trophy-gold); margin-left: 2px;">{{ m.score }}점</b>
+                    </span>
                     {% if m.is_done %}
                       <span style="color: var(--neon-mint); font-weight: 800;">완료 🏅</span>
                     {% else %}
@@ -1956,7 +2298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
               {% if quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}주간 누적 · {{ quest.reward_points }}P{% endif %}
             </span>
-            <div>
+            <div style="display: flex; align-items: center; gap: 6px;">
               {% if quest.is_completed %}
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
                   <i class="fa-solid fa-circle-check"></i> 완료
@@ -1965,6 +2307,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
                   {{ quest.done_label }} ({{ quest.progress_percent }}%)
                 </span>
+                {% if quest.target_minutes %}
+                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-play"></i> 미션 시작
+                  </a>
+                {% endif %}
               {% endif %}
             </div>
           </div>
@@ -1984,7 +2331,19 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 {% for m in quest.members_monitoring %}
                   <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                    <span style="color: #CBD5E1;">{% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}</span>
+                    <span style="color: #CBD5E1; display: inline-flex; align-items: center; gap: 4px;">
+                      {% if m.rank == 1 %}
+                        <span style="color: var(--trophy-gold); font-weight: 800;">🥇 1위</span>
+                      {% elif m.rank == 2 %}
+                        <span style="color: #CBD5E1; font-weight: 800;">🥈 2위</span>
+                      {% elif m.rank == 3 %}
+                        <span style="color: #CD7F32; font-weight: 800;">🥉 3위</span>
+                      {% elif m.rank %}
+                        <span style="color: #94A3B8; font-weight: 700;">{{ m.rank }}위</span>
+                      {% endif %}
+                      {% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}
+                      <b style="color: var(--trophy-gold); margin-left: 2px;">{{ m.score }}점</b>
+                    </span>
                     {% if m.is_done %}
                       <span style="color: var(--neon-mint); font-weight: 800;">완료 🏅</span>
                     {% else %}
@@ -2055,5 +2414,45 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
-{% endblock %}
 
+<!-- 👥 친구 닉네임으로 파티 초대 모달 -->
+<div id="invitePartyMemberModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 8, 16, 0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeInvitePartyModal();">
+  <div style="background: linear-gradient(135deg, #111A2C 0%, #0D1322 100%); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 18px; max-width: 440px; width: 100%; box-shadow: 0 16px 45px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(56, 189, 248, 0.05);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-user-plus" style="color: #38BDF8; font-size: 16px;"></i>
+        <b style="color: #FFFFFF; font-size: 15px;">친구 닉네임으로 파티 초대</b>
+      </div>
+      <button type="button" onclick="closeInvitePartyModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 2px;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="invitePartyForm" method="post" action="" style="padding: 20px; margin: 0;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="dashboard">
+      <p style="color: #94A3B8; font-size: 13px; line-height: 1.5; margin: 0 0 16px;">
+        '<b id="inviteModalPartyName" style="color: #38BDF8;">우리 파티</b>'에 함께 운동할 친구를 초대합니다.<br>
+        친구의 <b>활동 닉네임</b> 또는 <b>아이디</b>를 입력해 주세요.
+      </p>
+
+      <div class="field" style="margin-bottom: 20px;">
+        <label for="inviteFriendInput" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 8px;">
+          초대할 친구 닉네임 / 아이디
+        </label>
+        <input class="input" id="inviteFriendInput" name="friend_name" required placeholder="예: 러너123 또는 운동왕" style="width: 100%; box-sizing: border-box; font-size: 14px; padding: 10px 14px;">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="button secondary" onclick="closeInvitePartyModal()" style="padding: 8px 16px; font-size: 13px;">취소</button>
+        <button type="submit" class="button btn-mint" style="padding: 8px 20px; font-size: 13px; font-weight: 800; background: #38BDF8; border-color: #38BDF8; color: #090D16; cursor: pointer;">
+          <i class="fa-solid fa-paper-plane"></i> 초대장 발송
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% include "fitness/party_challenge_modals.html" %}
+{% include "fitness/poke_modal.html" %}
+{% endblock %}

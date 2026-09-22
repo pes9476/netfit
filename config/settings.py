@@ -2,29 +2,52 @@ import json
 import os
 from pathlib import Path
 
-import dj_database_url
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "local-development-only-secret-key")
-DEBUG = os.getenv("DJANGO_DEBUG", "True").strip().lower() in {"1", "true", "yes", "on"}
+
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _csv_env(name, default=""):
-    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+def env_list(name):
+    return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
 
 
-ALLOWED_HOSTS = _csv_env("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost,testserver")
-railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
-if railway_public_domain and railway_public_domain not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(railway_public_domain)
-
-CSRF_TRUSTED_ORIGINS = _csv_env("DJANGO_CSRF_TRUSTED_ORIGINS")
-if railway_public_domain:
-    railway_origin = f"https://{railway_public_domain}"
-    if railway_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(railway_origin)
+ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT_ID"))
+ON_RENDER = bool(os.getenv("RENDER"))
+ON_PLATFORM = ON_RAILWAY or ON_RENDER
+DEBUG = env_bool("DEBUG", not ON_PLATFORM)
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("Set SECRET_KEY before starting with DEBUG=False.")
+    SECRET_KEY = "django-insecure-local-development-only-netfit"
+PUBLIC_DOMAIN = (
+    os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    or os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+)
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
+if DEBUG:
+    ALLOWED_HOSTS += ["127.0.0.1", "localhost", "testserver"]
+if PUBLIC_DOMAIN:
+    ALLOWED_HOSTS.append(PUBLIC_DOMAIN)
+if ON_RAILWAY:
+    ALLOWED_HOSTS.append("healthcheck.railway.app")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+if PUBLIC_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{PUBLIC_DOMAIN}")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -60,17 +83,15 @@ TEMPLATES = [{
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
+USE_SQLITE = env_bool("USE_SQLITE")
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-if DATABASE_URL and os.getenv("USE_SQLITE") != "1":
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=60,
-            conn_health_checks=True,
-            ssl_require=True,
-        )
-    }
-elif os.getenv("POSTGRES_DB") and os.getenv("USE_SQLITE") != "1":
+if ON_PLATFORM and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB"))):
+    raise ImproperlyConfigured("Production requires PostgreSQL: set DATABASE_URL and unset USE_SQLITE.")
+if DATABASE_URL and not USE_SQLITE:
+    DATABASES = {"default": dj_database_url.parse(
+        DATABASE_URL, conn_max_age=600,
+    )}
+elif os.getenv("POSTGRES_DB") and not USE_SQLITE:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -80,11 +101,28 @@ elif os.getenv("POSTGRES_DB") and os.getenv("USE_SQLITE") != "1":
             "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
             "CONN_MAX_AGE": 60,
-            "OPTIONS": {"sslmode": "require"},
         }
     }
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    # Compatible with Supabase transaction poolers as well as direct PostgreSQL.
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+    DATABASES["default"].setdefault("OPTIONS", {}).update({
+        "prepare_threshold": None,
+        "connect_timeout": 5,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    })
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "netfit-cache",
+    }
+}
 AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = "ko-kr"
 TIME_ZONE = "Asia/Seoul"
@@ -93,28 +131,19 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        if (ON_PLATFORM and not DEBUG)
+        else "django.contrib.staticfiles.storage.StaticFilesStorage"
     },
 }
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "dashboard"
-
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "3600"))
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_REFERRER_POLICY = "same-origin"
 
 _kakao_file = BASE_DIR / "kakao.local.json"
 _kakao_local = json.loads(_kakao_file.read_text(encoding="utf-8")) if _kakao_file.exists() else {}
@@ -123,5 +152,6 @@ KAKAO_CLIENT_SECRET = os.environ.get("KAKAO_CLIENT_SECRET", "").strip() or _kaka
 KAKAO_REDIRECT_URI = (
     os.environ.get("KAKAO_REDIRECT_URI", "").strip()
     or _kakao_local.get("KAKAO_REDIRECT_URI", "").strip()
-    or "http://127.0.0.1:8000/login/kakao/callback/"
+    or (f"https://{PUBLIC_DOMAIN}/login/kakao/callback/" if PUBLIC_DOMAIN
+        else "http://127.0.0.1:8000/login/kakao/callback/")
 )

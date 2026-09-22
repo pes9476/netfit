@@ -9,3 +9,6 @@ beautifulsoup4>=4.12
 requests>=2.31
 selenium>=4.20
 python-dotenv>=1.0
+dj-database-url>=2.2,<4.0
+gunicorn>=23.0,<26.0
+whitenoise>=6.9,<7.0

@@ -20,7 +20,7 @@ class RegisterForm(UserCreationForm):
 class WorkoutForm(forms.ModelForm):
     class Meta:
         model = WorkoutRecord
-        fields = ("workout_type", "custom_workout_name", "minutes", "distance_km", "location", "with_party", "proof_image")
+        fields = ("workout_type", "custom_workout_name", "minutes", "distance_km", "location", "proof_image")
         widgets = {
             "workout_type": forms.Select(attrs={"class": "input"}),
             "custom_workout_name": forms.TextInput(attrs={
@@ -57,8 +57,6 @@ class WorkoutForm(forms.ModelForm):
         self.fields["distance_km"].required = False
         self.fields["location"].label = "운동 장소 (선택)"
         self.fields["location"].required = False
-        self.fields["with_party"].label = "파티와 함께 운동"
-        self.fields["with_party"].required = False
         self.fields["proof_image"].label = "인증 사진 추가 (선택)"
         self.fields["proof_image"].required = False
 

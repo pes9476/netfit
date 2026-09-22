@@ -1,0 +1,128 @@
+<!-- 👉 콕 찌르기 (Poke) 모달 컴포넌트 -->
+<div id="pokeModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(5, 10, 20, 0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closePokeModal();">
+  <div class="panel modal-card" style="width: 100%; max-width: 480px; background: #0E1726; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7); padding: 0; overflow: hidden; animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    
+    <!-- 모달 헤더 -->
+    <div style="padding: 18px 22px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.05);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.45); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+          👉
+        </span>
+        <div>
+          <h3 style="font-size: 16px; margin: 0; color: #FFFFFF; font-weight: 900; display: flex; align-items: center; gap: 6px;">
+            <span id="pokeModalTargetName" style="color: #FBBF24;">친구</span>님 콕 찌르기
+          </h3>
+          <span style="font-size: 12px; color: #94A3B8; margin-top: 2px; display: block;">위트 있는 한마디로 친구의 운동을 자극해보세요!</span>
+        </div>
+      </div>
+      <button type="button" onclick="closePokeModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 8px; line-height: 1;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 모달 바디: 폼 및 프리셋 선택 -->
+    <form method="post" id="pokeModalForm" action="" style="padding: 20px 22px; margin: 0; display: flex; flex-direction: column; gap: 16px;">
+      {% csrf_token %}
+      <input type="hidden" name="party_id" id="pokeModalPartyId" value="">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+      <div>
+        <label style="display: block; font-size: 12px; font-weight: 800; color: #E2E8F0; margin-bottom: 8px;">
+          ⚡ 빠른 한마디 프리셋 선택
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <button type="button" class="poke-preset-btn" onclick="setPokePreset(this, '야, 너 오늘 안 뛰냐? 내가 1등 한다! 🏃‍♂️')" style="text-align: left; padding: 9px 12px; font-size: 12.5px; font-weight: 700; background: rgba(245, 158, 11, 0.15); border: 1px solid #F59E0B; color: #FBBF24; border-radius: 10px; cursor: pointer; transition: all 0.15s;">
+            🏃‍♂️ "야, 너 오늘 안 뛰냐? 내가 1등 한다!"
+          </button>
+          <button type="button" class="poke-preset-btn" onclick="setPokePreset(this, '얼른 운동하고 내기 점수 올려라! 🔥')" style="text-align: left; padding: 9px 12px; font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); color: #CBD5E1; border-radius: 10px; cursor: pointer; transition: all 0.15s;">
+            🔥 "얼른 운동하고 내기 점수 올려라!"
+          </button>
+          <button type="button" class="poke-preset-btn" onclick="setPokePreset(this, '오늘 운동 쉬어? 그럼 내가 추월한다! ⚡')" style="text-align: left; padding: 9px 12px; font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); color: #CBD5E1; border-radius: 10px; cursor: pointer; transition: all 0.15s;">
+            ⚡ "오늘 운동 쉬어? 그럼 내가 추월한다!"
+          </button>
+          <button type="button" class="poke-preset-btn" onclick="setPokePreset(this, '힘내자! 같이 배지 따서 치킨 먹자 🍗')" style="text-align: left; padding: 9px 12px; font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); color: #CBD5E1; border-radius: 10px; cursor: pointer; transition: all 0.15s;">
+            🍗 "힘내자! 같이 배지 따서 치킨 먹자"
+          </button>
+          <button type="button" class="poke-preset-btn" onclick="setPokePreset(this, '운동할 시간이다! 지금 안 뛰면 후회한다 ⏰')" style="text-align: left; padding: 9px 12px; font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); color: #CBD5E1; border-radius: 10px; cursor: pointer; transition: all 0.15s;">
+            ⏰ "운동할 시간이다! 지금 안 뛰면 후회한다"
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label for="pokeMessageInput" style="display: block; font-size: 12px; font-weight: 800; color: #E2E8F0; margin-bottom: 6px;">
+          직접 메시지 수정하기
+        </label>
+        <input type="text" id="pokeMessageInput" name="poke_message" maxlength="60" value="야, 너 오늘 안 뛰냐? 내가 1등 한다! 🏃‍♂️" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 10px; padding: 10px 14px; color: #FFFFFF; font-size: 13.5px; font-weight: 600; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--neon-mint)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.18)'">
+        <small style="color: #94A3B8; font-size: 11px; margin-top: 4px; display: block;">최대 60자까지 입력 가능합니다.</small>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 4px;">
+        <button type="button" onclick="closePokeModal()" class="button secondary" style="flex: 1; padding: 11px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer;">
+          취소
+        </button>
+        <button type="submit" class="button btn-mint" style="flex: 2; padding: 11px; font-size: 13.5px; font-weight: 900; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>콕 찌르기 전송!</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openPokeModal(userId, userName, partyId) {
+  const modal = document.getElementById('pokeModal');
+  if (!modal) return;
+  const targetNameEl = document.getElementById('pokeModalTargetName');
+  if (targetNameEl) targetNameEl.textContent = userName || '친구';
+  
+  const form = document.getElementById('pokeModalForm');
+  if (form) form.action = `/poke/${userId}/`;
+  
+  const partyInput = document.getElementById('pokeModalPartyId');
+  if (partyInput) partyInput.value = partyId || '';
+
+  const input = document.getElementById('pokeMessageInput');
+  if (input) input.value = '야, 너 오늘 안 뛰냐? 내가 1등 한다! 🏃‍♂️';
+
+  const btns = document.querySelectorAll('.poke-preset-btn');
+  btns.forEach((btn, idx) => {
+    if (idx === 0) {
+      btn.style.borderColor = '#F59E0B';
+      btn.style.background = 'rgba(245, 158, 11, 0.15)';
+      btn.style.color = '#FBBF24';
+    } else {
+      btn.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+      btn.style.background = 'rgba(255, 255, 255, 0.04)';
+      btn.style.color = '#CBD5E1';
+    }
+  });
+
+  modal.style.display = 'flex';
+}
+
+function closePokeModal() {
+  const modal = document.getElementById('pokeModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function setPokePreset(btn, text) {
+  const input = document.getElementById('pokeMessageInput');
+  if (input) input.value = text;
+  document.querySelectorAll('.poke-preset-btn').forEach(b => {
+    b.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+    b.style.background = 'rgba(255, 255, 255, 0.04)';
+    b.style.color = '#CBD5E1';
+  });
+  btn.style.borderColor = '#F59E0B';
+  btn.style.background = 'rgba(245, 158, 11, 0.18)';
+  btn.style.color = '#FBBF24';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closePokeModal();
+  }
+});
+</script>

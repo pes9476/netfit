@@ -5,78 +5,6 @@
   <p>운동을 기록할 때마다 파티 내기 점수에 반영되는 배지를 받습니다. (30분 동메달 · 60분 은메달 · 90분 금메달)</p>
 </section>
 
-<!-- ⏱️ 실시간 운동 타이머 위젯 -->
-<article class="panel workout-timer-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(16, 26, 44, 0.95) 0%, rgba(10, 18, 32, 0.98) 100%); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 18px; padding: 20px 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <span style="width: 32px; height: 32px; border-radius: 10px; background: rgba(0,245,155,0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; color: var(--neon-mint); font-size: 15px;">
-        <i class="fa-solid fa-stopwatch"></i>
-      </span>
-      <div>
-        <h2 style="font-size: 16px; margin: 0; color: #FFFFFF; font-weight: 900;">실시간 운동 타이머</h2>
-        <span style="font-size: 11px; color: var(--text-muted);">운동 시간을 측정하고 기록 폼에 바로 적용해보세요.</span>
-      </div>
-    </div>
-    
-    <!-- 모드 선택 탭 -->
-    <div class="timer-mode-pills" style="display: inline-flex; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 3px; gap: 4px;">
-      <button type="button" id="btnModeCountup" onclick="setTimerMode('countup')" style="cursor: pointer; padding: 5px 12px; border-radius: 7px; border: none; font-size: 11.5px; font-weight: 800; background: var(--neon-mint); color: #070B12; transition: all 0.2s;">
-        ⏱️ 스톱워치
-      </button>
-      <button type="button" id="btnModeCountdown" onclick="setTimerMode('countdown')" style="cursor: pointer; padding: 5px 12px; border-radius: 7px; border: none; font-size: 11.5px; font-weight: 800; background: transparent; color: #94A3B8; transition: all 0.2s;">
-        ⏳ 목표 타이머
-      </button>
-    </div>
-  </div>
-
-  <!-- 목표 타이머 빠른 선택 프리셋 버튼들 (목표 모드일 때 활성화) -->
-  <div id="targetPresetRow" style="display: none; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-    <span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">목표 시간 선택:</span>
-    <button type="button" class="preset-btn" onclick="setTargetMinutes(30)" style="cursor: pointer; background: rgba(205,127,50,0.15); border: 1px solid rgba(205,127,50,0.5); color: #FFA07A; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
-      🥉 30분 (동 배지)
-    </button>
-    <button type="button" class="preset-btn" onclick="setTargetMinutes(60)" style="cursor: pointer; background: rgba(192,192,192,0.15); border: 1px solid rgba(192,192,192,0.5); color: #E2E8F0; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
-      🥈 60분 (은 배지)
-    </button>
-    <button type="button" class="preset-btn" onclick="setTargetMinutes(90)" style="cursor: pointer; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.5); color: var(--trophy-gold); font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 8px;">
-      🥇 90분 (금 배지)
-    </button>
-    <div style="display: inline-flex; align-items: center; gap: 4px;">
-      <input type="number" id="customTargetInput" min="1" max="600" placeholder="직접 분 입력" style="width: 90px; padding: 4px 8px; font-size: 11.5px; background: #162032; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #FFFFFF;" onchange="setTargetMinutes(this.value)">
-      <span style="font-size: 11.5px; color: var(--text-muted);">분</span>
-    </div>
-  </div>
-
-  <!-- 타이머 메인 디스플레이 & 컨트롤러 -->
-  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; background: rgba(8, 14, 24, 0.75); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px 22px;">
-    <div>
-      <div style="display: flex; align-items: baseline; gap: 10px;">
-        <span id="timerDisplay" style="font-family: 'Courier New', Courier, monospace; font-size: clamp(32px, 5vw, 44px); font-weight: 900; color: var(--neon-mint); letter-spacing: 2px; text-shadow: 0 0 20px rgba(0,245,155,0.4);">00:00</span>
-        <span id="timerStatusLabel" style="font-size: 12px; font-weight: 800; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">대기 중</span>
-      </div>
-      <div id="timerProgressContainer" style="width: 220px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 8px; overflow: hidden; display: none;">
-        <div id="timerProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8, var(--neon-mint)); transition: width 0.3s;"></div>
-      </div>
-    </div>
-
-    <!-- 타이머 조작 버튼 그룹 -->
-    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <button type="button" id="btnTimerStart" onclick="startTimer()" style="cursor: pointer; background: var(--neon-mint); color: #070B12; border: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 900; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(0,245,155,0.3);">
-        <i class="fa-solid fa-play"></i> <span>시작</span>
-      </button>
-      <button type="button" id="btnTimerPause" onclick="pauseTimer()" style="cursor: pointer; display: none; background: #F59E0B; color: #070B12; border: none; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 900; align-items: center; gap: 6px;">
-        <i class="fa-solid fa-pause"></i> <span>일시정지</span>
-      </button>
-      <button type="button" id="btnTimerReset" onclick="resetTimer()" style="cursor: pointer; background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.15); padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px;">
-        <i class="fa-solid fa-rotate-left"></i> <span>초기화</span>
-      </button>
-      <button type="button" id="btnTimerApply" onclick="applyTimerToForm()" style="cursor: pointer; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.4); padding: 10px 16px; border-radius: 10px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
-        <i class="fa-solid fa-check-to-slot"></i> <span>기록 폼에 시간 적용</span>
-      </button>
-    </div>
-  </div>
-</article>
-
 <div class="grid2 activity-entry-grid">
   <!-- 운동 입력 폼 -->
   <article class="panel">
@@ -86,7 +14,7 @@
       <input type="hidden" name="next" value="activity">
       <div class="form-grid">
         {% for field in workout_form %}
-          <div class="field {% if field.name == 'with_party' %}full check{% endif %}{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
+          <div class="field{% if field.name == 'custom_workout_name' %} custom-workout-field{% endif %}"{% if field.name == 'custom_workout_name' %} hidden{% endif %}>
             {% if field.name == 'proof_image' %}
               {{ field.label_tag }}
               <div style="display: none;">
@@ -129,7 +57,10 @@
   <!-- AI 시설 추천 -->
   <article class="panel ai-facility-panel">
     <div class="ai-facility-head">
-      <span>✨ AI FACILITY PICK</span>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+        <span>✨ AI FACILITY PICK</span>
+        <span id="aiFacilityCategoryBadge" style="font-size: 10.5px; font-weight: 800; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.3); border-radius: 6px; padding: 1px 7px;">{{ selected_workout|default:'러닝' }} 맞춤</span>
+      </div>
       <h2>내 주변 공공체육시설 추천</h2>
       <div class="ai-facility-actions">
         <button class="button secondary" type="button" id="activityLocationButton">
@@ -142,13 +73,16 @@
     </div>
     <div class="activity-facility-list">
       {% for facility in recommended_facilities %}
-        <article>
+        <article class="facility-picker-card" onclick="selectFacilityToLocation('{{ facility.name|escapejs }}', this)" title="클릭하면 운동 장소로 자동 입력됩니다" style="cursor: pointer; transition: all 0.2s ease;">
           <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
-          <div>
-            <b>{{ facility.name }}</b>
+          <div style="flex: 1; min-width: 0;">
+            <b class="facility-name-text">{{ facility.name }}</b>
             <small>{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</small>
           </div>
-          <a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('{{ facility.name|escapejs }}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>
+            <a href="{{ facility.kakao_map_url }}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+          </div>
         </article>
       {% empty %}
         <p style="color: var(--text-muted); margin: 12px 0;">추천할 시설이 없습니다. 주변시설 페이지에서 검색해 보세요.</p>
@@ -191,6 +125,72 @@
   {% endfor %}
 </article>
 
+<!-- 🏆 파티 내기 대결 기록 (운동 기록 페이지 연동 & 스크롤 목록보기) -->
+<section class="section-head" id="party-challenge-history" style="margin-top: 32px;">
+  <div>
+    <h2><i class="fa-solid fa-trophy" style="color: var(--trophy-gold); margin-right: 8px;"></i>파티 내기 대결 기록</h2>
+    <p>파티원들과 함께 완주했던 배지 내기 승부 기록과 최종 순위입니다.</p>
+  </div>
+  {% if ended_challenges %}
+    <button type="button" onclick="openEndedPartyHistoryModal()" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; color: var(--trophy-gold); border-color: rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+      <i class="fa-solid fa-list-ul"></i>
+      <span>전체 내기 목록보기 ({{ ended_challenges|length }}건)</span>
+    </button>
+  {% endif %}
+</section>
+
+<article class="panel" style="background: rgba(16, 24, 39, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 20px;">
+  {% if ended_challenges %}
+    <!-- 내기 요약 통계 바 -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px;">
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 12px 14px; text-align: center;">
+        <span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">완주한 내기</span>
+        <b style="display: block; font-size: 20px; color: #FFFFFF; font-weight: 900; margin-top: 3px;">{{ challenge_stats.total_ended }}건</b>
+      </div>
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 12px 14px; text-align: center;">
+        <span style="font-size: 11.5px; color: #FDE047; font-weight: 700;">🥇 1위 우승</span>
+        <b style="display: block; font-size: 20px; color: var(--trophy-gold); font-weight: 900; margin-top: 3px;">{{ challenge_stats.wins }}회</b>
+      </div>
+      <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 12px 14px; text-align: center;">
+        <span style="font-size: 11.5px; color: #38BDF8; font-weight: 700;">🏆 Top 3 입상</span>
+        <b style="display: block; font-size: 20px; color: #38BDF8; font-weight: 900; margin-top: 3px;">{{ challenge_stats.podium }}회</b>
+      </div>
+    </div>
+
+    <!-- 스크롤 가능 컨테이너 (아무리 많이 쌓여도 높이 고정되어 지저분해지지 않음) -->
+    <div style="max-height: 290px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">
+      {% for challenge in ended_challenges %}
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 10px; font-weight: 800; background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 1px 6px;">종료 🏁</span>
+              <strong style="color: #FFFFFF; font-size: 14px;">{{ challenge.party.name }}</strong>
+              <small style="color: var(--text-muted); font-size: 12px;">({{ challenge.party.challenge_start|date:'Y.m.d' }} ~ {{ challenge.party.challenge_end|date:'Y.m.d' }})</small>
+            </div>
+            <div style="font-size: 12.5px; color: #94A3B8; margin-top: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span>내 최종 결과: <b style="color: {% if challenge.my_rank == 1 %}var(--trophy-gold){% elif challenge.my_rank == 2 %}#CBD5E1{% elif challenge.my_rank == 3 %}#CD7F32{% else %}#E2E8F0{% endif %}; font-weight: 800;">{{ challenge.my_rank }}위</b> ({{ challenge.my_points }}점)</span>
+              {% if challenge.party.challenge_reward %}
+                <span style="color: rgba(255,255,255,0.4);">|</span>
+                <span>보상: <b style="color: var(--trophy-gold);">{{ challenge.party.challenge_reward }}</b></span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <button type="button" class="button secondary" onclick="openPartyResultModal('{{ challenge.party.id }}')" style="padding: 7px 14px; font-size: 12px; font-weight: 800; border-color: rgba(245, 158, 11, 0.4); color: var(--trophy-gold); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
+              <i class="fa-solid fa-trophy"></i>
+              <span>순위 결과 보기</span>
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); margin: 6px 0; text-align: center; font-size: 13.5px; padding: 14px 0;">
+      아직 종료된 파티 내기가 없습니다. 파티원들과 함께 배지 내기에 도전해보세요!
+    </p>
+  {% endif %}
+</article>
+
 <script>
 const workoutSelect = document.getElementById("id_workout_type"),
       customWorkout = document.getElementById("id_custom_workout_name"),
@@ -203,8 +203,51 @@ function toggleCustomWorkout() {
   customField.hidden = !isCustom;
   customWorkout.required = isCustom;
 }
+
+let userLat = null;
+let userLon = null;
+
+function fetchFacilityRecommendations(workoutType, lat = null, lon = null) {
+  const status = document.getElementById('activityLocationStatus');
+  const listContainer = document.querySelector('.activity-facility-list');
+  if (listContainer) listContainer.style.opacity = '0.5';
+
+  const selectedWorkout = workoutType || (workoutSelect ? workoutSelect.value : '러닝');
+  const targetLat = lat !== null ? lat : userLat;
+  const targetLon = lon !== null ? lon : userLon;
+
+  let url = `/activity/?workout_type=${encodeURIComponent(selectedWorkout)}&ajax=1`;
+  if (targetLat !== null && targetLon !== null) {
+    url += `&lat=${targetLat}&lon=${targetLon}`;
+  }
+
+  fetch(url, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (listContainer) listContainer.style.opacity = '1';
+    if (data.status === 'success' && data.facilities) {
+      renderRecommendedFacilities(data.facilities);
+      const badge = document.getElementById('aiFacilityCategoryBadge');
+      if (badge) badge.textContent = `${data.workout_type || selectedWorkout} 맞춤`;
+      if (status) {
+        status.textContent = `🎯 '${data.workout_type || selectedWorkout}' 종목에 맞춘 추천 시설로 갱신되었습니다.`;
+        setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+      }
+    }
+  })
+  .catch(err => {
+    if (listContainer) listContainer.style.opacity = '1';
+    console.error('Facility fetch error:', err);
+  });
+}
+
 if (workoutSelect) {
-  workoutSelect.addEventListener("change", toggleCustomWorkout);
+  workoutSelect.addEventListener("change", function() {
+    toggleCustomWorkout();
+    fetchFacilityRecommendations(this.value);
+  });
   toggleCustomWorkout();
 }
 
@@ -241,158 +284,8 @@ function removeSelectedProofImage() {
   if (nameLabel) nameLabel.textContent = "";
   if (previewContainer) previewContainer.style.display = "none";
 }
-
-// ⏱️ 스마트 운동 타이머 로직
-let timerMode = 'countup'; // 'countup' | 'countdown'
-let timerSeconds = 0;
-let targetSeconds = 0;
-let timerInterval = null;
-let isTimerRunning = false;
-
-function updateTimerDisplay() {
-  const display = document.getElementById("timerDisplay");
-  const statusLabel = document.getElementById("timerStatusLabel");
-  const progressContainer = document.getElementById("timerProgressContainer");
-  const progressBar = document.getElementById("timerProgressBar");
-  
-  let currentSec = timerSeconds;
-  if (timerMode === 'countdown') {
-    currentSec = Math.max(0, targetSeconds - timerSeconds);
-    if (progressContainer) progressContainer.style.display = "block";
-    if (progressBar && targetSeconds > 0) {
-      const pct = Math.min(100, (timerSeconds / targetSeconds) * 100);
-      progressBar.style.width = pct + "%";
-    }
-  } else {
-    if (progressContainer) progressContainer.style.display = "none";
-  }
-
-  const mins = Math.floor(currentSec / 60);
-  const secs = currentSec % 60;
-  const formatted = String(mins).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
-  if (display) display.textContent = formatted;
-
-  if (isTimerRunning) {
-    if (statusLabel) {
-      statusLabel.textContent = "운동 중 🔥";
-      statusLabel.style.color = "var(--neon-mint)";
-      statusLabel.style.background = "rgba(0,245,155,0.15)";
-    }
-  } else if (timerSeconds > 0) {
-    if (statusLabel) {
-      statusLabel.textContent = "일시정지 ⏸";
-      statusLabel.style.color = "#F59E0B";
-      statusLabel.style.background = "rgba(245,158,11,0.15)";
-    }
-  } else {
-    if (statusLabel) {
-      statusLabel.textContent = "대기 중";
-      statusLabel.style.color = "#94A3B8";
-      statusLabel.style.background = "rgba(255,255,255,0.08)";
-    }
-  }
-
-  // localStorage 동기화 (대시보드 실시간 연동 지원)
-  saveTimerState();
-}
-
-function setTimerMode(mode) {
-  timerMode = mode;
-  const btnCountup = document.getElementById("btnModeCountup");
-  const btnCountdown = document.getElementById("btnModeCountdown");
-  const presetRow = document.getElementById("targetPresetRow");
-
-  if (mode === 'countup') {
-    btnCountup.style.background = "var(--neon-mint)";
-    btnCountup.style.color = "#070B12";
-    btnCountdown.style.background = "transparent";
-    btnCountdown.style.color = "#94A3B8";
-    if (presetRow) presetRow.style.display = "none";
-  } else {
-    btnCountdown.style.background = "var(--neon-mint)";
-    btnCountdown.style.color = "#070B12";
-    btnCountup.style.background = "transparent";
-    btnCountup.style.color = "#94A3B8";
-    if (presetRow) presetRow.style.display = "flex";
-    if (targetSeconds === 0) setTargetMinutes(30);
-  }
-  updateTimerDisplay();
-}
-
-function setTargetMinutes(mins) {
-  const m = parseInt(mins, 10);
-  if (isNaN(m) || m <= 0) return;
-  targetSeconds = m * 60;
-  if (!isTimerRunning) {
-    timerSeconds = 0;
-  }
-  updateTimerDisplay();
-}
-
-function startTimer() {
-  if (isTimerRunning) return;
-  isTimerRunning = true;
-  document.getElementById("btnTimerStart").style.display = "none";
-  document.getElementById("btnTimerPause").style.display = "inline-flex";
-
-  timerInterval = setInterval(() => {
-    timerSeconds++;
-    if (timerMode === 'countdown' && timerSeconds >= targetSeconds) {
-      pauseTimer();
-      alert("🎉 목표 운동 시간(" + Math.floor(targetSeconds / 60) + "분)을 달성했습니다! 오늘 한 운동을 기록하세요.");
-      applyTimerToForm();
-    }
-    updateTimerDisplay();
-  }, 1000);
-  updateTimerDisplay();
-}
-
-function pauseTimer() {
-  if (!isTimerRunning) return;
-  isTimerRunning = false;
-  clearInterval(timerInterval);
-  document.getElementById("btnTimerStart").style.display = "inline-flex";
-  document.getElementById("btnTimerPause").style.display = "none";
-  updateTimerDisplay();
-}
-
-function resetTimer() {
-  pauseTimer();
-  timerSeconds = 0;
-  updateTimerDisplay();
-  localStorage.removeItem("netfit_active_workout_timer");
-}
-
-function applyTimerToForm() {
-  const totalMins = Math.max(1, Math.round(timerSeconds / 60));
-  if (minutesInput) {
-    minutesInput.value = totalMins;
-    minutesInput.style.borderColor = "var(--neon-mint)";
-    minutesInput.style.boxShadow = "0 0 12px rgba(0,245,155,0.4)";
-    setTimeout(() => {
-      minutesInput.style.boxShadow = "";
-    }, 1500);
-  }
-  // 입력 폼으로 부드럽게 스크롤
-  minutesInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function saveTimerState() {
-  try {
-    const state = {
-      mode: timerMode,
-      timerSeconds: timerSeconds,
-      targetSeconds: targetSeconds,
-      isTimerRunning: isTimerRunning,
-      updatedAt: Date.now(),
-      workoutType: workoutSelect ? workoutSelect.value : ""
-    };
-    localStorage.setItem("netfit_active_workout_timer", JSON.stringify(state));
-  } catch(e) {}
-}
-
-function loadSavedTimerOrParams() {
-  // URL 파라미터 확인: ?workout_type=러닝&target=30
+// URL 파라미터 확인 및 입력 폼 자동 채우기: ?workout_type=러닝&target=30
+function loadWorkoutParams() {
   const urlParams = new URLSearchParams(window.location.search);
   const paramWorkout = urlParams.get('workout_type');
   const paramTarget = urlParams.get('target');
@@ -400,53 +293,134 @@ function loadSavedTimerOrParams() {
   if (paramWorkout && workoutSelect) {
     workoutSelect.value = paramWorkout;
     toggleCustomWorkout();
+    fetchFacilityRecommendations(paramWorkout);
   }
-
-  if (paramTarget) {
-    const targetMins = parseInt(paramTarget, 10);
-    if (!isNaN(targetMins) && targetMins > 0) {
-      setTimerMode('countdown');
-      setTargetMinutes(targetMins);
-      const customInput = document.getElementById("customTargetInput");
-      if (customInput) customInput.value = targetMins;
-      return;
+  if (paramTarget && minutesInput) {
+    const mins = parseInt(paramTarget, 10);
+    if (!isNaN(mins) && mins > 0) {
+      minutesInput.value = mins;
     }
   }
-
-  // localStorage 상태 복원
-  try {
-    const saved = localStorage.getItem("netfit_active_workout_timer");
-    if (saved) {
-      const data = JSON.parse(saved);
-      // 12시간 이내의 타이머만 복원
-      if (Date.now() - data.updatedAt < 12 * 3600 * 1000) {
-        timerMode = data.mode || 'countup';
-        targetSeconds = data.targetSeconds || 0;
-        timerSeconds = data.timerSeconds || 0;
-        setTimerMode(timerMode);
-        updateTimerDisplay();
-      }
-    }
-  } catch(e) {}
 }
+loadWorkoutParams();
 
-loadSavedTimerOrParams();
+// 📍 추천 시설 클릭 시 운동 장소 입력창으로 자동 입력 (직접 수정/타이핑도 가능)
+window.selectFacilityToLocation = function(rawName, cardEl) {
+  const locInput = document.getElementById("id_location");
+  if (!locInput) return;
+  // 앞의 [18] 같은 인덱스 번호가 있으면 더 깔끔하게 정리 (예: [18]구로디지털단지역 -> 구로디지털단지역)
+  const cleanName = rawName.replace(/^\[\d+\]\s*/, '').trim();
+  locInput.value = cleanName;
+  locInput.focus();
 
-document.getElementById('activityLocationButton')?.addEventListener('click', () => {
-  const status = document.getElementById('activityLocationStatus');
-  if (!navigator.geolocation) {
-    status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+  // 입력창 시각 피드백 (네온 민트 글로우 효과)
+  locInput.style.transition = "all 0.3s ease";
+  locInput.style.borderColor = "var(--neon-mint)";
+  locInput.style.boxShadow = "0 0 12px rgba(0, 245, 155, 0.4)";
+  setTimeout(() => {
+    locInput.style.boxShadow = "";
+  }, 1200);
+
+  // 선택된 카드 하이라이트
+  document.querySelectorAll('.activity-facility-list article').forEach(a => a.style.borderColor = '');
+  if (cardEl) cardEl.style.borderColor = 'var(--neon-mint)';
+
+  if (typeof showToast === 'function') {
+    showToast('📍', '운동 장소 입력됨', `'${cleanName}'이(가) 운동 장소로 입력되었습니다.`, 'var(--neon-mint)');
+  }
+};
+
+function renderRecommendedFacilities(facilities) {
+  const listContainer = document.querySelector('.activity-facility-list');
+  if (!listContainer) return;
+  if (!facilities || facilities.length === 0) {
+    listContainer.innerHTML = '<p style="color: var(--text-muted); margin: 12px 0;">현재 위치 근처에 추천할 시설이 없습니다.</p>';
     return;
   }
-  status.textContent = '현재 위치를 확인하고 있어요…';
-  navigator.geolocation.getCurrentPosition(pos => {
-    const url = new URL(location.href);
-    url.searchParams.set('lat', pos.coords.latitude.toFixed(6));
-    url.searchParams.set('lon', pos.coords.longitude.toFixed(6));
-    location.href = url;
-  }, () => {
-    status.textContent = '위치 권한을 허용하면 가까운 시설을 추천할 수 있어요.';
-  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+  listContainer.innerHTML = facilities.map(f => {
+    const distText = f.distance_km != null ? ` · ${f.distance_km}km` : '';
+    const safeName = (f.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const safeType = (f.facility_type || '공공체육시설').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escapedAttr = safeName.replace(/'/g, "\\'");
+    return `
+      <article class="facility-picker-card" onclick="selectFacilityToLocation('${escapedAttr}', this)" title="클릭하면 운동 장소로 자동 입력됩니다" style="cursor: pointer; transition: all 0.2s ease;">
+        <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
+        <div style="flex: 1; min-width: 0;">
+          <b class="facility-name-text">${safeName}</b>
+          <small>${safeType}${distText}</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('${escapedAttr}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>
+          <a href="${f.kakao_map_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">지도 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i></a>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+// 🌐 현재 위치로 다시 추천 클릭 시 iOS 감성 위치 권한 모달을 띄우고 비동기 AJAX 갱신
+document.getElementById('activityLocationButton')?.addEventListener('click', () => {
+  const status = document.getElementById('activityLocationStatus');
+  const btn = document.getElementById('activityLocationButton');
+  if (status) status.textContent = '현재 위치를 확인하고 있어요…';
+
+  const onGpsSuccess = (coords) => {
+    const lat = coords.latitude.toFixed(6);
+    const lon = coords.longitude.toFixed(6);
+    userLat = lat;
+    userLon = lon;
+
+    const selectedWorkout = workoutSelect ? workoutSelect.value : '러닝';
+    fetch(`/activity/?workout_type=${encodeURIComponent(selectedWorkout)}&lat=${lat}&lon=${lon}&ajax=1`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (btn) btn.disabled = false;
+      if (data.status === 'success' && data.facilities) {
+        renderRecommendedFacilities(data.facilities);
+        const badge = document.getElementById('aiFacilityCategoryBadge');
+        if (badge) badge.textContent = `${data.workout_type || selectedWorkout} 맞춤`;
+        if (status) status.textContent = `📍 현재 위치 기준 '${data.workout_type || selectedWorkout}' 맞춤 시설로 갱신되었습니다!`;
+        setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+      } else {
+        if (status) status.textContent = '주변 시설 정보를 가져오지 못했습니다.';
+      }
+    })
+    .catch(err => {
+      if (btn) btn.disabled = false;
+      console.error('Facility fetch error:', err);
+      if (status) status.textContent = '추천 시설을 불러오는 중 오류가 발생했습니다.';
+    });
+  };
+
+  const onGpsError = (err) => {
+    if (btn) btn.disabled = false;
+    if (status) {
+      status.textContent = '🔒 위치 사용을 허용하지 않았습니다. 기본 등록 지역 기준으로 추천합니다.';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+    }
+  };
+
+  if (typeof openGPSPermissionModal === "function") {
+    openGPSPermissionModal(onGpsSuccess, onGpsError);
+  } else if (navigator.geolocation) {
+    if (btn) btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        if (btn) btn.disabled = false;
+        onGpsSuccess(pos.coords);
+      },
+      (err) => {
+        onGpsError(err);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  } else {
+    if (status) status.textContent = '이 브라우저에서는 위치 기능을 사용할 수 없어요.';
+  }
 });
 </script>
+
+{% include "fitness/party_challenge_modals.html" %}
 {% endblock %}
