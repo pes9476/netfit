@@ -21,13 +21,18 @@ def env_list(name):
 
 
 ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT_ID"))
-DEBUG = env_bool("DEBUG", not ON_RAILWAY)
+ON_RENDER = env_bool("RENDER") or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+ON_DEPLOYMENT = ON_RAILWAY or ON_RENDER
+DEBUG = env_bool("DEBUG", not ON_DEPLOYMENT)
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("Set SECRET_KEY before starting with DEBUG=False.")
     SECRET_KEY = "django-insecure-local-development-only-netfit"
-PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+PUBLIC_DOMAIN = (
+    os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    or os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+)
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 if DEBUG:
     ALLOWED_HOSTS += ["127.0.0.1", "localhost", "testserver"]
@@ -80,8 +85,10 @@ TEMPLATES = [{
 WSGI_APPLICATION = "config.wsgi.application"
 USE_SQLITE = env_bool("USE_SQLITE")
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-if ON_RAILWAY and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB"))):
-    raise ImproperlyConfigured("Railway requires PostgreSQL: set DATABASE_URL and unset USE_SQLITE.")
+if ON_DEPLOYMENT and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB"))):
+    raise ImproperlyConfigured(
+        "Deployed environments require PostgreSQL: set DATABASE_URL and unset USE_SQLITE."
+    )
 if DATABASE_URL and not USE_SQLITE:
     DATABASES = {"default": dj_database_url.parse(
         DATABASE_URL, conn_max_age=600,
@@ -129,7 +136,7 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
-        if (ON_RAILWAY and not DEBUG)
+        if (ON_DEPLOYMENT and not DEBUG)
         else "django.contrib.staticfiles.storage.StaticFilesStorage"
     },
 }

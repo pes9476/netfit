@@ -334,6 +334,10 @@ class OutfitPurchase(models.Model):
         super().save(*args, **kwargs)
 
 class Facility(models.Model):
+    source_record_id = models.CharField(
+        max_length=64, null=True, blank=True, unique=True,
+        help_text="원본 시설 식별자 또는 정규화된 시설 정보의 SHA-256 값",
+    )
     name = models.CharField(max_length=200)
     facility_type = models.CharField(max_length=100, blank=True)
     region = models.CharField(max_length=30, choices=REGION_CHOICES)
@@ -377,6 +381,44 @@ class Facility(models.Model):
     @kakao_map_url.setter
     def kakao_map_url(self, value):
         self._kakao_map_url = value
+
+
+class DataSyncRun(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_RUNNING = "RUNNING"
+    STATUS_SUCCESS = "SUCCESS"
+    STATUS_FAILED = "FAILED"
+    STATUS_SKIPPED_NO_CHANGE = "SKIPPED_NO_CHANGE"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "대기"),
+        (STATUS_RUNNING, "실행 중"),
+        (STATUS_SUCCESS, "성공"),
+        (STATUS_FAILED, "실패"),
+        (STATUS_SKIPPED_NO_CHANGE, "변경 없음"),
+    ]
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    source_name = models.CharField(max_length=100)
+    source_url = models.URLField(blank=True, max_length=500)
+    checksum = models.CharField(max_length=64, blank=True, db_index=True)
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    source_count = models.PositiveIntegerField(default=0)
+    created_count = models.PositiveIntegerField(default=0)
+    updated_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    error_summary = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_name"],
+                condition=models.Q(status="RUNNING"),
+                name="unique_running_facility_sync",
+            )
+        ]
 
 class Party(models.Model):
     name = models.CharField(max_length=100)
