@@ -1773,6 +1773,91 @@ h2 { font-size: 20px; }
   writing-mode: vertical-rl;
 }
 
+.chart-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+.chart-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.bar-chart > .chart-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  text-align: center;
+}
+.type-chart-wrap {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  align-items: center;
+  gap: 20px;
+  margin-top: 24px;
+}
+.donut-chart {
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #263247;
+  position: relative;
+  margin: 0 auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.donut-chart::after {
+  content: "";
+  position: absolute;
+  width: 66%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #111827;
+}
+.donut-chart > span {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.donut-chart b {
+  display: block;
+  font-size: 22px;
+  color: #FFFFFF;
+  font-weight: 800;
+}
+.donut-chart small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chart-legend li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+}
+.chart-legend li > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.chart-legend li > span {
+  color: #CBD5E1;
+}
+.chart-legend li > b {
+  color: var(--neon-mint);
+  font-weight: 700;
+}
+
 /* 온보딩 페이지 스타일 */
 .onboarding-page .tabs { display: none; }
 .onboarding-page main.wrap { padding-top: 28px; }
@@ -1931,12 +2016,23 @@ h2 { font-size: 20px; }
 }
 
 @media (max-width: 850px) {
-  .dash, .grid2, .profile-layout { grid-template-columns: 1fr; }
+  .dash, .grid2 { grid-template-columns: 1fr; }
+  .profile-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .preview-panel {
+    display: block;
+    position: static;
+    width: 100%;
+    order: -1;
+    margin-bottom: 8px;
+  }
   .card { max-width: 400px; margin: auto; }
   .stats, .regions, .dashboard-links, .sample-opponents, .mascot-showcase { grid-template-columns: 1fr 1fr; }
   .battle-cards { grid-template-columns: 1fr; }
   .battle-vs { justify-self: center; }
-  .preview-panel { display: none; }
   .topline { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
   .analytics-grid { grid-template-columns: 1fr; }
   .dashboard-main { display: block; }
@@ -1945,11 +2041,73 @@ h2 { font-size: 20px; }
   .compact-party-quests .quest-cards { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 600px) {
+  .wrap {
+    width: min(1200px, calc(100% - 24px));
+  }
+  .panel {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .section-head .button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  .workout-summary {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+  .workout-summary article {
+    padding: 12px 6px !important;
+    border-radius: 14px !important;
+    text-align: center;
+  }
+  .workout-summary span {
+    font-size: 11px !important;
+  }
+  .workout-summary b {
+    font-size: 18px !important;
+    margin-top: 4px !important;
+  }
+  .bar-chart {
+    grid-template-columns: repeat(14, 26px) !important;
+    gap: 6px !important;
+    height: 200px !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+  .type-chart-wrap {
+    grid-template-columns: 1fr !important;
+    justify-items: center;
+    gap: 16px;
+  }
+  .chart-legend {
+    width: 100%;
+  }
+  .bmi-scale {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .bmi-scale span {
+    font-size: 10px !important;
+    padding: 6px 2px !important;
+  }
+  .measure-table th, .measure-table td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 520px) {
   .stats, .regions, .dashboard-links, .sample-opponents, .mascot-showcase, .guide-grid, .mode-picker, .goal-picker { grid-template-columns: 1fr; }
   .logo small { display: none; }
   .header-user-name, .header-icon span, .header-parties summary span { display: none; }
   .auth { padding: 25px; margin: 24px auto; }
-  .workout-summary { grid-template-columns: 1fr; }
   .map-buttons { flex-wrap: wrap; }
 }

@@ -912,6 +912,47 @@ class WebFlowTests(TestCase):
         self.assertContains(dash, "커피 쏘기")
         self.assertNotContains(dash, "panel party-scoreboard")
 
+    def test_profile_page_mobile_layout_and_analytics(self):
+        user = User.objects.create_user(username="profileuser", password="password123")
+        self.client.force_login(user)
+
+        # 1. 마이페이지 로드 검증
+        res = self.client.get(reverse("profile"))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "마이페이지")
+        self.assertContains(res, "내 캐릭터 미리보기")
+        self.assertContains(res, "profile-layout")
+        self.assertContains(res, "preview-panel")
+        self.assertContains(res, "bmi-inputs")
+        self.assertContains(res, "bmi-scale")
+        self.assertContains(res, "내 운동 리포트")
+        self.assertContains(res, "dailyWorkoutChart")
+        self.assertContains(res, "workoutTypeChart")
+
+        # 2. 프로필 정보 및 캐릭터 저장 검증
+        save_res = self.client.post(reverse("profile"), {
+            "nickname": "파이터민수",
+            "area": "서울특별시",
+            "age": 28,
+            "gender": "M",
+            "height_cm": 178,
+            "weight_kg": 72,
+            "measured_on": timezone.localdate().strftime("%Y-%m-%d"),
+            "avatar_preference": "MUSCULAR",
+            "rank_participation": True,
+        }, follow=True)
+        self.assertEqual(save_res.status_code, 200)
+
+        user.refresh_from_db()
+        self.assertEqual(user.username, "파이터민수")
+        self.assertEqual(user.profile.display_name, "파이터민수")
+        self.assertEqual(user.profile.avatar_preference, "MUSCULAR")
+        self.assertEqual(float(user.profile.height_cm), 178.0)
+        self.assertEqual(float(user.profile.weight_kg), 72.0)
+        self.assertIsNotNone(user.profile.bmi)
+        self.assertContains(save_res, "파이터민수")
+
+
 
 
 

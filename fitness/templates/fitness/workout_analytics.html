@@ -1,8 +1,49 @@
-<section class="section-head"><div><h2>내 운동 리포트</h2><p>지금까지 기록한 운동을 한눈에 확인하세요.</p></div><a class="button" href="{% url 'activity' %}">운동 기록하기</a></section>
-<section class="workout-summary" aria-label="운동 기록 요약"><article><span>총 운동</span><b>{{ workout_totals.workouts }}회</b></article><article><span>누적 시간</span><b>{{ workout_totals.minutes }}분</b></article><article><span>배지 점수</span><b>{{ workout_totals.points }}점</b></article></section>
+<section class="section-head">
+  <div>
+    <h2><i class="fa-solid fa-chart-pie" style="color: var(--neon-mint); margin-right: 8px;"></i>내 운동 리포트</h2>
+    <p>지금까지 기록한 운동을 한눈에 확인하세요.</p>
+  </div>
+  <a class="button btn-mint" href="{% url 'activity' %}" style="display: inline-flex; align-items: center; gap: 6px;">
+    <i class="fa-solid fa-plus"></i>
+    <span>운동 기록하기</span>
+  </a>
+</section>
+<section class="workout-summary" aria-label="운동 기록 요약">
+  <article>
+    <span>총 운동</span>
+    <b>{{ workout_totals.workouts }}회</b>
+  </article>
+  <article>
+    <span>누적 시간</span>
+    <b>{{ workout_totals.minutes }}분</b>
+  </article>
+  <article>
+    <span>배지 점수</span>
+    <b>{{ workout_totals.points }}점</b>
+  </article>
+</section>
 <section class="analytics-grid">
-  <article class="panel chart-panel"><div class="chart-heading"><h3>최근 14일 운동 시간</h3><p>날짜별 운동 시간(분)</p></div><div class="bar-chart" id="dailyWorkoutChart" role="img" aria-label="최근 14일 날짜별 운동 시간 그래프"><p class="chart-empty">운동을 기록하면 그래프가 표시됩니다.</p></div></article>
-  <article class="panel chart-panel"><div class="chart-heading"><h3>종목별 운동 분포</h3><p>누적 운동 시간 기준</p></div><div class="type-chart-wrap"><div class="donut-chart" id="workoutTypeChart" role="img" aria-label="종목별 누적 운동 시간 비율"><span><b>{{ workout_totals.minutes }}</b><small>총 분</small></span></div><ul class="chart-legend" id="workoutTypeLegend"></ul></div></article>
+  <article class="panel chart-panel">
+    <div class="chart-heading">
+      <h3><i class="fa-solid fa-chart-simple" style="color: #38BDF8; margin-right: 6px;"></i>최근 14일 운동 시간</h3>
+      <p>날짜별 운동 시간(분)</p>
+    </div>
+    <div class="bar-chart" id="dailyWorkoutChart" role="img" aria-label="최근 14일 날짜별 운동 시간 그래프">
+      <p class="chart-empty">운동을 기록하면 그래프가 표시됩니다.</p>
+    </div>
+  </article>
+  <article class="panel chart-panel">
+    <div class="chart-heading">
+      <h3><i class="fa-solid fa-chart-pie" style="color: var(--trophy-gold); margin-right: 6px;"></i>종목별 운동 분포</h3>
+      <p>누적 운동 시간 기준</p>
+    </div>
+    <div class="type-chart-wrap">
+      <div class="donut-chart" id="workoutTypeChart" role="img" aria-label="종목별 누적 운동 시간 비율">
+        <span><b>{{ workout_totals.minutes }}</b><small>총 분</small></span>
+      </div>
+      <ul class="chart-legend" id="workoutTypeLegend"></ul>
+    </div>
+  </article>
 </section>
 {{ daily_chart|json_script:"daily-workout-data" }}
 {{ type_chart|json_script:"type-workout-data" }}
