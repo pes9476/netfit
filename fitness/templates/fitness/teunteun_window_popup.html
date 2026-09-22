@@ -28,41 +28,11 @@
       flex-direction: column;
       background: #0B111E;
     }
-    .popup-header {
-      height: 34px;
-      background: #0F172A;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      flex-shrink: 0;
-    }
-    .popup-header .title {
-      font-size: 11px;
-      font-weight: 800;
-      color: #F59E0B;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .popup-header .header-close-btn {
-      background: none;
-      border: none;
-      color: #94A3B8;
-      font-size: 14px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 2px 4px;
-      transition: color 0.15s;
-    }
-    .popup-header .header-close-btn:hover {
-      color: #FFFFFF;
-    }
+    /* 메인 이미지 포스터 영역 (상단부터 꽉 차게 표시) */
     .poster-link {
       flex: 1;
       width: 100%;
-      height: calc(100% - 76px);
+      height: calc(100% - 42px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -80,29 +50,12 @@
       transition: transform 0.22s ease;
     }
     .poster-link:hover img {
-      transform: scale(1.02);
+      transform: scale(1.015);
     }
-    .poster-badge {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(0, 245, 155, 0.4);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 11px;
-      font-weight: 800;
-      color: #00F59B;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      pointer-events: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    }
+    /* 하단 닫기 & 24시간 미노출 제어 바 */
     .popup-footer {
       height: 42px;
-      background: #0F172A;
+      background: #0B111E;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       align-items: center;
@@ -129,42 +82,31 @@
       color: #E2E8F0;
     }
     .close-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #E2E8F0;
       font-size: 11px;
       font-weight: 800;
       cursor: pointer;
-      padding: 5px 12px;
+      padding: 5px 14px;
       border-radius: 6px;
       transition: background 0.15s, border-color 0.15s;
     }
     .close-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
       color: #FFFFFF;
     }
   </style>
 </head>
 <body>
   <div class="popup-wrapper">
-    <div class="popup-header">
-      <span class="title">
-        <i class="fa-solid fa-gift"></i> 국민체력100 × 넷핏 튼튼머니
-      </span>
-      <button type="button" class="header-close-btn" onclick="closePopupWindow()" title="닫기">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
+    <!-- 이미지 본문 (클릭 시 공식 페이지 새 창 이동) -->
     <a href="https://nfa.kspo.or.kr" target="_blank" rel="noopener noreferrer" class="poster-link" title="국민체력100 공식 홈페이지로 이동 (새 창)">
       <img src="{% static 'fitness/img/teunteun_money_poster.png' %}" alt="운동하면 튼튼머니 연간 최대 5만원 국민체력100">
-      <div class="poster-badge">
-        <span>공식 신청 바로가기</span>
-        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 9px;"></i>
-      </div>
     </a>
 
+    <!-- 하단 제어 바: [24시간 동안 열지 않기] / [닫기] -->
     <div class="popup-footer">
       <label class="checkbox-label" for="chkHide24h">
         <input type="checkbox" id="chkHide24h">
@@ -193,6 +135,7 @@
       window.close();
     }
 
+    // ESC 누르면 창 닫기
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         closePopupWindow();
