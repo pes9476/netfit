@@ -1,61 +1,10 @@
-{% load static %}
 <!-- ==========================================================================
-     🎁 [국민체육진흥공단 × 넷핏] 튼튼머니 우측 상단 플로팅 포스터 팝업
-     화면 전체를 가리지 않고 우측 상단에 콤팩트하게 상주하는 제휴 배너
+     🎁 [국민체육진흥공단 × 넷핏] 튼튼머니 실제 브라우저 팝업 (window.open) 제어기
+     HTML DOM 내부 렌더링 부하를 없애고 별도의 가벼운 독립 팝업창으로 띄웁니다.
      ========================================================================== -->
-<div id="teunteunPopup" style="display: none; position: fixed; top: 85px; right: 20px; z-index: 9999; width: 280px; max-width: calc(100vw - 32px); opacity: 0; transform: translateY(-10px) scale(0.96); transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);">
-  <div id="teunteunPopupCard" style="background: #0F172A; border: 1.5px solid rgba(0, 245, 155, 0.45); border-radius: 18px; box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75), 0 0 25px rgba(0, 245, 155, 0.2); overflow: hidden;">
-    
-    <!-- 팝업 미니 상단바 -->
-    <div style="padding: 7px 12px; background: rgba(255, 255, 255, 0.04); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-      <span style="font-size: 11px; font-weight: 800; color: var(--trophy-gold); display: inline-flex; align-items: center; gap: 5px;">
-        <i class="fa-solid fa-coins"></i> 국민체력100 튼튼머니
-      </span>
-      <button type="button" onclick="closeTeunTeunPopup()" style="background: none; border: none; color: #94A3B8; font-size: 15px; cursor: pointer; padding: 2px 4px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="팝업 닫기">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <!-- 팝업 이미지 본문 (이미지 전체 링크 연동) -->
-    <a href="https://nfa.kspo.or.kr" target="_blank" rel="noopener noreferrer" style="display: block; position: relative; overflow: hidden; cursor: pointer; text-decoration: none;" title="국민체력100 튼튼머니 공식 사이트로 이동 (새 창)">
-      <img src="{% static 'fitness/img/teunteun_money_poster.png' %}" 
-           alt="몸은 튼튼하게, 포인트는 든든하게 운동하면 튼튼머니 연간 최대 5만원 국민체력100" 
-           style="width: 100%; height: auto; display: block; transition: transform 0.25s ease;"
-           onmouseover="this.style.transform='scale(1.02)'" 
-           onmouseout="this.style.transform='scale(1)'">
-      <!-- 호버 시 안내 툴팁 오버레이 -->
-      <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(0, 245, 155, 0.4); border-radius: 6px; padding: 3px 7px; font-size: 10px; font-weight: 800; color: var(--neon-mint); display: inline-flex; align-items: center; gap: 4px; pointer-events: none;">
-        <span>공식 신청 바로가기</span>
-        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 8px;"></i>
-      </div>
-    </a>
-
-    <!-- 팝업 하단 바: [24시간 동안 보지 않기] / [닫기] -->
-    <div style="background: #0B111E; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-      <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94A3B8; user-select: none;">
-        <input type="checkbox" id="teunteunTodayCheckbox" style="accent-color: var(--neon-mint); cursor: pointer; width: 13px; height: 13px;">
-        <span>24시간 동안 보지 않기</span>
-      </label>
-      <button type="button" onclick="closeTeunTeunPopup()" style="background: none; border: none; color: #CBD5E1; font-size: 11px; font-weight: 800; cursor: pointer; padding: 3px 6px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
-        <span>닫기</span>
-      </button>
-    </div>
-
-  </div>
-</div>
-
-<style>
-@media (max-width: 600px) {
-  #teunteunPopup {
-    top: 65px !important;
-    right: 12px !important;
-    width: 235px !important;
-  }
-}
-</style>
-
 <script>
 const TEUNTEUN_STORAGE_KEY = "netfit_teunteun_popup_hide_until";
+const TEUNTEUN_POPUP_URL = "{% url 'teunteun_popup' %}";
 
 window.openTeunTeunPopup = function(force = false) {
   if (!force) {
@@ -68,12 +17,11 @@ window.openTeunTeunPopup = function(force = false) {
 
   if (!force) {
     try {
-      // 1. '24시간 동안 보지 않기' 확인
       const hideUntil = localStorage.getItem(TEUNTEUN_STORAGE_KEY);
       if (hideUntil) {
         const hideTimestamp = parseInt(hideUntil, 10);
         if (Date.now() < hideTimestamp) {
-          return;
+          return null;
         } else {
           localStorage.removeItem(TEUNTEUN_STORAGE_KEY);
         }
@@ -81,42 +29,36 @@ window.openTeunTeunPopup = function(force = false) {
     } catch (e) {}
   }
 
-  const popup = document.getElementById("teunteunPopup");
-  if (popup) {
-    popup.style.display = "block";
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        popup.style.opacity = "1";
-        popup.style.transform = "translateY(0) scale(1)";
-      }, 30);
-    });
+  // 실제 브라우저 팝업 창 규격 (우측 상단 배치)
+  const width = 380;
+  const height = 520;
+  const screenW = window.screen.availWidth || window.screen.width || 1280;
+  const left = Math.max(0, screenW - width - 40);
+  const top = 70;
+  const features = `width=${width},height=${height},left=${left},top=${top},location=no,menubar=no,toolbar=no,status=no,resizable=no,scrollbars=no`;
+
+  try {
+    const popupWin = window.open(TEUNTEUN_POPUP_URL, "NetfitTeunTeunPopup", features);
+    if (popupWin) {
+      popupWin.focus();
+    }
+    return popupWin;
+  } catch (err) {
+    console.warn("Teunteun popup window could not be opened:", err);
+    return null;
   }
 };
 
 window.closeTeunTeunPopup = function() {
-  const chk = document.getElementById("teunteunTodayCheckbox");
-  if (chk && chk.checked) {
-    try {
-      const expiry = Date.now() + (24 * 60 * 60 * 1000);
-      localStorage.setItem(TEUNTEUN_STORAGE_KEY, expiry.toString());
-    } catch (e) {}
-  }
-  const popup = document.getElementById("teunteunPopup");
-  if (popup) {
-    popup.style.opacity = "0";
-    popup.style.transform = "translateY(-10px) scale(0.96)";
-    setTimeout(() => {
-      popup.style.display = "none";
-    }, 280);
-  }
+  // 하위 호환용 (실제 팝업창 내부에서 window.close()로 닫힘)
 };
 
-// 메인 대시보드 진입 시 24시간 미설정 사용자에게 우측 상단에 콤팩트하게 노출
+// 메인 대시보드 진입 시 24시간 미설정 사용자에게 실제 팝업 띄우기
 document.addEventListener("DOMContentLoaded", () => {
   {% if request.resolver_match.url_name == 'dashboard' %}
     setTimeout(() => {
       window.openTeunTeunPopup(false);
-    }, 600);
+    }, 500);
   {% endif %}
 });
 </script>

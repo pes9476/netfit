@@ -1,0 +1,203 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>국민체력100 튼튼머니 안내 - 넷핏</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0B111E;
+      color: #E2E8F0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    .popup-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #0B111E;
+    }
+    .popup-header {
+      height: 34px;
+      background: #0F172A;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+    .popup-header .title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #F59E0B;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .popup-header .header-close-btn {
+      background: none;
+      border: none;
+      color: #94A3B8;
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+      transition: color 0.15s;
+    }
+    .popup-header .header-close-btn:hover {
+      color: #FFFFFF;
+    }
+    .poster-link {
+      flex: 1;
+      width: 100%;
+      height: calc(100% - 76px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      text-decoration: none;
+      background: #060911;
+    }
+    .poster-link img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.22s ease;
+    }
+    .poster-link:hover img {
+      transform: scale(1.02);
+    }
+    .poster-badge {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(0, 245, 155, 0.4);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #00F59B;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    .popup-footer {
+      height: 42px;
+      background: #0F172A;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+    .checkbox-label {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: #00F59B;
+      width: 13px;
+      height: 13px;
+    }
+    .checkbox-label:hover {
+      color: #E2E8F0;
+    }
+    .close-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #E2E8F0;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-wrapper">
+    <div class="popup-header">
+      <span class="title">
+        <i class="fa-solid fa-gift"></i> 국민체력100 × 넷핏 튼튼머니
+      </span>
+      <button type="button" class="header-close-btn" onclick="closePopupWindow()" title="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <a href="https://nfa.kspo.or.kr" target="_blank" rel="noopener noreferrer" class="poster-link" title="국민체력100 공식 홈페이지로 이동 (새 창)">
+      <img src="{% static 'fitness/img/teunteun_money_poster.png' %}" alt="운동하면 튼튼머니 연간 최대 5만원 국민체력100">
+      <div class="poster-badge">
+        <span>공식 신청 바로가기</span>
+        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 9px;"></i>
+      </div>
+    </a>
+
+    <div class="popup-footer">
+      <label class="checkbox-label" for="chkHide24h">
+        <input type="checkbox" id="chkHide24h">
+        <span>24시간 동안 열지 않기</span>
+      </label>
+      <button type="button" class="close-btn" onclick="closePopupWindow()">닫기</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "netfit_teunteun_popup_hide_until";
+
+    function closePopupWindow() {
+      const chk = document.getElementById("chkHide24h");
+      if (chk && chk.checked) {
+        const expiry = Date.now() + (24 * 60 * 60 * 1000);
+        try {
+          localStorage.setItem(STORAGE_KEY, expiry.toString());
+        } catch(e) {}
+        try {
+          if (window.opener && window.opener.localStorage) {
+            window.opener.localStorage.setItem(STORAGE_KEY, expiry.toString());
+          }
+        } catch(e) {}
+      }
+      window.close();
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closePopupWindow();
+      }
+    });
+  </script>
+</body>
+</html>

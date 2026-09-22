@@ -955,15 +955,22 @@ class WebFlowTests(TestCase):
     def test_teunteun_popup_and_gps_direct_prompt(self):
         user = User.objects.create_user(username="popuptester", password=None)
         self.client.force_login(user)
-        # 1. 튼튼머니 플로팅 포스터 팝업 검증
+        # 1. 메인 대시보드의 실제 브라우저 팝업 호출 스크립트 검증
         dash_res = self.client.get(reverse("dashboard"))
         self.assertEqual(dash_res.status_code, 200)
-        self.assertContains(dash_res, "teunteun_money_poster.png")
-        self.assertContains(dash_res, "https://nfa.kspo.or.kr")
-        self.assertContains(dash_res, "24시간 동안 보지 않기")
+        self.assertContains(dash_res, "openTeunTeunPopup")
+        self.assertContains(dash_res, reverse("teunteun_popup"))
         self.assertContains(dash_res, "netfit_teunteun_popup_hide_until")
 
-        # 2. GPS 직접 호출 모달 구조 검증
+        # 2. 독립 팝업창 뷰 (/teunteun-popup/) 검증
+        popup_res = self.client.get(reverse("teunteun_popup"))
+        self.assertEqual(popup_res.status_code, 200)
+        self.assertContains(popup_res, "teunteun_money_poster.png")
+        self.assertContains(popup_res, "https://nfa.kspo.or.kr")
+        self.assertContains(popup_res, "24시간 동안 열지 않기")
+        self.assertContains(popup_res, "window.close()")
+
+        # 3. GPS 직접 호출 모달 구조 검증
         fac_res = self.client.get(reverse("facilities"))
         self.assertEqual(fac_res.status_code, 200)
         self.assertContains(fac_res, "openGPSPermissionModal")

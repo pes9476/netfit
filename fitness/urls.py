@@ -11,6 +11,7 @@ from .views import (
     dismiss_party_notification, invite_party_member,
     poke_user, dismiss_poke,
     sports_news_api, weather_api, notifications_api,
+    teunteun_popup_view,
 )
 
 urlpatterns = [
@@ -55,4 +56,5 @@ urlpatterns = [
     path("demo/level/", demo_level, name="demo_level"),
     path("demo/level/<int:target_level>/", demo_level, name="demo_level_target"),
     path("demo/battle/", demo_battle, name="demo_battle"),
+    path("teunteun-popup/", teunteun_popup_view, name="teunteun_popup"),
 ]

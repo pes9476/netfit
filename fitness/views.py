@@ -1826,3 +1826,8 @@ class UserLogoutView(LogoutView):
         for _ in storage:
             pass
         return super().dispatch(request, *args, **kwargs)
+
+
+def teunteun_popup_view(request):
+    """국민체력100 튼튼머니 실제 브라우저 팝업(window.open) 전용 가벼운 뷰"""
+    return render(request, "fitness/teunteun_window_popup.html")
