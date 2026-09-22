@@ -1,0 +1,38 @@
+name: Django CI
+
+on:
+  push:
+    branches: [testsv, runsv, netfit_giuk]
+  pull_request:
+    branches: [testsv, runsv]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      USE_SQLITE: "1"
+      DEBUG: "True"
+      SECRET_KEY: "ci-test-only-secret"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: >-
+          python manage.py test
+          config.test_deployment
+          fitness.test_kakao
+          fitness.test_local_auth
+          fitness.test_logout
+          fitness.test_mascots
+          fitness.test_web_flow
+          fitness.test_facility_sync
+          -v 1
+      - run: python manage.py collectstatic --noinput
