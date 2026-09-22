@@ -952,7 +952,20 @@ class WebFlowTests(TestCase):
         self.assertIsNotNone(user.profile.bmi)
         self.assertContains(save_res, "파이터민수")
 
+    def test_teunteun_popup_and_gps_direct_prompt(self):
+        user = User.objects.create_user(username="popuptester", password=None)
+        self.client.force_login(user)
+        # 1. 튼튼머니 플로팅 포스터 팝업 검증
+        dash_res = self.client.get(reverse("dashboard"))
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertContains(dash_res, "teunteun_money_poster.png")
+        self.assertContains(dash_res, "https://nfa.kspo.or.kr")
+        self.assertContains(dash_res, "24시간 동안 보지 않기")
+        self.assertContains(dash_res, "netfit_teunteun_popup_hide_until")
 
-
-
-
+        # 2. GPS 직접 호출 모달 구조 검증
+        fac_res = self.client.get(reverse("facilities"))
+        self.assertEqual(fac_res.status_code, 200)
+        self.assertContains(fac_res, "openGPSPermissionModal")
+        self.assertContains(fac_res, "executeGPSFetch")
+        self.assertContains(fac_res, "navigator.geolocation.getCurrentPosition")
