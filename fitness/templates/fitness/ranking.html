@@ -29,7 +29,7 @@
     </thead>
     <tbody>
       {% for item in ranked %}
-        <tr style="{% if item.is_me %}background: rgba(0, 245, 155, 0.08);{% endif %}">
+        <tr class="rank-row {% if forloop.counter > 10 %}rank-row-hidden{% endif %}" style="{% if item.is_me %}background: rgba(0, 245, 155, 0.08);{% endif %}{% if forloop.counter > 10 %}display:none;{% endif %}">
           <td>
             {% if item.rank == 1 %}
               <span style="font-size: 20px;">🥇</span>
@@ -63,6 +63,27 @@
       {% endfor %}
     </tbody>
   </table>
+  {% if ranked|length > 10 %}
+  <div style="text-align: center; padding: 14px 0 6px;">
+    <button type="button" id="rankingShowMoreBtn" onclick="toggleRankingRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; font-size: 12px; font-weight: 800; padding: 8px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" id="rankingShowMoreIcon" style="margin-right: 6px; font-size: 10px;"></i>더 보기
+    </button>
+  </div>
+  <script>
+  function toggleRankingRows() {
+    const hiddenRows = document.querySelectorAll('.rank-row-hidden');
+    const btn = document.getElementById('rankingShowMoreBtn');
+    const icon = document.getElementById('rankingShowMoreIcon');
+    const isHidden = hiddenRows[0] && hiddenRows[0].style.display === 'none';
+    hiddenRows.forEach(row => { row.style.display = isHidden ? '' : 'none'; });
+    if (isHidden) {
+      btn.innerHTML = '<i class="fa-solid fa-chevron-up" style="margin-right: 6px; font-size: 10px;"></i>접기';
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기';
+    }
+  }
+  </script>
+  {% endif %}
 </article>
 
 {% if scope == 'friends' and friend_count == 0 %}

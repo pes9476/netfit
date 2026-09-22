@@ -35,6 +35,7 @@
             </summary>
             <div class="header-friends-links quest-menu">
               <strong>내 일일미션</strong>
+              <div class="quest-menu-scroll">
               {% for quest in header_quests %}
                 <div class="quest-menu-item {% if quest.completed %}done{% endif %}">
                   <span>{% if quest.completed %}✓{% else %}○{% endif %}</span>
@@ -47,6 +48,7 @@
               {% empty %}
                 <p>설정된 일일미션이 없어요.</p>
               {% endfor %}
+              </div>
               <a href="{% url 'dashboard' %}#daily-quests">대시보드에서 확인·완료하기</a>
             </div>
           </details>
@@ -79,12 +81,22 @@
                 </a>
               {% endif %}
               {% for party in header_user_parties|default:user.parties.all %}
-                <b style="color: #FFFFFF; font-size: 13px;">{{ party.name }}</b>
-                {% for member in party.members.all %}
-                  <small style="display: block; color: var(--text-muted); padding: 3px 0 3px 10px;">• {{ member.profile.display_name|default:member.username }}</small>
-                {% endfor %}
+                <div class="party-accordion-item">
+                  <button type="button"
+                    class="party-accordion-btn"
+                    onclick="togglePartyMembers(this)"
+                    aria-expanded="false">
+                    <span><i class="fa-solid fa-users" style="font-size: 11px; color: #38BDF8; margin-right: 5px;"></i>{{ party.name }}</span>
+                    <i class="fa-solid fa-chevron-right party-accordion-icon"></i>
+                  </button>
+                  <div class="party-members-scroll party-accordion-body" style="display:none;">
+                    {% for member in party.members.all %}
+                      <small style="display: block; color: var(--text-muted); padding: 3px 0 3px 10px;">• {{ member.profile.display_name|default:member.username }}</small>
+                    {% endfor %}
+                  </div>
+                </div>
               {% empty %}
-                <small style="display: block; color: var(--text-muted);">참여 중인 파티가 없어요.</small>
+                <small style="display: block; color: var(--text-muted); padding: 4px 6px;">참여 중인 파티가 없어요.</small>
               {% endfor %}
               <a href="{% url 'onboarding_group' %}" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">새 파티 만들기</a>
             </div>
@@ -192,6 +204,14 @@
   <script src="{% static 'fitness/js/mascot-picker.js' %}" defer></script>
 
   <script>
+  // 그룹원 드롭다운 파티 아코디언 토글
+  function togglePartyMembers(btn) {
+    const body = btn.nextElementSibling;
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    body.style.display = isOpen ? 'none' : 'block';
+  }
+
   (() => {
     // 드롭다운 외부 클릭 및 ESC 닫기 핸들러
     const menus = [...document.querySelectorAll('.header-friends')];
