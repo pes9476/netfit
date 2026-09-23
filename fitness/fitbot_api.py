@@ -118,6 +118,7 @@ def chat(request):
         return JsonResponse({"error": "AI 연결 설정이 필요합니다. Render 환경변수(Environment)에 GROQ_API_KEY를 등록해 주세요."}, status=503)
 
     # 1. Try Groq API if key configured
+    groq_err = None
     if groq_key:
         groq_models = [getattr(settings, "GROQ_MODEL", "openai/gpt-oss-20b")]
         for gm in ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]:
@@ -140,7 +141,14 @@ def chat(request):
                 )
                 if response.status_code == 429:
                     return JsonResponse({"error": "이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-                response.raise_for_status()
+                if not response.ok:
+                    try:
+                        err_msg = response.json().get("error", {}).get("message", response.text[:80])
+                    except Exception:
+                        err_msg = response.text[:80]
+                    groq_err = f"Groq {response.status_code}: {err_msg}"
+                    logger.warning(f"Groq API call ({model}) failed: {groq_err}")
+                    continue
                 res_data = response.json()
                 if "choices" in res_data:
                     choices = res_data.get("choices") or []
@@ -152,10 +160,11 @@ def chat(request):
                 if reply:
                     break
             except Exception as e:
-                logger.warning(f"Groq API call ({model}) failed, attempting fallback: {e}")
-                last_error = e
+                groq_err = f"Groq 예외: {e}"
+                logger.warning(f"Groq API call ({model}) failed: {e}")
 
     # 2. Try Gemini API if Groq wasn't configured or failed
+    gemini_err = None
     if not reply and gemini_key:
         models_to_try = [getattr(settings, "GEMINI_MODEL", "gemini-1.5-flash")]
         for m_name in ["gemini-1.5-flash", "gemini-2.0-flash"]:
@@ -176,7 +185,14 @@ def chat(request):
                 )
                 if response.status_code == 429:
                     return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-                response.raise_for_status()
+                if not response.ok:
+                    try:
+                        err_msg = response.json().get("error", {}).get("message", response.text[:80])
+                    except Exception:
+                        err_msg = response.text[:80]
+                    gemini_err = f"Gemini {response.status_code}: {err_msg}"
+                    logger.warning(f"Gemini API model {m_name} failed: {gemini_err}")
+                    continue
                 result = response.json()
                 if "candidates" in result:
                     candidates = result.get("candidates") or []
@@ -188,14 +204,21 @@ def chat(request):
                 if reply:
                     break
             except Exception as e:
+                gemini_err = f"Gemini 예외: {e}"
                 logger.warning(f"Gemini API model {m_name} failed: {e}")
-                last_error = e
 
     if not reply:
-        logger.error(f"Fitbot AI generation failed completely: {last_error}")
-        diag = ""
-        if isinstance(last_error, requests.HTTPError) and last_error.response is not None:
-            diag = f" (오류 {last_error.response.status_code})"
-        return JsonResponse({"error": f"답변 연결에 실패했어요.{diag} 잠시 후 다시 시도해 주세요."}, status=503)
+        details = []
+        if groq_key:
+            details.append(groq_err or "Groq 응답 없음")
+        else:
+            details.append("Groq키 미설정")
+        if gemini_key:
+            details.append(gemini_err or "Gemini 응답 없음")
+        else:
+            details.append("Gemini키 미설정")
+        detail_str = " | ".join(details)
+        logger.error(f"Fitbot AI generation failed completely: {detail_str}")
+        return JsonResponse({"error": f"답변 연결에 실패했어요. ({detail_str}) 잠시 후 다시 시도해 주세요."}, status=503)
 
     return JsonResponse({"reply": reply[:3000], "facilities": facilities})

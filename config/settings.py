@@ -159,9 +159,15 @@ KAKAO_REDIRECT_URI = (
 def _clean_str(val):
     if not val:
         return ""
-    val = val.strip()
+    val = str(val).strip()
     if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
         val = val[1:-1].strip()
+    if val.startswith("GROQ_API_KEY="):
+        val = val.split("=", 1)[1].strip()
+    if val.startswith("GEMINI_API_KEY="):
+        val = val.split("=", 1)[1].strip()
+    if val.startswith("Bearer "):
+        val = val[7:].strip()
     return val
 
 _groq_local_file = BASE_DIR / "netfit_groq.local.env"
@@ -175,16 +181,24 @@ if _groq_local_file.exists():
     except Exception:
         pass
 
-GROQ_API_KEY = (
-    _clean_str(os.getenv("GROQ_API_KEY"))
-    or _clean_str(os.getenv("GROQ_KEY"))
-)
+GROQ_API_KEY = ""
+GEMINI_API_KEY = ""
+
+for _env_k, _env_v in os.environ.items():
+    _ck = _env_k.strip().upper()
+    _cv = _clean_str(_env_v)
+    if not _cv:
+        continue
+    if _cv.startswith("gsk_"):
+        GROQ_API_KEY = _cv
+    elif _cv.startswith("AIza"):
+        GEMINI_API_KEY = _cv
+    elif _ck in ("GROQ_API_KEY", "GROQ_KEY", "GROQ") and not GROQ_API_KEY:
+        GROQ_API_KEY = _cv
+    elif _ck in ("GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY") and not GEMINI_API_KEY:
+        GEMINI_API_KEY = _cv
+
 GROQ_MODEL = _clean_str(os.getenv("GROQ_MODEL")) or "openai/gpt-oss-20b"
-GEMINI_API_KEY = (
-    _clean_str(os.getenv("GEMINI_API_KEY"))
-    or _clean_str(os.getenv("GEMINI_KEY"))
-    or _clean_str(os.getenv("GOOGLE_API_KEY"))
-)
 GEMINI_MODEL = _clean_str(os.getenv("GEMINI_MODEL")) or "gemini-1.5-flash"
 FITBOT_REQUIRE_LOGIN = True
 FITBOT_REGIONS = [
