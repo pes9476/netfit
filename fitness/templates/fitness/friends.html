@@ -123,7 +123,7 @@
 {% if friends %}
   <div class="friend-cards-grid">
     {% for friend in friends %}
-      <article class="friend-rich-card">
+      <article class="friend-rich-card {% if forloop.counter > 5 %}friend-card-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
         <!-- 상단: 아바타 + 닉네임 + 캐릭터 레벨/티어 -->
         <div class="friend-card-header">
           <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
@@ -201,6 +201,25 @@
       </article>
     {% endfor %}
   </div>
+  {% if friends|length > 5 %}
+  <div style="text-align: center; margin-top: 16px;">
+    <button type="button" id="friendShowMoreBtn" onclick="toggleFriendCards()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; font-size: 13px; font-weight: 800; padding: 10px 28px; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-user-group" style="color: #38BDF8; font-size: 12px;"></i>
+      친구 더 보기 (총 {{ friends|length }}명)
+    </button>
+  </div>
+  <script>
+  function toggleFriendCards() {
+    const hiddenCards = document.querySelectorAll('.friend-card-hidden');
+    const btn = document.getElementById('friendShowMoreBtn');
+    const isHidden = hiddenCards[0] && hiddenCards[0].style.display === 'none';
+    hiddenCards.forEach(card => { card.style.display = isHidden ? '' : 'none'; });
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-chevron-up" style="font-size: 12px;"></i> 접기'
+      : '<i class="fa-solid fa-user-group" style="color: #38BDF8; font-size: 12px;"></i> 친구 더 보기 (총 {{ friends|length }}명)';
+  }
+  </script>
+  {% endif %}
 {% else %}
   <article class="panel" style="text-align: center; padding: 40px 20px; background: rgba(16, 24, 39, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px;">
     <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: #38BDF8;">

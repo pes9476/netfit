@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / "netfit_groq.local.env")
 
 def env_bool(name, default=False):
     return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -21,17 +22,17 @@ def env_list(name):
 
 
 ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT_ID"))
-ON_RENDER = bool(os.getenv("RENDER"))
-ON_PLATFORM = ON_RAILWAY or ON_RENDER
-DEBUG = env_bool("DEBUG", not ON_PLATFORM)
+ON_RENDER = env_bool("RENDER") or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+ON_DEPLOYMENT = ON_RAILWAY or ON_RENDER
+DEBUG = env_bool("DEBUG", not ON_DEPLOYMENT)
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("Set SECRET_KEY before starting with DEBUG=False.")
     SECRET_KEY = "django-insecure-local-development-only-netfit"
 PUBLIC_DOMAIN = (
-    os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
-    or os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    or os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 )
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 if DEBUG:
@@ -85,8 +86,10 @@ TEMPLATES = [{
 WSGI_APPLICATION = "config.wsgi.application"
 USE_SQLITE = env_bool("USE_SQLITE")
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-if ON_PLATFORM and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB"))):
-    raise ImproperlyConfigured("Production requires PostgreSQL: set DATABASE_URL and unset USE_SQLITE.")
+if ON_DEPLOYMENT and (USE_SQLITE or not (DATABASE_URL or os.getenv("POSTGRES_DB"))):
+    raise ImproperlyConfigured(
+        "Deployed environments require PostgreSQL: set DATABASE_URL and unset USE_SQLITE."
+    )
 if DATABASE_URL and not USE_SQLITE:
     DATABASES = {"default": dj_database_url.parse(
         DATABASE_URL, conn_max_age=600,
@@ -134,7 +137,7 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
-        if (ON_PLATFORM and not DEBUG)
+        if (ON_DEPLOYMENT and not DEBUG)
         else "django.contrib.staticfiles.storage.StaticFilesStorage"
     },
 }
@@ -155,3 +158,16 @@ KAKAO_REDIRECT_URI = (
     or (f"https://{PUBLIC_DOMAIN}/login/kakao/callback/" if PUBLIC_DOMAIN
         else "http://127.0.0.1:8000/login/kakao/callback/")
 )
+
+# --------------------------------------------------------------------------
+# 🤖 NetFit 핏봇 (Groq AI Chatbot) 설정
+# --------------------------------------------------------------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+FITBOT_REQUIRE_LOGIN = True
+FITBOT_REGIONS = [
+    "서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시",
+    "대전광역시", "광주광역시", "울산광역시", "세종특별자치시", "강원특별자치도",
+    "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도",
+    "경상남도", "제주특별자치도",
+]
+FITBOT_FACILITY_SEARCH = "fitness.services.search_facilities_for_fitbot"

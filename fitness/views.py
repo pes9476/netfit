@@ -251,10 +251,12 @@ def dashboard(request):
 
     party_daily_missions = []
     party_weekly_missions = []
+    party_has_direct_missions = False
     if active_party:
         party_data = sync_party_mission_progress(active_party, request.user)
         party_daily_missions = party_data["daily_missions"]
         party_weekly_missions = party_data["weekly_missions"]
+        party_has_direct_missions = any(getattr(q, 'source', '') == 'DIRECT' for q in party_daily_missions)
         group_quests = party_daily_missions
     else:
         group_quests = []
@@ -305,6 +307,7 @@ def dashboard(request):
         "active_party": active_party,
         "user_all_parties": request.user.parties.all(),
         "party_daily_missions": party_daily_missions,
+        "party_has_direct_missions": party_has_direct_missions,
         "party_weekly_missions": party_weekly_missions,
         "group_quests": group_quests, "personal_quests": personal_quests,
         "completed_personal_ids": completed_personal_ids, "completed_group_ids": completed_group_ids,
@@ -1138,7 +1141,7 @@ def invite_party_member(request, party_id):
         ).first()
 
         if not target_user:
-            messages.error(request, f"'{target_name}'에 해당하는 사용자를 찾을 수 없습니다. 닉네임 또는 아이디를 확인해주세요.")
+            messages.error(request, "등록되지 않은 사용자입니다.")
         elif target_user == request.user:
             messages.error(request, "본인은 파티에 초대할 수 없습니다.")
         elif party.members.filter(id=target_user.id).exists():
@@ -1301,6 +1304,37 @@ def notifications_api(request):
         "pending_friend_requests": pending_friend_list,
         "pending_party_invitations": pending_party_list,
     })
+
+
+@login_required
+def search_users_api(request):
+    """친구 닉네임/아이디 실시간 검색 API (전체 계정 대상)"""
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return JsonResponse({"results": [], "count": 0, "message": "검색어를 입력해 주세요."})
+
+    # 전체 계정 중 본인을 제외한 사용자 검색
+    matched_users = User.objects.filter(
+        Q(username__icontains=query) | Q(first_name__icontains=query)
+    ).exclude(id=request.user.id).select_related("profile")[:15]
+
+    results = []
+    for u in matched_users:
+        disp_name = getattr(u, "profile", None) and u.profile.display_name
+        if not disp_name:
+            disp_name = u.username
+        area = getattr(u, "profile", None) and u.profile.area or "서울특별시"
+        results.append({
+            "id": u.id,
+            "username": u.username,
+            "display_name": disp_name,
+            "area": area,
+        })
+
+    if not results:
+        return JsonResponse({"results": [], "count": 0, "message": "등록되지 않은 사용자입니다."})
+
+    return JsonResponse({"results": results, "count": len(results), "message": "검색 완료"})
 
 
 PRESET_LOCATIONS = {
@@ -1666,15 +1700,20 @@ def onboarding_group(request):
                 int(value) for value in request.POST.getlist("invitees")
                 if value.isdigit() and int(value) in friend_ids
             }
+            direct_invitee_id = request.POST.get("direct_invitee_id", "").strip()
             direct_invitee_name = request.POST.get("direct_invitee", "").strip()
-            if direct_invitee_name:
+            if direct_invitee_id and direct_invitee_id.isdigit():
+                direct_user = User.objects.filter(id=int(direct_invitee_id)).exclude(id=request.user.id).first()
+                if direct_user:
+                    invited_ids.add(direct_user.id)
+            elif direct_invitee_name:
                 direct_user = User.objects.filter(
                     Q(username__iexact=direct_invitee_name) | Q(first_name__iexact=direct_invitee_name)
                 ).exclude(id=request.user.id).first()
                 if direct_user:
                     invited_ids.add(direct_user.id)
                 else:
-                    messages.warning(request, f"입력하신 '{direct_invitee_name}'님을 찾지 못하여 파티 초대 대상에서 제외되었습니다.")
+                    messages.error(request, f"'{direct_invitee_name}'님은 등록되지 않은 사용자입니다.")
             with transaction.atomic():
                 party = Party.objects.create(
                     name=room_name, owner=request.user,
@@ -1706,8 +1745,15 @@ def onboarding_group(request):
 def onboarding_group_quest(request, party_id):
     party = get_object_or_404(Party, pk=party_id, owner=request.user)
     workout_choices = WorkoutRecord.WORKOUT_CHOICES
+    today = timezone.localdate()
     if request.method == "POST":
         action = request.POST.get("action", "direct")
+        if action == "delete_quest":
+            quest_id = request.POST.get("quest_id")
+            DailyQuest.objects.filter(id=quest_id, party=party, source="DIRECT").delete()
+            messages.info(request, "파티 미션이 삭제되었습니다.")
+            return redirect("onboarding_group_quest", party_id=party.id)
+
         if action in ["ai", "facility"]:
             from .services import generate_party_daily_missions, generate_party_weekly_missions
             generate_party_daily_missions(party)
@@ -1721,6 +1767,7 @@ def onboarding_group_quest(request, party_id):
             messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! AI 일일(3개) & 주간(10개) 협동 미션이 시작됩니다.")
             return redirect("dashboard")
 
+        submit_action = request.POST.get("submit_action", "finish")
         title = request.POST.get("title", "").strip()[:100]
         workout_type = request.POST.get("workout_type", "")
         custom_workout_name = request.POST.get("custom_workout_name", "").strip()[:50]
@@ -1745,19 +1792,32 @@ def onboarding_group_quest(request, party_id):
                 period_type="DAILY",
                 mission_category="WORKOUT",
                 source="DIRECT",
+                quest_date=today,
+                is_active=True,
             )
-            from .services import generate_party_daily_missions, generate_party_weekly_missions
-            generate_party_daily_missions(party)
+            # 직접입력 퀘스트이므로 AI 일일미션은 자동 생성하지 않습니다!
+            from .services import generate_party_weekly_missions
             generate_party_weekly_missions(party)
+
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! (운동 종목: {party.workout_type})")
-            return redirect("dashboard")
+
+            if submit_action == "add_more":
+                messages.success(request, f"'{title}' 미션이 추가되었습니다! 계속해서 미션을 추가하실 수 있습니다.")
+                return redirect("onboarding_group_quest", party_id=party.id)
+            else:
+                messages.success(request, f"🎉 '{party.name}' 파티 미션 설정을 완료했습니다! (운동 종목: {party.workout_type})")
+                return redirect("dashboard")
+
+    existing_quests = list(DailyQuest.objects.filter(
+        party=party, period_type="DAILY", quest_date=today, is_active=True
+    ).order_by("id"))
     return render(request, "fitness/onboarding_group_quest.html", {
         "party": party, "workout_choices": workout_choices,
         "members": party.members.select_related("profile").all(),
+        "existing_quests": existing_quests,
     })
 
 

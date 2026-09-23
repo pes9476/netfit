@@ -15,6 +15,7 @@ quest_proofs/
 !.env.example
 *.log
 kakao.local.json
+netfit_groq.local.env
 
 # Local code backups
 docs/change_history/

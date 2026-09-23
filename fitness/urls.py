@@ -10,9 +10,10 @@ from .views import (
     register_view, respond_friend_request, respond_party_invitation,
     dismiss_party_notification, invite_party_member,
     poke_user, dismiss_poke,
-    sports_news_api, weather_api, notifications_api,
+    sports_news_api, weather_api, notifications_api, search_users_api,
     teunteun_popup_view,
 )
+from . import fitbot_api
 
 urlpatterns = [
     path("login/kakao/", kakao_login, name="kakao_login"),
@@ -39,6 +40,7 @@ urlpatterns = [
     path("api/news/", sports_news_api, name="sports_news_api"),
     path("api/weather/", weather_api, name="weather_api"),
     path("api/notifications/", notifications_api, name="notifications_api"),
+    path("api/users/search/", search_users_api, name="search_users_api"),
     path("friends/", friends_view, name="friends"),
     path("friends/add/", add_friend, name="add_friend"),
     path("friends/request/<int:request_id>/<str:action>/", respond_friend_request, name="respond_friend_request"),
@@ -57,4 +59,6 @@ urlpatterns = [
     path("demo/level/<int:target_level>/", demo_level, name="demo_level_target"),
     path("demo/battle/", demo_battle, name="demo_battle"),
     path("teunteun-popup/", teunteun_popup_view, name="teunteun_popup"),
+    path("fitbot/api/bootstrap/", fitbot_api.bootstrap, name="fitbot_bootstrap"),
+    path("fitbot/api/chat/", fitbot_api.chat, name="fitbot_chat"),
 ]

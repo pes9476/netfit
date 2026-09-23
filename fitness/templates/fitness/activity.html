@@ -101,7 +101,7 @@
 
 <article class="panel">
   {% for record in records %}
-    <div class="activity">
+    <div class="activity workout-record-item {% if forloop.counter > 5 %}workout-record-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
       <span class="icon"><i class="fa-solid fa-person-running"></i></span>
       <span>
         <b>{{ record.workout_name }} · {{ record.minutes }}분{% if record.distance_km %} · {{ record.distance_km }}km{% endif %}</b>
@@ -123,6 +123,24 @@
   {% empty %}
     <p style="color: var(--text-muted); margin: 8px 0;">첫 운동을 기록해보세요.</p>
   {% endfor %}
+  {% if records|length > 5 %}
+  <div style="text-align: center; padding: 14px 0 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px;">
+    <button type="button" id="workoutShowMoreBtn" onclick="toggleWorkoutRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 12px; font-weight: 800; padding: 8px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기 (총 {{ records|length }}건)
+    </button>
+  </div>
+  <script>
+  function toggleWorkoutRows() {
+    const hidden = document.querySelectorAll('.workout-record-hidden');
+    const btn = document.getElementById('workoutShowMoreBtn');
+    const isHidden = hidden[0] && hidden[0].style.display === 'none';
+    hidden.forEach(el => { el.style.display = isHidden ? '' : 'none'; });
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-chevron-up" style="margin-right: 6px; font-size: 10px;"></i>접기'
+      : '<i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기 (총 {{ records|length }}건)';
+  }
+  </script>
+  {% endif %}
 </article>
 
 <!-- 🏆 파티 내기 대결 기록 (운동 기록 페이지 연동 & 스크롤 목록보기) -->

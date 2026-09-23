@@ -1,0 +1,127 @@
+﻿<!-- 🏛️ NetFit 공공데이터 2종 융합 아키텍처 상세 안내 인라인 모달 -->
+<div id="publicDataModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(3, 7, 18, 0.82); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 16px;" onclick="if(event.target === this) closePublicDataModal();">
+  <div class="modal-card" style="background: linear-gradient(145deg, #0F172A 0%, #111E36 100%); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 22px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.2); box-sizing: border-box; display: flex; flex-direction: column;">
+    
+    <!-- 모달 헤더 -->
+    <div style="padding: 20px 24px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0F172A; z-index: 10;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 17px; color: #38BDF8;">
+          <i class="fa-solid fa-landmark"></i>
+        </span>
+        <div>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 900; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
+            NetFit 공공데이터 2종 연동 안내
+            <span style="font-size: 10.5px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 1px 7px; border-radius: 5px;">공식 연동</span>
+          </h3>
+          <small style="color: #94A3B8; font-size: 11.5px; font-weight: 600;">공공데이터포털(data.go.kr) 공식 OPEN API 데이터셋 활용</small>
+        </div>
+      </div>
+      <button type="button" onclick="closePublicDataModal()" style="background: none; border: none; color: #94A3B8; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 8px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 모달 본문 -->
+    <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 18px;">
+
+      <!-- 1. 국민체력100 체력 측정 데이터 카드 -->
+      <article style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; padding: 16px 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🏅</span>
+            <strong style="color: #FFFFFF; font-size: 14.5px; font-weight: 900;">국민체력100 체력 측정 항목별 기준 데이터</strong>
+          </div>
+          <span style="font-size: 10.5px; font-weight: 800; background: rgba(245, 158, 11, 0.18); color: var(--trophy-gold); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; padding: 2px 7px;">
+            제공: 국민체육진흥공단
+          </span>
+        </div>
+        <p style="margin: 0 0 10px; font-size: 12.5px; color: #CBD5E1; line-height: 1.6;">
+          국민체육진흥공단(KSPO)의 공인 <b>'국민체력100' 성별·연령별 체력인증 기준</b>(심폐지구력, 근력, 근지구력)을 게임화(Gamification) 엔진으로 융합했습니다.
+        </p>
+        <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; font-size: 11.5px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <b style="color: var(--trophy-gold); min-width: 65px;">🥇 금 (100P)</b>
+            <span style="color: #E2E8F0;">고강도 90분 이상 완주 · 국가 1등급 체력 기준 표준 점수화</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <b style="color: #CBD5E1; min-width: 65px;">🥈 은 (50P)</b>
+            <span style="color: #E2E8F0;">중강도 60분 이상 완주 · 국가 2등급 체력 기준 표준 점수화</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <b style="color: #CD7F32; min-width: 65px;">🥉 동 (30P)</b>
+            <span style="color: #E2E8F0;">기초 30분 이상 완주 · 국가 3등급 체력 기준 표준 점수화</span>
+          </div>
+        </div>
+        <div style="margin-top: 10px; font-size: 11px; color: #94A3B8;">
+          <i class="fa-solid fa-check" style="color: var(--neon-mint); margin-right: 4px;"></i>
+          <b>활용처:</b> 나의 배지 컬렉션 스코어, 파티원 실시간 내기 승부 점수, 개인 성장 캐릭터 티어 시스템
+        </div>
+      </article>
+
+      <!-- 2. 전국 공공체육시설 공간정보 개방 데이터 카드 -->
+      <article style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px; padding: 16px 18px;">
+        <div style="display: justify; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🗺️</span>
+            <strong style="color: #FFFFFF; font-size: 14.5px; font-weight: 900;">전국 공공체육시설 공간정보 개방 데이터</strong>
+          </div>
+          <span style="font-size: 10.5px; font-weight: 800; background: rgba(56, 189, 248, 0.18); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 2px 7px;">
+            제공: 문화체육관광부
+          </span>
+        </div>
+        <p style="margin: 0 0 10px; font-size: 12.5px; color: #CBD5E1; line-height: 1.6;">
+          전국 2만여 개 공공체육시설(축구장, 테니스장, 수영장, 종합체육관 등)의 <b>위치 좌표(위도·경도) 및 종목별 시설 정보 DB</b>를 실시간 GPS 위치와 결합했습니다.
+        </p>
+        <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; font-size: 11.5px;">
+          <div><b style="color: #38BDF8;">✨ AI 내 주변 시설 추천:</b> 현재 GPS 위치 반경 내 최적 시설을 카카오맵 길찾기와 연동</div>
+          <div><b style="color: #38BDF8;">📍 현장 방문 퀘스트:</b> 공공체육시설 방문 시 일일 미션 및 파티 협동 미션(50P) 자동 연계</div>
+        </div>
+        <div style="margin-top: 10px; font-size: 11px; color: #94A3B8;">
+          <i class="fa-solid fa-check" style="color: var(--neon-mint); margin-right: 4px;"></i>
+          <b>활용처:</b> 주변 시설 탐색 지도, 대시보드 맞춤 시설 추천, 파티 시설 방문 협동 퀘스트
+        </div>
+      </article>
+
+      <!-- 3. 실시간 기상 데이터 안내 (서브 연계) -->
+      <article style="background: rgba(0, 245, 155, 0.05); border: 1px solid rgba(0, 245, 155, 0.25); border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">🌤️</span>
+          <span style="font-size: 12px; color: #E2E8F0; font-weight: 700;">기상 데이터 실시간 연동: 기온·풍속 기반 야외/실내 운동 가이드</span>
+        </div>
+        <span style="font-size: 10.5px; color: var(--neon-mint); font-weight: 800;">Open-Meteo API</span>
+      </article>
+
+    </div>
+
+    <!-- 모달 푸터 -->
+    <div style="padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: #0B1220; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 22px 22px;">
+      <small style="color: var(--text-dim); font-size: 11px;">
+        출처: 공공데이터포털(data.go.kr) OPEN API
+      </small>
+      <button type="button" onclick="closePublicDataModal()" class="button btn-mint" style="padding: 7px 20px; font-size: 12px; font-weight: 900; border-radius: 8px; cursor: pointer;">
+        확인 완료
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function openPublicDataModal() {
+  const m = document.getElementById('publicDataModal');
+  if (m) {
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+}
+function closePublicDataModal() {
+  const m = document.getElementById('publicDataModal');
+  if (m) {
+    m.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePublicDataModal();
+});
+</script>

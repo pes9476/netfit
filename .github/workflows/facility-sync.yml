@@ -1,0 +1,56 @@
+name: Manual facility sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_large_drop:
+        description: Allow a source row-count drop of 30% or more
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testsv-facility-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-test-data:
+    runs-on: ubuntu-latest
+    environment: testsv
+    env:
+      DEBUG: "False"
+      SECRET_KEY: "facility-sync-command-only"
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      ALLOWED_HOSTS: "localhost"
+      CSRF_TRUSTED_ORIGINS: "https://localhost"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: testsv
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Require the isolated test database secret
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "TEST_DATABASE_URL is required for the isolated testsv database."
+            exit 1
+          fi
+      - run: pip install -r requirements.txt
+      - run: python manage.py migrate --check
+      - name: Synchronize the checked-in facility source
+        shell: bash
+        run: |
+          args=(--source-path facilities.csv)
+          if [ "${{ inputs.allow_large_drop }}" = "true" ]; then
+            args+=(--allow-large-drop)
+          fi
+          python manage.py sync_facilities "${args[@]}"
+
+# A schedule is intentionally omitted until an official downloadable source URL
+# is approved and the manual workflow succeeds against an isolated test database.

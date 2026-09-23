@@ -362,7 +362,7 @@ WORKOUT_PARTY_DAILY_TEMPLATES = {
     "수영": [
         ("파티 자유형 폼 & 페이스 협동 수영 30분", "파티원들과 일정한 페이스로 시원하게 물살을 갈라보세요.", 30, 50),
         ("파티 평영 & 배영 밸런스 수영 30분", "다양한 영법을 조화롭게 구사하며 전신을 자극해보세요.", 30, 50),
-        ("파티 수요 인터벌 랩 챌린지 35분", "정해진 랩 타임을 목표로 심폐 능력을 강화하는 수영 세션.", 35, 50),
+        ("파티 수요 인터벌 랩 수영 챌린지 35분", "정해진 랩 타임을 목표로 심폐 능력을 강화하는 수영 세션.", 35, 50),
         ("파티 목요 지구력 롱디스턴스 수영 30분", "쉬지 않고 꾸준히 나아가는 파티 롱디스턴스 수영.", 30, 50),
         ("파티 불금 하이퍼 스피드 수영 35분", "불타는 금요일! 강력한 발차기와 스트로크로 스피드를 올려보세요.", 35, 50),
         ("파티 주말 롱코스 수영 트레이닝 40분", "주말 물속에서 파티원들과 함께 즐기는 장거리 수영 훈련.", 40, 50),
@@ -438,9 +438,9 @@ WORKOUT_PARTY_SECONDARY_TEMPLATES = {
     "러닝": [
         ("파티원과 함께 심폐 강화 인터벌 러닝 30분", "심박수를 올리는 인터벌 구간 러닝으로 지구력을 극대화하세요.", 30, 50),
         ("파티원과 함께 케이던스 맞춤 러닝 30분", "파티원들과 보폭과 발구름을 일치시키며 가볍게 달려보세요.", 30, 50),
-        ("파티원과 함께 템포 런 챌린지 30분", "목표 페이스를 유지하며 집중력 있게 달리는 러닝 세션.", 30, 50),
+        ("파티원과 함께 템포 러닝 챌린지 30분", "목표 페이스를 유지하며 집중력 있게 달리는 러닝 세션.", 30, 50),
         ("파티원과 함께 릴레이 지속주 러닝 30분", "파티원들과 교대로 선두를 맡아 30분 동안 지속해서 달려보세요.", 30, 50),
-        ("파티원과 함께 고강도 언덕 스프린트 35분", "오르막 인터벌로 폭발적인 심폐와 하체 파워를 기르세요.", 35, 50),
+        ("파티원과 함께 고강도 언덕 스프린트 러닝 35분", "오르막 인터벌로 폭발적인 심폐와 하체 파워를 기르세요.", 35, 50),
         ("파티원과 함께 주말 그룹 LSD 러닝 40분", "주말을 맞아 여유 있는 페이스로 긴 거리를 달려보세요.", 40, 50),
         ("파티원과 함께 쿨다운 리커버리 러닝 25분", "편안한 조깅으로 뭉친 다리 근육을 풀어주는 회복 세션.", 25, 40),
     ],
@@ -1051,8 +1051,18 @@ def generate_party_daily_missions(party, today=None):
                 q.title = q.title.replace("농구", p_workout)
             q.save(update_fields=["workout_type", "title"])
 
+    # 사용자가 직접 입력한 퀘스트(DIRECT)가 존재할 경우:
+    # AI 퀘스트를 자동 생성하지 않고 사용자가 만든 직접입력 퀘스트만 단독 반환
+    direct_missions = [q for q in existing if q.source == "DIRECT"]
+    if direct_missions:
+        # 이전에 자동 생성된 AI 퀘스트가 섞여 있다면 정리하여 순수 직접입력 미션만 유지
+        DailyQuest.objects.filter(
+            party=party, period_type="DAILY", quest_date=today, source="AI"
+        ).delete()
+        return direct_missions
+
     if len(existing) >= 3:
-        return existing[:3]
+        return existing
 
     created_missions = list(existing)
     existing_titles = {q.title for q in existing}
@@ -1162,7 +1172,7 @@ def generate_party_daily_missions(party, today=None):
             created_missions.append(q3)
             existing_titles.add(f_title)
 
-    return created_missions[:3]
+    return created_missions
 
 
 def generate_party_weekly_missions(party, week_start=None):
@@ -1435,6 +1445,34 @@ def sync_party_mission_progress(party, current_user):
         "daily_missions": party_daily_missions,
         "weekly_missions": party_weekly_missions,
     }
+
+
+def search_facilities_for_fitbot(region=None, query=None, request=None):
+    """Fitbot 백곰 시설 검색용 서비스 함수.
+    is_active=True인 시설 중 region 및 query 조건에 맞는 시설 최대 5개를 반환합니다."""
+    from .models import Facility
+    from django.db.models import Q
+
+    qs = Facility.objects.filter(is_active=True)
+    if region and region != "전체":
+        qs = qs.filter(region=region)
+    if query:
+        query_text = query.strip()
+        if query_text:
+            qs = qs.filter(
+                Q(name__icontains=query_text)
+                | Q(address__icontains=query_text)
+                | Q(facility_type__icontains=query_text)
+            )
+
+    results = []
+    for fac in qs[:5]:
+        results.append({
+            "name": fac.name,
+            "address": fac.address or fac.region or "",
+            "url": fac.naver_map_url or fac.homepage_url or "",
+        })
+    return results
 
 
 

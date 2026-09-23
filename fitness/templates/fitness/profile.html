@@ -226,7 +226,7 @@
     </thead>
     <tbody>
       {% for measurement in measurements %}
-        <tr>
+        <tr class="measure-row {% if forloop.counter > 5 %}measure-row-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
           <td>{{ measurement.measured_on|date:"Y.m.d" }}</td>
           <td>{{ measurement.height_cm }}cm</td>
           <td>{{ measurement.weight_kg }}kg</td>
@@ -239,6 +239,24 @@
       {% endfor %}
     </tbody>
   </table>
+  {% if measurements|length > 5 %}
+  <div style="text-align: center; padding: 12px 0 4px;">
+    <button type="button" id="measureShowMoreBtn" onclick="toggleMeasureRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 12px; font-weight: 800; padding: 7px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" style="margin-right: 5px; font-size: 10px;"></i>더 보기 (총 {{ measurements|length }}건)
+    </button>
+  </div>
+  <script>
+  function toggleMeasureRows() {
+    const hiddenRows = document.querySelectorAll('.measure-row-hidden');
+    const btn = document.getElementById('measureShowMoreBtn');
+    const isHidden = hiddenRows[0] && hiddenRows[0].style.display === 'none';
+    hiddenRows.forEach(row => { row.style.display = isHidden ? '' : 'none'; });
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-chevron-up" style="margin-right: 5px; font-size: 10px;"></i>접기'
+      : '<i class="fa-solid fa-chevron-down" style="margin-right: 5px; font-size: 10px;"></i>더 보기 (총 {{ measurements|length }}건)';
+  }
+  </script>
+  {% endif %}
 </article>
 
 <script>

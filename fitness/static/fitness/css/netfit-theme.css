@@ -358,6 +358,43 @@ a.news-ticker-text:hover {
   color: #fff;
   font-size: 14px;
 }
+/* 일일미션 목록 내부 스크롤 */
+.quest-menu-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.quest-menu-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.quest-menu-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.quest-menu-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+/* 그룹원 목록 내부 스크롤 */
+.party-members-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  margin: 4px 0;
+}
+.party-members-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.party-members-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.party-members-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
 .quest-menu-item {
   display: grid;
   grid-template-columns: 20px 1fr auto;
@@ -391,6 +428,47 @@ a.news-ticker-text:hover {
 }
 .quest-menu-item.done > span, .quest-menu-item.done em {
   color: var(--neon-mint);
+}
+
+/* 파티 아코디언 (그룹원 드롭다운 내부) */
+.party-accordion-item {
+  margin-bottom: 2px;
+}
+.party-accordion-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+  text-align: left;
+}
+.party-accordion-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.party-accordion-icon {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.party-accordion-btn[aria-expanded="true"] .party-accordion-icon {
+  transform: rotate(90deg);
+  color: #38BDF8;
+}
+.party-accordion-body {
+  padding-left: 4px;
+  padding-top: 2px;
+  padding-bottom: 4px;
 }
 
 .header-icon {
@@ -1981,37 +2059,26 @@ h2 { font-size: 20px; }
 
 @media (min-width: 851px) {
   .dash {
-    grid-template-rows: auto auto minmax(0, 1fr);
-    column-gap: 28px;
-    row-gap: 20px;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 24px;
+    align-items: start;
   }
-  .dashboard-left, .dashboard-main {
-    display: contents;
+  .dashboard-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 340px;
+    box-sizing: border-box;
   }
-  .dashboard-left > .card {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .dashboard-left > .sports-news-card {
-    grid-column: 1;
-    grid-row: 2 / 4;
-    height: 100%;
-  }
-  .dashboard-main > .hero {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .dashboard-main > .stats {
-    grid-column: 2;
-    grid-row: 2;
-    margin-top: 0;
-  }
-  .dashboard-main > .compact-party-quests {
-    grid-column: 2;
-    grid-row: 3;
-    height: 100%;
-    margin-top: 0 !important;
+  .dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 

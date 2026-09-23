@@ -1,40 +1,39 @@
 import csv
 from django.core.management.base import BaseCommand
 from fitness.models import Facility
+from fitness.facility_sync import (
+    FacilityRowError,
+    facility_defaults_from_row,
+    facility_source_record_id,
+)
 
 class Command(BaseCommand):
-    help = "전국공공체육시설 CSV를 SQLite DB에 불러옵니다."
+    help = "전국공공체육시설 CSV를 현재 DB에 불러옵니다."
 
     def add_arguments(self, parser):
         parser.add_argument("csv_path")
 
     def handle(self, *args, **options):
         count = 0
-        region_map = {
-            "강원도": "강원특별자치도",
-            "전라북도": "전북특별자치도",
-            "제주도": "제주특별자치도",
-        }
-        valid_regions = dict(Facility._meta.get_field("region").choices)
+        skipped = 0
+        failed = 0
         with open(options["csv_path"], encoding="utf-8-sig", newline="") as file:
-            for row in csv.DictReader(file):
+            for line_number, row in enumerate(csv.DictReader(file), start=2):
                 if row.get("DEL_AT") == "Y":
+                    skipped += 1
                     continue
-                region = row.get("ROAD_NM_CTPRVN_NM") or row.get("POSESN_MBY_CTPRVN_NM")
-                if not region:
+                try:
+                    source_record_id = facility_source_record_id(row)
+                    defaults = facility_defaults_from_row(row)
+                except FacilityRowError as exc:
+                    failed += 1
+                    self.stderr.write(f"{line_number}행 건너뜀: {exc}")
                     continue
-                region = region_map.get(region, region)
                 Facility.objects.update_or_create(
-                    name=row.get("FCLTY_NM", ""),
-                    address=row.get("RDNMADR_NM", ""),
-                    defaults={
-                        "facility_type": row.get("FCLTY_TY_NM", ""),
-                        "region": region if region in valid_regions else "서울특별시",
-                        "longitude": row.get("FCLTY_LO") or None,
-                        "latitude": row.get("FCLTY_LA") or None,
-                        "homepage_url": row.get("FCLTY_HMPG_URL", ""),
-                        "is_active": True,
-                    },
+                    source_record_id=source_record_id,
+                    defaults=defaults,
                 )
                 count += 1
-        self.stdout.write(self.style.SUCCESS(f"{count}개 시설을 불러왔습니다."))
+        self.stdout.write(self.style.SUCCESS(
+            f"시설 {count}개 저장, {skipped}개 제외, {failed}개 실패"
+        ))

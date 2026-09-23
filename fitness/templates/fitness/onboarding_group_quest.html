@@ -4,9 +4,50 @@
   <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 운동 방식</span><i></i><span class="active">4 그룹 설정</span></div>
   <header class="onboarding-heading"><span>PARTY MISSION</span><h1>{{ party.name }} 파티 미션을 어떻게 시작할까요?</h1><p>직접 파티 일일미션을 만들거나, AI 추천 파티 미션 팩(일일 3개 + 주간 10개)을 바로 시작할 수 있어요.</p></header>
   
+  {% if existing_quests %}
+    <div class="panel" style="margin-top: 18px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(16, 24, 39, 0.85);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 15px; margin: 0; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-list-check" style="color: #38BDF8;"></i>
+          현재 설정된 파티 미션 ({{ existing_quests|length }}개)
+        </h2>
+        <a href="{% url 'dashboard' %}" class="button btn-mint" style="padding: 6px 14px; font-size: 12px; text-decoration: none; font-weight: 800;">
+          설정 완료하고 대시보드로 이동 →
+        </a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% for eq in existing_quests %}
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 2px 7px; border-radius: 5px;">
+                미션 {{ forloop.counter }}
+              </span>
+              <div>
+                <b style="color: #FFFFFF; font-size: 13.5px;">{{ eq.title }}</b>
+                <small style="color: #94A3B8; display: block; font-size: 11.5px; margin-top: 2px;">
+                  종목: {{ eq.workout_type }} · 목표 시간: {{ eq.target_minutes }}분
+                </small>
+              </div>
+            </div>
+            {% if eq.source == 'DIRECT' %}
+              <form method="post" style="margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_quest">
+                <input type="hidden" name="quest_id" value="{{ eq.id }}">
+                <button type="submit" class="button secondary" style="padding: 4px 10px; font-size: 11.5px; color: #EF4444; border-color: rgba(239, 68, 68, 0.35);" title="미션 삭제">
+                  <i class="fa-solid fa-trash-can"></i> 삭제
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
   <div class="solo-options" style="margin-top: 20px;">
     <details class="panel solo-option" open>
-      <summary><span>✍️</span><strong>파티 일일미션 직접 입력</strong><small>파티원과 함께 할 운동과 목표 시간을 직접 정해요</small></summary>
+      <summary><span>✍️</span><strong>파티 일일미션 직접 입력</strong><small>파티원과 함께 할 운동과 목표 시간을 직접 정해요 (원하는 만큼 추가 가능)</small></summary>
       <form method="post" id="groupQuestForm" style="margin-top: 14px;">
         {% csrf_token %}
         <input type="hidden" name="action" value="direct">
@@ -48,7 +89,14 @@
         </div>
         <input type="hidden" name="target_minutes" id="targetMinutesField" value="30">
 
-        <button class="button" type="submit" style="margin-top: 16px;">파티 미션 만들고 시작하기 →</button>
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+          <button class="button secondary" type="submit" name="submit_action" value="add_more" style="flex: 1; border-color: rgba(56, 189, 248, 0.45); color: #38BDF8; font-weight: 800; padding: 10px 16px;">
+            <i class="fa-solid fa-plus"></i> 미션 추가하고 계속 작성
+          </button>
+          <button class="button btn-mint" type="submit" name="submit_action" value="finish" style="flex: 1.2; font-weight: 800; padding: 10px 16px;">
+            <i class="fa-solid fa-check"></i> 파티 미션 완료 (대시보드로) →
+          </button>
+        </div>
       </form>
     </details>
 

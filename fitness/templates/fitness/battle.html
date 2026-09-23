@@ -83,7 +83,7 @@
 
 <article class="panel">
   {% for battle in battles %}
-    <div class="battle">
+    <div class="battle battle-record-item {% if forloop.counter > 5 %}battle-record-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
       <div class="fighter">
         {% if user.profile.display_name %}{{ user.profile.display_name }} 카드{% else %}내 카드{% endif %}
         <small>파워 {{ battle.challenger_power }} CP</small>
@@ -94,13 +94,31 @@
         <small>파워 {{ battle.opponent_power }} CP</small>
       </div>
     </div>
-    <div class="chips">
+    <div class="chips battle-record-item {% if forloop.counter > 5 %}battle-record-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
       <span class="chip"><i class="fa-solid fa-gift" style="margin-right: 4px; color: var(--trophy-gold);"></i>보상: {{ battle.reward_label }}</span>
       <a class="chip" href="{% url 'battle_arena' battle.pk %}" style="color: var(--neon-mint); border-color: rgba(0,245,155,0.3);"><i class="fa-solid fa-eye" style="margin-right: 4px;"></i>대결 화면 보기</a>
     </div>
   {% empty %}
     <p style="color: var(--text-muted); margin: 8px 0;">아직 카드 배틀이 없어요. 위 예시 상대부터 테스트해보세요.</p>
   {% endfor %}
+  {% if battles|length > 5 %}
+  <div style="text-align: center; padding: 14px 0 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px;">
+    <button type="button" id="battleShowMoreBtn" onclick="toggleBattleRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 12px; font-weight: 800; padding: 8px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기
+    </button>
+  </div>
+  <script>
+  function toggleBattleRows() {
+    const hiddenItems = document.querySelectorAll('.battle-record-hidden');
+    const btn = document.getElementById('battleShowMoreBtn');
+    const isHidden = hiddenItems[0] && hiddenItems[0].style.display === 'none';
+    hiddenItems.forEach(el => { el.style.display = isHidden ? '' : 'none'; });
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-chevron-up" style="margin-right: 6px; font-size: 10px;"></i>접기'
+      : '<i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기';
+  }
+  </script>
+  {% endif %}
 </article>
 
 <script>
