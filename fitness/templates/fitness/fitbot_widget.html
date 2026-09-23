@@ -1,22 +1,96 @@
 <!-- NETFIT 핏봇 (Groq AI Chatbot Widget) -->
-<style>#netfit-fitbot{position:fixed;right:24px;bottom:max(22px,env(safe-area-inset-bottom));z-index:9990;font:14px/1.5 system-ui,-apple-system,sans-serif;color:#183b35;text-align:left;isolation:isolate}
-#netfit-fitbot *{box-sizing:border-box}#netfit-fitbot [hidden]{display:none!important}#netfit-fitbot button,#netfit-fitbot input,#netfit-fitbot select{font:inherit;letter-spacing:normal}#netfit-fitbot button{cursor:pointer;width:auto;min-height:0;color:inherit;text-transform:none;box-shadow:none}#netfit-fitbot button:disabled{opacity:.5;cursor:wait}#netfit-fitbot button:focus-visible,#netfit-fitbot input:focus-visible,#netfit-fitbot select:focus-visible{outline:3px solid #20a485;outline-offset:3px}
-#netfit-fitbot .fb-launch{position:relative;width:292px;height:184px}#netfit-fitbot .fb-bubble{position:absolute;top:0;left:0;width:188px;min-height:64px;z-index:8;margin:0;background:#fff;border:1px solid #dcebe5;border-radius:20px;padding:13px 16px;font-size:14px;font-weight:700;box-shadow:0 10px 35px #092d2b30}#netfit-fitbot .fb-bubble:after{content:'';position:absolute;right:40px;bottom:-8px;background:#fff;width:14px;height:14px;transform:rotate(45deg);border-right:1px solid #dcebe5;border-bottom:1px solid #dcebe5}
-#netfit-fitbot .fb-cards{position:absolute;bottom:0;right:0;width:274px;height:106px;padding:0;border:0;background:transparent}#netfit-fitbot .fb-face{position:absolute;left:3px;top:19px;width:86px;height:86px;max-width:none;min-width:0;min-height:0;padding:0;border:0;border-radius:0;background:transparent;filter:drop-shadow(0 5px 8px #123a3438);transform:translateX(calc(58px * var(--index))) rotate(calc(-9deg + 5deg * var(--index)));z-index:calc(4 - var(--index));transition:transform .28s ease,filter .28s ease}#netfit-fitbot .fb-face img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}#netfit-fitbot .fb-face.fb-front{transform:translateX(calc(58px * var(--index))) translateY(-8px) rotate(calc(-9deg + 5deg * var(--index))) scale(1.08);z-index:5}#netfit-fitbot .fb-face:hover,#netfit-fitbot .fb-face:focus-visible{z-index:6;transform:translateX(calc(58px * var(--index))) translateY(-13px) scale(1.16);filter:drop-shadow(0 10px 11px #123a3477)}#netfit-fitbot .fb-face[data-bot="court"] img{clip-path:inset(0 0 0 5%)}#netfit-fitbot .fb-dismiss{position:absolute;top:2px;left:0;width:32px;height:32px;padding:0;border:1px solid #dcebe5;border-radius:50%;background:white;font-size:22px;z-index:9;opacity:0;pointer-events:none;transition:opacity .15s}
-#netfit-fitbot .fb-dialog{position:absolute;bottom:220px;right:0;width:min(382px,calc(100vw - 32px));height:490px;max-height:calc(100dvh - 250px);min-height:240px;display:flex;flex-direction:column;background:#fff;border:1px solid #dcebe5;border-radius:21px;box-shadow:0 16px 50px #102f3540;overflow:hidden}#netfit-fitbot .fb-head{display:flex;align-items:center;gap:8px;padding:12px 14px;background:#edf8f2;margin:0}#netfit-fitbot .fb-head img{width:38px;height:38px;object-fit:contain}#netfit-fitbot .fb-title{flex:1;font-size:15px;color:#193e34}#netfit-fitbot .fb-head button{border:0;background:none;font-size:25px;padding:0 5px}#netfit-fitbot .fb-tabs{display:flex;gap:5px;padding:9px 12px;border-bottom:1px solid #e8eeeb;flex-wrap:nowrap;margin:0;overflow:auto}#netfit-fitbot .fb-tabs button{flex:1;border:0;border-radius:11px;padding:7px 5px;background:#f0f4f2;font-size:12px;white-space:nowrap}#netfit-fitbot .fb-tabs button[aria-pressed=true]{background:#137c63;color:#fff}
-#netfit-fitbot .fb-filters{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f5faf7}#netfit-fitbot .fb-filters label{font-size:11px}#netfit-fitbot .fb-filters select,#netfit-fitbot .fb-query{display:block;width:100%;min-width:0;border:1px solid #d5e6de;border-radius:8px;padding:6px;color:#214b3e;background:#fff;font-size:12px}#netfit-fitbot .fb-search{grid-column:span 2;background:#137c63;color:#fff;border:0;border-radius:9px;padding:7px}
-#netfit-fitbot .fb-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}#netfit-fitbot .fb-msg{padding:10px 12px;background:#f0f5f2;max-width:91%;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0;font-size:13px}#netfit-fitbot .fb-msg.user{align-self:flex-end;background:#daf3e6}#netfit-fitbot .fb-msg.error{background:#fff3e6;color:#7a4213}#netfit-fitbot .fb-note{margin:0;padding:4px 14px;font-size:10px;color:#667b72}#netfit-fitbot form{display:flex;gap:7px;margin:0;padding:10px;border-top:1px solid #e5ece8;background:white}#netfit-fitbot .fb-input{min-width:0;flex:1;border:1px solid #d8e7e0;background:#fff;color:#193d31;border-radius:11px;padding:10px;font-size:16px}#netfit-fitbot form button{border:0;background:#137c63;color:#fff;border-radius:11px;padding:0 12px;font-size:13px}#netfit-fitbot .fb-toast{position:absolute;bottom:0;right:0;width:270px;padding:14px 18px;border-radius:13px;background:#153e34;color:#fff;box-shadow:0 8px 24px #14342f30}
-#netfit-fitbot .fb-facility{border:1px solid #deebe2;border-radius:12px;padding:11px;flex-shrink:0}#netfit-fitbot .fb-facility p{margin:4px 0;color:#5d7268;font-size:12px}#netfit-fitbot a{color:#126f56;text-decoration:underline;font-size:12px}#netfit-fitbot .fb-more{padding:8px}
-#netfit-fitbot .fb-reopen-pill{display:inline-flex;align-items:center;gap:6px;background:#153e34;color:#4fedaf;border:1px solid #2a5143;box-shadow:0 4px 16px rgba(0,0,0,.35);padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s ease;z-index:5}#netfit-fitbot .fb-reopen-pill:hover{transform:translateY(-2px);background:#1a4d41;box-shadow:0 6px 20px rgba(0,245,155,.25)}#netfit-fitbot .fb-reopen-pill[hidden]{display:none!important}.netfit-fitbot-reopen{border:1px solid #349e7f!important;border-radius:10px!important;background:#163e33!important;color:#dcffed!important;padding:8px 13px!important;font:600 13px system-ui!important;cursor:pointer!important}[data-fitbot-reopen-container]{padding:12px 24px;text-align:center}
+<style>
+#netfit-fitbot{position:fixed;right:24px;bottom:max(22px,env(safe-area-inset-bottom));z-index:9990;font:14px/1.5 system-ui,-apple-system,sans-serif;color:#e2e8f0;text-align:left;isolation:isolate}
+#netfit-fitbot *{box-sizing:border-box}
+#netfit-fitbot [hidden]{display:none!important}
+#netfit-fitbot button,#netfit-fitbot input,#netfit-fitbot select{font:inherit;letter-spacing:normal}
+#netfit-fitbot button{cursor:pointer;width:auto;min-height:0;color:inherit;text-transform:none;box-shadow:none}
+#netfit-fitbot button:disabled{opacity:.5;cursor:wait}
+#netfit-fitbot button:focus-visible,#netfit-fitbot input:focus-visible,#netfit-fitbot select:focus-visible{outline:2px solid #00f59b;outline-offset:2px}
+
+/* 말풍선 (캐릭터 호버 말풍선) */
+#netfit-fitbot .fb-launch{position:relative;width:292px;height:184px}
+#netfit-fitbot .fb-bubble{position:absolute;top:0;left:0;width:188px;min-height:64px;z-index:8;margin:0;background:#0d1520;border:1px solid rgba(0,245,155,0.4);border-radius:20px;padding:13px 16px;font-size:13.5px;font-weight:700;color:#f1f5f9;box-shadow:0 10px 35px rgba(0,0,0,0.7),0 0 15px rgba(0,245,155,0.15)}
+#netfit-fitbot .fb-bubble:after{content:'';position:absolute;right:40px;bottom:-8px;background:#0d1520;width:14px;height:14px;transform:rotate(45deg);border-right:1px solid rgba(0,245,155,0.4);border-bottom:1px solid rgba(0,245,155,0.4)}
+
+/* 캐릭터 카드 뭉치 */
+#netfit-fitbot .fb-cards{position:absolute;bottom:0;right:0;width:274px;height:106px;padding:0;border:0;background:transparent}
+#netfit-fitbot .fb-face{position:absolute;left:3px;top:19px;width:86px;height:86px;max-width:none;min-width:0;min-height:0;padding:0;border:0;border-radius:0;background:transparent;filter:drop-shadow(0 6px 10px rgba(0,0,0,0.6));transform:translateX(calc(58px * var(--index))) rotate(calc(-9deg + 5deg * var(--index)));z-index:calc(4 - var(--index));transition:transform .28s ease,filter .28s ease}
+#netfit-fitbot .fb-face img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+#netfit-fitbot .fb-face.fb-front{transform:translateX(calc(58px * var(--index))) translateY(-8px) rotate(calc(-9deg + 5deg * var(--index))) scale(1.08);z-index:5}
+#netfit-fitbot .fb-face:hover,#netfit-fitbot .fb-face:focus-visible{z-index:6;transform:translateX(calc(58px * var(--index))) translateY(-13px) scale(1.16);filter:drop-shadow(0 10px 18px rgba(0,245,155,0.35))}
+#netfit-fitbot .fb-face[data-bot="court"] img{clip-path:inset(0 0 0 5%)}
+#netfit-fitbot .fb-dismiss{position:absolute;top:2px;left:0;width:32px;height:32px;padding:0;border:1px solid rgba(255,255,255,0.15);border-radius:50%;background:#0d1520;color:#94a3b8;font-size:22px;z-index:9;opacity:0;pointer-events:none;transition:all .15s;display:grid;place-items:center;line-height:1}
+#netfit-fitbot .fb-dismiss:hover{background:#1a2736;color:#f87171;border-color:#f87171}
+
+/* 대화창 전체 프레임 (다크 사이버네틱 테마) */
+#netfit-fitbot .fb-dialog{position:absolute;bottom:220px;right:0;width:min(382px,calc(100vw - 32px));height:500px;max-height:calc(100dvh - 250px);min-height:240px;display:flex;flex-direction:column;background:#0b1118;border:1px solid rgba(0,245,155,0.3);border-radius:21px;box-shadow:0 20px 60px rgba(0,0,0,0.85),0 0 25px rgba(0,245,155,0.15);overflow:hidden}
+
+/* 대화창 헤더 */
+#netfit-fitbot .fb-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,#0e1724 0%,#111e30 100%);border-bottom:1px solid rgba(255,255,255,0.08);margin:0}
+#netfit-fitbot .fb-head img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5))}
+#netfit-fitbot .fb-title{flex:1;font-size:14.5px;font-weight:800;color:#ffffff;letter-spacing:-0.2px}
+#netfit-fitbot .fb-head button{border:0;background:none;font-size:22px;color:#94a3b8;padding:0 5px;transition:color .15s;line-height:1}
+#netfit-fitbot .fb-head button:hover{color:#f87171}
+
+/* 캐릭터 선택 탭 */
+#netfit-fitbot .fb-tabs{display:flex;gap:6px;padding:10px 12px;background:#080d14;border-bottom:1px solid rgba(255,255,255,0.06);flex-wrap:nowrap;margin:0;overflow:auto}
+#netfit-fitbot .fb-tabs button{flex:1;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:7px 5px;background:rgba(255,255,255,0.04);color:#94a3b8;font-size:12px;font-weight:700;white-space:nowrap;transition:all .18s ease}
+#netfit-fitbot .fb-tabs button:hover{background:rgba(255,255,255,0.08);color:#e2e8f0}
+#netfit-fitbot .fb-tabs button[aria-pressed=true]{background:rgba(0,245,155,0.18);color:#00f59b;border-color:rgba(0,245,155,0.5);box-shadow:0 0 12px rgba(0,245,155,0.2)}
+
+/* 시설 검색 필터 */
+#netfit-fitbot .fb-filters{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#090f17;border-bottom:1px solid rgba(255,255,255,0.06)}
+#netfit-fitbot .fb-filters label{font-size:11px;color:#94a3b8;font-weight:700}
+#netfit-fitbot .fb-filters select,#netfit-fitbot .fb-query{display:block;width:100%;min-width:0;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 8px;color:#f1f5f9;background:#111c2a;font-size:12px;outline:none;transition:border-color .15s}
+#netfit-fitbot .fb-filters select:focus,#netfit-fitbot .fb-query:focus{border-color:#00f59b}
+#netfit-fitbot .fb-search{grid-column:span 2;background:linear-gradient(135deg,#00f59b 0%,#00b87a 100%);color:#090d16;font-weight:900;border:0;border-radius:9px;padding:8px;font-size:12.5px;transition:opacity .15s}
+#netfit-fitbot .fb-search:hover{opacity:.9}
+
+/* 대화 메시지 영역 */
+#netfit-fitbot .fb-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#080d14;overscroll-behavior:contain}
+#netfit-fitbot .fb-msg{padding:11px 14px;background:rgba(255,255,255,0.06);color:#f1f5f9;border:1px solid rgba(255,255,255,0.07);max-width:90%;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0;font-size:13px;line-height:1.55}
+#netfit-fitbot .fb-msg.user{align-self:flex-end;background:rgba(0,245,155,0.18);color:#e6fff5;border:1px solid rgba(0,245,155,0.38);box-shadow:0 2px 10px rgba(0,245,155,0.12)}
+#netfit-fitbot .fb-msg.error{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+#netfit-fitbot .fb-note{margin:0;padding:6px 14px;font-size:10px;color:#64748b;background:#080d14;border-top:1px solid rgba(255,255,255,0.04)}
+
+/* 입력창 & 전송 버튼 */
+#netfit-fitbot form{display:flex;gap:8px;margin:0;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.08);background:#0b1118}
+#netfit-fitbot .fb-input{min-width:0;flex:1;border:1px solid rgba(255,255,255,0.12);background:#070b10;color:#ffffff;border-radius:11px;padding:9px 12px;font-size:14px;outline:none;transition:border-color .15s}
+#netfit-fitbot .fb-input:focus{border-color:#00f59b}
+#netfit-fitbot .fb-input::placeholder{color:#64748b}
+#netfit-fitbot form button{border:0;background:linear-gradient(135deg,#00f59b 0%,#00b87a 100%);color:#090d16;font-weight:900;border-radius:11px;padding:0 14px;font-size:13px;transition:opacity .15s}
+#netfit-fitbot form button:hover{opacity:.9}
+
+/* 시설 카드 */
+#netfit-fitbot .fb-facility{border:1px solid rgba(0,245,155,0.25);border-radius:12px;padding:11px 13px;background:rgba(16,28,42,0.7);flex-shrink:0}
+#netfit-fitbot .fb-facility strong{color:#ffffff;font-size:13px}
+#netfit-fitbot .fb-facility p{margin:4px 0 6px;color:#94a3b8;font-size:11.5px}
+#netfit-fitbot a{color:#00f59b;text-decoration:none;font-size:11.5px;font-weight:700}
+#netfit-fitbot a:hover{text-decoration:underline}
+#netfit-fitbot .fb-more{padding:8px}
+
+/* 토스트 & 복원 칩 */
+#netfit-fitbot .fb-toast{position:absolute;bottom:0;right:0;width:290px;padding:13px 16px;border-radius:14px;background:#0e1724;color:#e2e8f0;border:1px solid rgba(0,245,155,0.3);box-shadow:0 8px 30px rgba(0,0,0,0.7)}
+#netfit-fitbot .fb-reopen-pill{display:inline-flex;align-items:center;gap:6px;background:#0d1520;color:#00f59b;border:1px solid rgba(0,245,155,0.4);box-shadow:0 4px 16px rgba(0,0,0,.5);padding:8px 14px;border-radius:20px;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s ease;z-index:5}
+#netfit-fitbot .fb-reopen-pill:hover{transform:translateY(-2px);background:#132030;box-shadow:0 6px 20px rgba(0,245,155,.25)}
+#netfit-fitbot .fb-reopen-pill[hidden]{display:none!important}
+.netfit-fitbot-reopen{border:1px solid #00f59b!important;border-radius:10px!important;background:#0d1520!important;color:#00f59b!important;padding:8px 13px!important;font:700 13px system-ui!important;cursor:pointer!important}
+
 @media(hover:none),(pointer:coarse){#netfit-fitbot .fb-dismiss{opacity:1;pointer-events:auto}}
-@media(max-width:600px){#netfit-fitbot{right:10px;bottom:max(12px,env(safe-area-inset-bottom))}#netfit-fitbot .fb-dialog{position:fixed;bottom:max(14px,env(safe-area-inset-bottom));right:12px;width:calc(100vw - 24px);height:min(550px,calc(100dvh - 35px));max-height:calc(100dvh - 35px);z-index:6}#netfit-fitbot .fb-launch{width:292px}#netfit-fitbot .fb-dismiss{opacity:1;pointer-events:auto}}
+@media(max-width:600px){
+  #netfit-fitbot{right:10px;bottom:max(12px,env(safe-area-inset-bottom))}
+  #netfit-fitbot .fb-dialog{position:fixed;bottom:max(14px,env(safe-area-inset-bottom));right:12px;width:calc(100vw - 24px);height:min(550px,calc(100dvh - 35px));max-height:calc(100dvh - 35px);z-index:6}
+  #netfit-fitbot .fb-launch{width:292px}
+  #netfit-fitbot .fb-dismiss{opacity:1;pointer-events:auto}
+}
 @media(prefers-reduced-motion:reduce){#netfit-fitbot *{transition:none!important}}
 
 /* 겹친 카드: 호버에서만 네 캐릭터가 펼쳐집니다. */
 #netfit-fitbot .fb-launch{pointer-events:none}
 #netfit-fitbot .fb-bubble{pointer-events:none}
 #netfit-fitbot .fb-bubble:after{right:auto;left:var(--bubble-arrow,50%)}
-#netfit-fitbot .fb-dismiss{top:130px;left:0;right:auto;opacity:0;pointer-events:none;box-shadow:0 3px 10px #123a3440;display:grid;place-items:center;font-size:0;line-height:1}
+#netfit-fitbot .fb-dismiss{top:130px;left:0;right:auto;opacity:0;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:grid;place-items:center;font-size:0;line-height:1}
 #netfit-fitbot .fb-launch.fb-dismiss-visible .fb-dismiss,#netfit-fitbot .fb-launch:focus-within .fb-dismiss{opacity:1;pointer-events:auto}
 #netfit-fitbot .fb-dismiss::before{content:"×";font-size:22px;line-height:1;transform:translateY(-2px)}
 @media(hover:none),(pointer:coarse){#netfit-fitbot .fb-dismiss{opacity:1;pointer-events:auto}}
