@@ -238,8 +238,8 @@
 
       <!-- 1. 일일 미션 뷰 (1개씩 페이징) -->
       <div id="dailyMissionView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35;">
+        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 16px; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35; flex-shrink: 0;">
             오늘의 미션 <b style="color: #FFFFFF;">{{ daily_missions|length }}개</b><br>
             <span style="font-size: 10px; color: var(--text-dim); font-weight: 600; white-space: nowrap;">(출석 1 + 맞춤 2)</span>
           </span>
@@ -401,9 +401,10 @@
 
       <!-- 2. 주간 미션 뷰 (1개씩 페이징) -->
       <div id="weeklyMissionView" style="display: none; flex-direction: column; gap: 10px; flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
-            이번 주 미션 <b style="color: #FFFFFF;">{{ weekly_missions|length }}개</b> (출석누적 1 + AI 9)
+        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 16px; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35; flex-shrink: 0;">
+            이번 주 미션 <b style="color: #FFFFFF;">{{ weekly_missions|length }}개</b><br>
+            <span style="font-size: 10px; color: var(--text-dim); font-weight: 600; white-space: nowrap;">(출석누적 1 + AI 9)</span>
           </span>
           <div style="display: flex; align-items: center; gap: 6px;">
             <!-- 페이징 컨트롤 < 1 / 10 > -->
