@@ -1,8 +1,11 @@
 ﻿from datetime import date, timedelta
 from django.contrib.auth.models import User
-from django.test import TestCase
+from datetime import time
+from django.core.cache import cache
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
+from fitness.context_processors import quest_menu
 from fitness.models import DailyQuest, Party, PartyInvitation
 from fitness.services import generate_party_daily_missions
 
@@ -27,6 +30,35 @@ class PartyEnhancementsTestCase(TestCase):
             challenge_end=date.today() + timedelta(days=7),
         )
         self.party.members.add(self.user, self.friend)
+
+    def test_header_party_menu_excludes_finished_challenges(self):
+        ended_party = Party.objects.create(
+            name="종료된 내기 파티",
+            owner=self.user,
+            challenge_start=date.today() - timedelta(days=2),
+            challenge_end=date.today() - timedelta(days=1),
+        )
+        ended_party.members.add(self.user)
+        ended_today = Party.objects.create(
+            name="오늘 마감된 내기 파티",
+            owner=self.user,
+            challenge_start=date.today() - timedelta(days=1),
+            challenge_end=date.today(),
+            challenge_end_time=time(0, 0),
+        )
+        ended_today.members.add(self.user)
+        no_deadline_party = Party.objects.create(name="마감 없는 파티", owner=self.user)
+        no_deadline_party.members.add(self.user)
+
+        request = RequestFactory().get("/")
+        request.user = self.user
+        cache.clear()
+        names = [party.name for party in quest_menu(request)["header_user_parties"]]
+
+        self.assertIn(self.party.name, names)
+        self.assertIn(no_deadline_party.name, names)
+        self.assertNotIn(ended_party.name, names)
+        self.assertNotIn(ended_today.name, names)
 
     def test_direct_quest_does_not_create_ai_missions(self):
         """직접 입력으로 파티 퀘스트 생성 시 AI 퀘스트가 자동 생성되지 않고 내가 만든 퀘스트만 유지된다."""

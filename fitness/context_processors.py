@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
@@ -57,10 +59,26 @@ def quest_menu(request):
     # 🔔 파티 초대 알림 카운트
     pending_party_invitation_count = PartyInvitation.objects.filter(invitee=request.user, status="PENDING").count()
 
-    # 👥 헤더용 파티 및 멤버 프로필 N+1 방지 일괄 프리페치
-    header_user_parties = list(
-        request.user.parties.all().prefetch_related("members__profile")
+    # 👥 지난 내기 기록은 보존하되, 종료된 파티는 그룹원 메뉴에서 제외한다.
+    now = timezone.now()
+    today = timezone.localdate(now)
+    party_candidates = (
+        request.user.parties
+        .filter(models.Q(challenge_end__isnull=True) | models.Q(challenge_end__gte=today))
+        .prefetch_related("members__profile")
     )
+    header_user_parties = []
+    for party in party_candidates:
+        if party.challenge_end is None:
+            header_user_parties.append(party)
+            continue
+        end_time = party.challenge_end_time or time(23, 59, 59)
+        deadline = timezone.make_aware(
+            datetime.combine(party.challenge_end, end_time),
+            timezone.get_current_timezone(),
+        )
+        if deadline >= now:
+            header_user_parties.append(party)
 
     data = {
         "header_quests": entries,
