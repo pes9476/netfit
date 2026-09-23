@@ -107,10 +107,19 @@ def chat(request):
                 contents.append({"role": item["role"], "parts": [{"text": item["text"][:800]}]})
     contents.append({"role": "user", "parts": [{"text": message.strip()}]})
 
-    try:
-        groq_key = getattr(settings, "GROQ_API_KEY", "")
-        gemini_key = getattr(settings, "GEMINI_API_KEY", "")
-        if groq_key:
+    reply = None
+    last_error = None
+
+    groq_key = getattr(settings, "GROQ_API_KEY", "").strip()
+    gemini_key = getattr(settings, "GEMINI_API_KEY", "").strip()
+
+    if not groq_key and not gemini_key:
+        logger.error("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured")
+        return JsonResponse({"error": "AI 연결 설정이 필요합니다. API 키를 등록해 주세요."}, status=503)
+
+    # 1. Try Groq API if key configured
+    if groq_key:
+        try:
             model = getattr(settings, "GROQ_MODEL", "openai/gpt-oss-20b")
             messages = [{"role": "system", "content": system_prompt}]
             if isinstance(history, list):
@@ -122,15 +131,11 @@ def chat(request):
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "max_tokens": 800,
-                },
-                timeout=20,
+                json={"model": model, "messages": messages, "max_tokens": 800},
+                timeout=15,
             )
             if response.status_code == 429:
-                return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+                return JsonResponse({"error": "이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
             response.raise_for_status()
             res_data = response.json()
             if "choices" in res_data:
@@ -140,41 +145,48 @@ def chat(request):
                 candidates = res_data.get("candidates") or []
                 parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
                 reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
-            else:
-                reply = ""
-            if not reply:
-                raise ValueError("Empty model response")
-        elif gemini_key:
-            model = getattr(settings, "GEMINI_MODEL", "gemini-1.5-flash")
-            response = requests.post(
-                GEMINI_API_URL.format(model=model),
-                headers={"x-goog-api-key": gemini_key, "Content-Type": "application/json"},
-                json={
-                    "systemInstruction": {"parts": [{"text": system_prompt}]},
-                    "contents": contents,
-                    "generationConfig": {"maxOutputTokens": 800},
-                },
-                timeout=20,
-            )
-            if response.status_code == 429:
-                return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-            response.raise_for_status()
-            result = response.json()
-            if "candidates" in result:
-                candidates = result.get("candidates") or []
-                parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
-                reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
-            elif "choices" in result:
-                choices = result.get("choices") or []
-                reply = choices[0].get("message", {}).get("content", "") if choices else ""
-            else:
-                reply = ""
-            if not reply:
-                raise ValueError("Empty model response")
-        else:
-            logger.error("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured")
-            return JsonResponse({"error": "AI 연결 설정이 필요합니다."}, status=503)
-    except (requests.RequestException, ValueError, KeyError, IndexError):
-        logger.exception("Fitbot AI request failed")
+        except Exception as e:
+            logger.warning(f"Groq API call failed, attempting fallback: {e}")
+            last_error = e
+
+    # 2. Try Gemini API if Groq wasn't configured or failed
+    if not reply and gemini_key:
+        models_to_try = [getattr(settings, "GEMINI_MODEL", "gemini-1.5-flash")]
+        for m_name in ["gemini-1.5-flash", "gemini-2.0-flash"]:
+            if m_name not in models_to_try:
+                models_to_try.append(m_name)
+
+        for m_name in models_to_try:
+            try:
+                response = requests.post(
+                    GEMINI_API_URL.format(model=m_name),
+                    headers={"x-goog-api-key": gemini_key, "Content-Type": "application/json"},
+                    json={
+                        "systemInstruction": {"parts": [{"text": system_prompt}]},
+                        "contents": contents,
+                        "generationConfig": {"maxOutputTokens": 800},
+                    },
+                    timeout=15,
+                )
+                if response.status_code == 429:
+                    return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+                response.raise_for_status()
+                result = response.json()
+                if "candidates" in result:
+                    candidates = result.get("candidates") or []
+                    parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+                    reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+                elif "choices" in result:
+                    choices = result.get("choices") or []
+                    reply = choices[0].get("message", {}).get("content", "") if choices else ""
+                if reply:
+                    break
+            except Exception as e:
+                logger.warning(f"Gemini API model {m_name} failed: {e}")
+                last_error = e
+
+    if not reply:
+        logger.error(f"Fitbot AI generation failed completely: {last_error}")
         return JsonResponse({"error": "답변 연결에 실패했어요. 잠시 후 다시 시도해 주세요."}, status=503)
+
     return JsonResponse({"reply": reply[:3000], "facilities": facilities})
