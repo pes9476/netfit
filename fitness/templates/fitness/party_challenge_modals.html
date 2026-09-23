@@ -112,6 +112,11 @@
       </button>
     </div>
 
+    <!-- 🗂️ 복수 파티 종료 시 한 번에 전환 확인 가능한 탭 바 -->
+    <div id="modalEndedPartiesTabs" style="display: none; padding: 10px 22px; gap: 8px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.25);">
+      <!-- JS로 종료된 파티 목록 탭 렌더링 -->
+    </div>
+
     <!-- 모달 본문 콘텐츠 -->
     <div style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
       
@@ -169,8 +174,8 @@
       <a href="{% url 'onboarding_group' %}" class="button secondary" style="padding: 7px 14px; font-size: 12px; border-color: rgba(255,255,255,0.15);">
         <i class="fa-solid fa-plus"></i> 새 내기 만들기
       </a>
-      <button type="button" onclick="closePartyResultModal()" class="button btn-mint" style="padding: 8px 22px; font-size: 13px; font-weight: 800; cursor: pointer;">
-        확인 완료
+      <button type="button" onclick="acknowledgeAllPartyResults()" class="button btn-mint" style="padding: 8px 22px; font-size: 13px; font-weight: 800; cursor: pointer;">
+        모든 결과 확인 완료
       </button>
     </div>
   </div>
@@ -460,6 +465,12 @@ function stopFireworks() {
   fwConfetti = [];
 }
 
+function escapePartyHtml(str) {
+  return (str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+}
+
 function openPartyResultModal(partyId) {
   const modal = document.getElementById("partyResultModal");
   if (!modal) return;
@@ -468,6 +479,51 @@ function openPartyResultModal(partyId) {
   if (!pData) return;
 
   currentModalPartyId = partyId;
+
+  // 🗂️ 종료된 파티가 복수 개일 경우 상단 탭 바 렌더링 (한 모달 안에서 모든 결과 확인 가능)
+  const tabsContainer = document.getElementById("modalEndedPartiesTabs");
+  const endedPartyIds = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
+  if (tabsContainer) {
+    if (endedPartyIds.length > 1) {
+      tabsContainer.style.display = 'flex';
+      tabsContainer.innerHTML = '';
+      endedPartyIds.forEach(id => {
+        const item = PARTY_CHALLENGES_DATA[id];
+        const isActive = (String(id) === String(partyId));
+        const tabBtn = document.createElement("button");
+        tabBtn.type = "button";
+        tabBtn.style.padding = "6px 14px";
+        tabBtn.style.borderRadius = "20px";
+        tabBtn.style.fontSize = "12px";
+        tabBtn.style.fontWeight = "800";
+        tabBtn.style.cursor = "pointer";
+        tabBtn.style.whiteSpace = "nowrap";
+        tabBtn.style.transition = "all 0.2s ease";
+        tabBtn.style.display = "inline-flex";
+        tabBtn.style.alignItems = "center";
+        tabBtn.style.gap = "6px";
+        
+        let rankBadge = item.myRank === 1 ? '👑 1위' : `${item.myRank}위`;
+        if (isActive) {
+          tabBtn.style.background = "linear-gradient(135deg, #F59E0B, #D97706)";
+          tabBtn.style.border = "1px solid #F59E0B";
+          tabBtn.style.color = "#090D16";
+          tabBtn.style.boxShadow = "0 2px 10px rgba(245, 158, 11, 0.4)";
+        } else {
+          tabBtn.style.background = "rgba(255, 255, 255, 0.06)";
+          tabBtn.style.border = "1px solid rgba(255, 255, 255, 0.12)";
+          tabBtn.style.color = "#CBD5E1";
+        }
+
+        tabBtn.innerHTML = `<span>${escapePartyHtml(item.partyName)}</span> <span style="font-size: 11px; opacity: 0.9;">(${rankBadge})</span>`;
+        tabBtn.onclick = () => openPartyResultModal(id);
+        tabsContainer.appendChild(tabBtn);
+      });
+    } else {
+      tabsContainer.style.display = 'none';
+      tabsContainer.innerHTML = '';
+    }
+  }
 
   // 타이틀 및 보상 세팅
   document.getElementById("modalPartySubtitle").textContent = `${pData.partyName} · ${pData.isEnded ? '대결 종료 🏁' : '대결 진행 중 ⏱️'}`;
@@ -502,7 +558,7 @@ function openPartyResultModal(partyId) {
     rowDiv.innerHTML = `
       <div style="display: flex; align-items: center;">
         ${rankBadge}
-        <span style="color: ${r.isMe ? '#FFFFFF' : '#CBD5E1'}; font-weight: ${r.isMe ? '800' : '600'}; font-size: 13px;">${r.name}</span>
+        <span style="color: ${r.isMe ? '#FFFFFF' : '#CBD5E1'}; font-weight: ${r.isMe ? '800' : '600'}; font-size: 13px;">${escapePartyHtml(r.name)}</span>
         ${meTag}
       </div>
       <b style="color: var(--trophy-gold); font-size: 13.5px;">${r.points}점</b>
@@ -511,6 +567,19 @@ function openPartyResultModal(partyId) {
   });
 
   modal.style.display = 'flex';
+}
+
+function acknowledgeAllPartyResults() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const dateKey = 'netfit_party_results_acknowledged_' + todayStr;
+  try {
+    sessionStorage.setItem(dateKey, 'true');
+    const endedParties = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
+    endedParties.forEach(id => {
+      sessionStorage.setItem('netfit_party_result_shown_' + id, 'true');
+    });
+  } catch (e) {}
+  closePartyResultModal();
 }
 
 function simulatePartyRank(targetRank) {
@@ -538,17 +607,20 @@ function closeEndedPartyHistoryModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// 자동 팝업: 종료된 파티가 있는 경우 사용자가 버튼을 누르지 않아도 대시보드 접속 시 자동으로 결과 축하 팝업 안내
+// 자동 팝업: 종료된 파티가 있는 경우 같은 날 중복 팝업 없이 1회에 모든 종료 결과를 탭으로 확인할 수 있도록 안내
 document.addEventListener("DOMContentLoaded", () => {
   try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dateKey = 'netfit_party_results_acknowledged_' + todayStr;
+    if (sessionStorage.getItem(dateKey)) return;
+
     const endedParties = Object.keys(PARTY_CHALLENGES_DATA).filter(id => PARTY_CHALLENGES_DATA[id].isEnded);
-    for (const partyId of endedParties) {
-      const storageKey = 'netfit_party_result_shown_' + partyId;
-      if (!sessionStorage.getItem(storageKey)) {
-        sessionStorage.setItem(storageKey, 'true');
-        setTimeout(() => openPartyResultModal(partyId), 600);
-        break;
-      }
+    if (!endedParties.length) return;
+
+    const hasUnseen = endedParties.some(id => !sessionStorage.getItem('netfit_party_result_shown_' + id));
+    if (hasUnseen) {
+      endedParties.forEach(id => sessionStorage.setItem('netfit_party_result_shown_' + id, 'true'));
+      setTimeout(() => openPartyResultModal(endedParties[0]), 600);
     }
   } catch (e) {}
 });

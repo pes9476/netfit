@@ -1051,8 +1051,18 @@ def generate_party_daily_missions(party, today=None):
                 q.title = q.title.replace("농구", p_workout)
             q.save(update_fields=["workout_type", "title"])
 
+    # 사용자가 직접 입력한 퀘스트(DIRECT)가 존재할 경우:
+    # AI 퀘스트를 자동 생성하지 않고 사용자가 만든 직접입력 퀘스트만 단독 반환
+    direct_missions = [q for q in existing if q.source == "DIRECT"]
+    if direct_missions:
+        # 이전에 자동 생성된 AI 퀘스트가 섞여 있다면 정리하여 순수 직접입력 미션만 유지
+        DailyQuest.objects.filter(
+            party=party, period_type="DAILY", quest_date=today, source="AI"
+        ).delete()
+        return direct_missions
+
     if len(existing) >= 3:
-        return existing[:3]
+        return existing
 
     created_missions = list(existing)
     existing_titles = {q.title for q in existing}
@@ -1162,7 +1172,7 @@ def generate_party_daily_missions(party, today=None):
             created_missions.append(q3)
             existing_titles.add(f_title)
 
-    return created_missions[:3]
+    return created_missions
 
 
 def generate_party_weekly_missions(party, week_start=None):
