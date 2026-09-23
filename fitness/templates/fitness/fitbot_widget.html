@@ -1,5 +1,5 @@
 {% load static %}
-<!-- NETFIT 핏봇 (Groq AI Chatbot Widget) -->
+<!-- NETFIT 핏봇 (Gemini AI Chatbot Widget) -->
 <style>
 #netfit-fitbot{position:fixed;right:24px;bottom:max(22px,env(safe-area-inset-bottom));z-index:9990;font:14px/1.5 system-ui,-apple-system,sans-serif;color:#e2e8f0;text-align:left;isolation:isolate}
 #netfit-fitbot *{box-sizing:border-box}
@@ -126,11 +126,11 @@
   const config = {...script.dataset};
   const bots = [
     {id:'coach', name:'백호 · 운동 코치', image:config.tiger, line:'운동이 궁금해? 내가 도와줄게!', intro:'나는 운동을 잘할 수 있게 도와주는 백호 핏봇이야! 목표나 운동 방법이 궁금하면 편하게 물어봐.'},
-    {id:'facility', name:'백곰 · 시설 안내', image:config.bear, line:'가까운 운동 시설을 찾고 있어? 내가 찾아볼게!', intro:'나는 운동 시설을 안내하는 백곰 핏봇이야! 지역과 찾는 시설을 골라주면 NETFIT에 등록된 곳을 보여줄게.'},
-    {id:'meal', name:'햄스터 · 식단 도우미', image:config.hamster, line:'오늘 뭐 먹을지 고민돼? 같이 생각해보자!', intro:'나는 식사 아이디어를 함께 고르는 햄스터 핏봇이야! 먹고 싶은 음식이나 선호하는 식단을 말해줘.'},
-    {id:'court', name:'아기공룡 · 변명재판소', image:config.dino, line:'오늘 운동을 못 했다고? 변명을 들어볼게!', intro:'나는 변명재판소의 아기공룡 판사야! 오늘 운동을 못 한 이유를 말하면 재미있게 판결하고 작은 다음 행동을 제안할게.'}
+    {id:'facility', name:'포동 · 시설 안내', image:config.bear, line:'가까운 운동 시설을 찾고 있어? 내가 찾아볼게!', intro:'나는 운동 시설을 안내하는 포동 핏봇이야! 지역과 찾는 시설을 골라주면 NETFIT에 등록된 곳을 보여줄게.'},
+    {id:'meal', name:'토리 · 식단 도우미', image:config.hamster, line:'오늘 뭐 먹을지 고민돼? 같이 생각해보자!', intro:'나는 식사 아이디어를 함께 고르는 토리 핏봇이야! 먹고 싶은 음식이나 선호하는 식단을 말해줘.'},
+    {id:'court', name:'아콩 · 변명재판소', image:config.dino, line:'오늘 운동을 못 했다고? 변명을 들어볼게!', intro:'나는 변명재판소의 아콩 판사야! 오늘 운동을 못 한 이유를 말하면 재미있게 판결하고 작은 다음 행동을 제안할게.'}
   ];
-  const commonGuide = '우리 네 핏봇은 이렇게 도와줘! 백호는 운동 상담, 백곰은 시설 안내, 햄스터는 식단 안내, 아기공룡은 변명재판소를 맡고 있어. 다른 핏봇이 궁금하면 위에서 캐릭터를 바꿔봐!';
+  const commonGuide = '우리 네 핏봇은 이렇게 도와줘! 백호는 운동 상담, 포동은 시설 안내, 토리는 식단 안내, 아콩은 변명재판소를 맡고 있어. 다른 핏봇이 궁금하면 위에서 캐릭터를 바꿔봐!';
   const root = document.createElement('aside'); root.id = 'netfit-fitbot';
   root.setAttribute('aria-label', 'NETFIT 핏봇');
   root.innerHTML = `<div class="fb-launch"><p class="fb-bubble" role="status" hidden></p><button class="fb-dismiss" type="button" aria-label="핏봇 위젯 닫기">×</button><div class="fb-cards" role="group" aria-label="핏봇 캐릭터 선택"></div></div>
