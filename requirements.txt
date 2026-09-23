@@ -9,4 +9,3 @@ python-dotenv>=1.0
 dj-database-url>=2.2,<4.0
 gunicorn>=23.0,<26.0
 whitenoise>=6.9,<7.0
-groq>=0.9.0

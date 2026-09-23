@@ -279,7 +279,7 @@
   }
 
   function updateMascot() {
-    const names = {ACTIVE: "백호", MUSCULAR: "백곰", SOFT: "햄스터", BALANCED: "아기공룡"};
+    const names = {ACTIVE: "백호", MUSCULAR: "포동", SOFT: "토리", BALANCED: "아콩"};
     const value = Object.hasOwn(names, pref.value) ? pref.value : "ACTIVE";
     avatar.className = "avatar-roster style-" + value.toLowerCase() + " outfit-{{ profile.equipped_outfit|lower }}";
     avatar.setAttribute("role", "img");

@@ -2,7 +2,7 @@
 import json
 import logging
 
-from groq import Groq, RateLimitError
+import requests
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -14,12 +14,12 @@ from django.views.decorators.http import require_GET, require_POST
 from .services import search_facilities_for_fitbot
 
 logger = logging.getLogger(__name__)
-MODEL = "openai/gpt-oss-20b"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 ROLES = {
     "coach": "당신은 NETFIT의 친근한 백호 운동 코치입니다. 운동 목표와 기본 동작을 도와주세요. 질병 진단이나 치료를 단정하지 마세요.",
-    "facility": "당신은 NETFIT의 백곰 시설 안내자입니다. 제공된 검색 결과에 있는 시설만 안내하고, 없는 시설이나 주소를 만들어내지 마세요.",
-    "meal": "당신은 NETFIT의 햄스터 식단 도우미입니다. 실천 가능한 식사 아이디어를 제안하세요. 의학적 식이요법을 처방하지 마세요.",
-    "court": "당신은 NETFIT 변명재판소의 아기공룡 판사입니다. 가벼운 유머로 변명을 들어주고 오늘 할 수 있는 작은 행동을 제안하세요. 사용자를 비난하지 마세요.",
+    "facility": "당신은 NETFIT의 포동 시설 안내자입니다. 제공된 검색 결과에 있는 시설만 안내하고, 없는 시설이나 주소를 만들어내지 마세요.",
+    "meal": "당신은 NETFIT의 토리 식단 도우미입니다. 실천 가능한 식사 아이디어를 제안하세요. 의학적 식이요법을 처방하지 마세요.",
+    "court": "당신은 NETFIT 변명재판소의 아콩 판사입니다. 가벼운 유머로 변명을 들어주고 오늘 할 수 있는 작은 행동을 제안하세요. 사용자를 비난하지 마세요.",
 }
 DEFAULT_REGIONS = ["서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시", "대전광역시", "광주광역시", "울산광역시", "세종특별자치시", "강원특별자치도", "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"]
 
@@ -98,26 +98,41 @@ def chat(request):
             f"- {x['name']} / {x['address']}" for x in facilities
         )
 
-    messages = [{"role": "system", "content": ROLES[role] + " 항상 자연스러운 한국어로, 4문장 이내로 답하세요." + context}]
+    system_prompt = ROLES[role] + " 항상 자연스러운 한국어로, 4문장 이내로 답하세요." + context
+    contents = []
     history = data.get("history", [])
     if isinstance(history, list):
         for item in history[-8:]:
             if isinstance(item, dict) and item.get("role") in ("user", "model") and isinstance(item.get("text"), str):
-                messages.append({"role": "assistant" if item["role"] == "model" else "user", "content": item["text"][:800]})
-    messages.append({"role": "user", "content": message.strip()})
+                contents.append({"role": item["role"], "parts": [{"text": item["text"][:800]}]})
+    contents.append({"role": "user", "parts": [{"text": message.strip()}]})
 
     try:
-        key = getattr(settings, "GROQ_API_KEY", "")
+        key = getattr(settings, "GEMINI_API_KEY", "")
         if not key:
-            logger.error("GROQ_API_KEY is not configured")
+            logger.error("GEMINI_API_KEY is not configured")
             return JsonResponse({"error": "AI 연결 설정이 필요합니다."}, status=503)
-        result = Groq(api_key=key, timeout=20).chat.completions.create(model=MODEL, messages=messages)
-        reply = result.choices[0].message.content
+        model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+        response = requests.post(
+            GEMINI_API_URL.format(model=model),
+            headers={"x-goog-api-key": key, "Content-Type": "application/json"},
+            json={
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
+                "contents": contents,
+                "generationConfig": {"maxOutputTokens": 800},
+            },
+            timeout=20,
+        )
+        if response.status_code == 429:
+            return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+        response.raise_for_status()
+        result = response.json()
+        candidates = result.get("candidates") or []
+        parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+        reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
         if not reply:
             raise ValueError("Empty model response")
-    except RateLimitError:
-        return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-    except Exception:
+    except (requests.RequestException, ValueError, KeyError, IndexError):
         logger.exception("Fitbot AI request failed")
         return JsonResponse({"error": "답변 연결에 실패했어요. 잠시 후 다시 시도해 주세요."}, status=503)
     return JsonResponse({"reply": reply[:3000], "facilities": facilities})

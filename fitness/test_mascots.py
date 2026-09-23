@@ -23,7 +23,7 @@ class ManualMascotTests(TestCase):
     def test_four_choices_and_legacy_default(self):
         form = ProfileForm(instance=self.user.profile, user=self.user)
         self.assertEqual(list(form.fields["avatar_preference"].choices), [
-            ("ACTIVE", "백호"), ("MUSCULAR", "백곰"), ("SOFT", "햄스터"), ("BALANCED", "아기공룡")])
+            ("ACTIVE", "백호"), ("MUSCULAR", "포동"), ("SOFT", "토리"), ("BALANCED", "아콩")])
         self.assertEqual(form.initial["avatar_preference"], "ACTIVE")
 
     def test_selection_persists_alongside_measurement_history(self):
@@ -32,11 +32,11 @@ class ManualMascotTests(TestCase):
                     measured_on="2026-09-15", avatar_preference="SOFT")
         self.assertRedirects(self.client.post(reverse("profile"), data), reverse("profile"))
         self.user.profile.refresh_from_db()
-        self.assertEqual(self.user.profile.character_label, "햄스터")
+        self.assertEqual(self.user.profile.character_label, "토리")
         self.assertEqual(self.user.body_measurements.count(), 1)
         data.update(weight_kg=50, skeletal_muscle_kg=15, gender="M", age=20)
         self.assertRedirects(self.client.post(reverse("profile"), data), reverse("profile"))
         self.user.profile.refresh_from_db()
-        self.assertEqual(self.user.profile.character_label, "햄스터")
+        self.assertEqual(self.user.profile.character_label, "토리")
         self.assertEqual(self.user.body_measurements.count(), 2)
         self.assertContains(self.client.get(reverse("dashboard")), "style-soft")

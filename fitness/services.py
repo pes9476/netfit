@@ -1448,7 +1448,7 @@ def sync_party_mission_progress(party, current_user):
 
 
 def search_facilities_for_fitbot(region=None, query=None, request=None):
-    """Fitbot 백곰 시설 검색용 서비스 함수.
+    """Fitbot 포동 시설 검색용 서비스 함수.
     is_active=True인 시설 중 region 및 query 조건에 맞는 시설 최대 5개를 반환합니다."""
     from .models import Facility
     from django.db.models import Q

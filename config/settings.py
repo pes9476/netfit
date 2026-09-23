@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-load_dotenv(BASE_DIR / "netfit_groq.local.env")
+load_dotenv(BASE_DIR / "netfit_gemini.local.env")
 
 def env_bool(name, default=False):
     return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -160,9 +160,13 @@ KAKAO_REDIRECT_URI = (
 )
 
 # --------------------------------------------------------------------------
-# 🤖 NetFit 핏봇 (Groq AI Chatbot) 설정
+# 🤖 NetFit 핏봇 (Gemini AI Chatbot) 설정
 # --------------------------------------------------------------------------
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GEMINI_API_KEY = (
+    os.getenv("GEMINI_API_KEY", "").strip()
+    or os.getenv("GOOGLE_API_KEY", "").strip()
+)
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 FITBOT_REQUIRE_LOGIN = True
 FITBOT_REGIONS = [
     "서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시",

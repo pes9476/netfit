@@ -154,9 +154,9 @@ class Profile(models.Model):
     @property
     def character_label(self):
         labels = {
-            "SLIM": "백호", "BALANCED": "아기공룡",
-            "SOFT": "햄스터", "ACTIVE": "백호",
-            "MUSCULAR": "백곰",
+            "SLIM": "백호", "BALANCED": "아콩",
+            "SOFT": "토리", "ACTIVE": "백호",
+            "MUSCULAR": "포동",
         }
         return labels[self.body_style]
 
