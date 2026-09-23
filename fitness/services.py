@@ -1447,4 +1447,32 @@ def sync_party_mission_progress(party, current_user):
     }
 
 
+def search_facilities_for_fitbot(region=None, query=None, request=None):
+    """Fitbot 백곰 시설 검색용 서비스 함수.
+    is_active=True인 시설 중 region 및 query 조건에 맞는 시설 최대 5개를 반환합니다."""
+    from .models import Facility
+    from django.db.models import Q
+
+    qs = Facility.objects.filter(is_active=True)
+    if region and region != "전체":
+        qs = qs.filter(region=region)
+    if query:
+        query_text = query.strip()
+        if query_text:
+            qs = qs.filter(
+                Q(name__icontains=query_text)
+                | Q(address__icontains=query_text)
+                | Q(facility_type__icontains=query_text)
+            )
+
+    results = []
+    for fac in qs[:5]:
+        results.append({
+            "name": fac.name,
+            "address": fac.address or fac.region or "",
+            "url": fac.naver_map_url or fac.homepage_url or "",
+        })
+    return results
+
+
 

@@ -59,6 +59,12 @@
             <span style="color: var(--trophy-gold); font-weight: 800; font-size: 11px;">튼튼머니</span>
           </button>
 
+          <!-- 핏봇 (AI 코치) 열기 버튼 -->
+          <button type="button" data-fitbot-open class="header-icon" title="AI 코치 핏봇 열기" style="background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.35); color: var(--neon-mint); cursor: pointer; border-radius: 8px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-robot" style="color: var(--neon-mint);"></i>
+            <span style="color: var(--neon-mint); font-weight: 800; font-size: 11px;">핏봇</span>
+          </button>
+
           <!-- 새 파티 만들기 -->
           <a class="header-icon" href="{% url 'onboarding_group' %}" title="새 파티 만들기">
             <i class="fa-solid fa-plus" style="color: var(--neon-mint);"></i>
@@ -622,6 +628,7 @@
     {% endif %}
   })();
   </script>
+  {% include "fitness/fitbot_widget.html" %}
 </body>
 </html>
 

@@ -13,6 +13,7 @@ from .views import (
     sports_news_api, weather_api, notifications_api, search_users_api,
     teunteun_popup_view,
 )
+from . import fitbot_api
 
 urlpatterns = [
     path("login/kakao/", kakao_login, name="kakao_login"),
@@ -58,4 +59,6 @@ urlpatterns = [
     path("demo/level/<int:target_level>/", demo_level, name="demo_level_target"),
     path("demo/battle/", demo_battle, name="demo_battle"),
     path("teunteun-popup/", teunteun_popup_view, name="teunteun_popup"),
+    path("fitbot/api/bootstrap/", fitbot_api.bootstrap, name="fitbot_bootstrap"),
+    path("fitbot/api/chat/", fitbot_api.chat, name="fitbot_chat"),
 ]

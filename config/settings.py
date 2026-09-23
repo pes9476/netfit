@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / "netfit_groq.local.env")
 
 def env_bool(name, default=False):
     return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -157,3 +158,16 @@ KAKAO_REDIRECT_URI = (
     or (f"https://{PUBLIC_DOMAIN}/login/kakao/callback/" if PUBLIC_DOMAIN
         else "http://127.0.0.1:8000/login/kakao/callback/")
 )
+
+# --------------------------------------------------------------------------
+# 🤖 NetFit 핏봇 (Groq AI Chatbot) 설정
+# --------------------------------------------------------------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+FITBOT_REQUIRE_LOGIN = True
+FITBOT_REGIONS = [
+    "서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시",
+    "대전광역시", "광주광역시", "울산광역시", "세종특별자치시", "강원특별자치도",
+    "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도",
+    "경상남도", "제주특별자치도",
+]
+FITBOT_FACILITY_SEARCH = "fitness.services.search_facilities_for_fitbot"
