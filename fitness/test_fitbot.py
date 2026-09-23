@@ -9,7 +9,7 @@ from fitness.models import Facility
 from fitness.services import search_facilities_for_fitbot
 
 
-@override_settings(GEMINI_API_KEY="test-gemini-key")
+@override_settings(GEMINI_API_KEY="test-gemini-key", GROQ_API_KEY="")
 class FitbotTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testrunner", password="password123")
@@ -174,7 +174,7 @@ class FitbotTests(TestCase):
         self.assertIn("등록된 시설을 찾지 못했어요", data["reply"])
         self.assertEqual(data["facilities"], [])
 
-    @override_settings(GEMINI_API_KEY="")
+    @override_settings(GEMINI_API_KEY="", GROQ_API_KEY="")
     def test_chat_missing_gemini_key_503(self):
         self.client.login(username="testrunner", password="password123")
         payload = {

@@ -108,30 +108,72 @@ def chat(request):
     contents.append({"role": "user", "parts": [{"text": message.strip()}]})
 
     try:
-        key = getattr(settings, "GEMINI_API_KEY", "")
-        if not key:
-            logger.error("GEMINI_API_KEY is not configured")
+        groq_key = getattr(settings, "GROQ_API_KEY", "")
+        gemini_key = getattr(settings, "GEMINI_API_KEY", "")
+        if groq_key:
+            model = getattr(settings, "GROQ_MODEL", "openai/gpt-oss-20b")
+            messages = [{"role": "system", "content": system_prompt}]
+            if isinstance(history, list):
+                for item in history[-8:]:
+                    if isinstance(item, dict) and item.get("role") in ("user", "model", "assistant") and isinstance(item.get("text"), str):
+                        r = "assistant" if item["role"] in ("model", "assistant") else "user"
+                        messages.append({"role": r, "content": item["text"][:800]})
+            messages.append({"role": "user", "content": message.strip()})
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": 800,
+                },
+                timeout=20,
+            )
+            if response.status_code == 429:
+                return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+            response.raise_for_status()
+            res_data = response.json()
+            if "choices" in res_data:
+                choices = res_data.get("choices") or []
+                reply = choices[0].get("message", {}).get("content", "") if choices else ""
+            elif "candidates" in res_data:
+                candidates = res_data.get("candidates") or []
+                parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+                reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+            else:
+                reply = ""
+            if not reply:
+                raise ValueError("Empty model response")
+        elif gemini_key:
+            model = getattr(settings, "GEMINI_MODEL", "gemini-1.5-flash")
+            response = requests.post(
+                GEMINI_API_URL.format(model=model),
+                headers={"x-goog-api-key": gemini_key, "Content-Type": "application/json"},
+                json={
+                    "systemInstruction": {"parts": [{"text": system_prompt}]},
+                    "contents": contents,
+                    "generationConfig": {"maxOutputTokens": 800},
+                },
+                timeout=20,
+            )
+            if response.status_code == 429:
+                return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+            response.raise_for_status()
+            result = response.json()
+            if "candidates" in result:
+                candidates = result.get("candidates") or []
+                parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+                reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+            elif "choices" in result:
+                choices = result.get("choices") or []
+                reply = choices[0].get("message", {}).get("content", "") if choices else ""
+            else:
+                reply = ""
+            if not reply:
+                raise ValueError("Empty model response")
+        else:
+            logger.error("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured")
             return JsonResponse({"error": "AI 연결 설정이 필요합니다."}, status=503)
-        model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
-        response = requests.post(
-            GEMINI_API_URL.format(model=model),
-            headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-            json={
-                "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "contents": contents,
-                "generationConfig": {"maxOutputTokens": 800},
-            },
-            timeout=20,
-        )
-        if response.status_code == 429:
-            return JsonResponse({"error": "무료 이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-        response.raise_for_status()
-        result = response.json()
-        candidates = result.get("candidates") or []
-        parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
-        reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
-        if not reply:
-            raise ValueError("Empty model response")
     except (requests.RequestException, ValueError, KeyError, IndexError):
         logger.exception("Fitbot AI request failed")
         return JsonResponse({"error": "답변 연결에 실패했어요. 잠시 후 다시 시도해 주세요."}, status=503)
