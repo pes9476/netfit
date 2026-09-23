@@ -34,5 +34,6 @@ jobs:
           fitness.test_mascots
           fitness.test_web_flow
           fitness.test_facility_sync
+          fitness.test_facility_migration
           -v 1
       - run: python manage.py collectstatic --noinput
