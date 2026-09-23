@@ -115,39 +115,45 @@ def chat(request):
 
     if not groq_key and not gemini_key:
         logger.error("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured")
-        return JsonResponse({"error": "AI 연결 설정이 필요합니다. API 키를 등록해 주세요."}, status=503)
+        return JsonResponse({"error": "AI 연결 설정이 필요합니다. Render 환경변수(Environment)에 GROQ_API_KEY를 등록해 주세요."}, status=503)
 
     # 1. Try Groq API if key configured
     if groq_key:
-        try:
-            model = getattr(settings, "GROQ_MODEL", "openai/gpt-oss-20b")
-            messages = [{"role": "system", "content": system_prompt}]
-            if isinstance(history, list):
-                for item in history[-8:]:
-                    if isinstance(item, dict) and item.get("role") in ("user", "model", "assistant") and isinstance(item.get("text"), str):
-                        r = "assistant" if item["role"] in ("model", "assistant") else "user"
-                        messages.append({"role": r, "content": item["text"][:800]})
-            messages.append({"role": "user", "content": message.strip()})
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
-                json={"model": model, "messages": messages, "max_tokens": 800},
-                timeout=15,
-            )
-            if response.status_code == 429:
-                return JsonResponse({"error": "이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
-            response.raise_for_status()
-            res_data = response.json()
-            if "choices" in res_data:
-                choices = res_data.get("choices") or []
-                reply = choices[0].get("message", {}).get("content", "") if choices else ""
-            elif "candidates" in res_data:
-                candidates = res_data.get("candidates") or []
-                parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
-                reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
-        except Exception as e:
-            logger.warning(f"Groq API call failed, attempting fallback: {e}")
-            last_error = e
+        groq_models = [getattr(settings, "GROQ_MODEL", "openai/gpt-oss-20b")]
+        for gm in ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]:
+            if gm not in groq_models:
+                groq_models.append(gm)
+        for model in groq_models:
+            try:
+                messages = [{"role": "system", "content": system_prompt}]
+                if isinstance(history, list):
+                    for item in history[-8:]:
+                        if isinstance(item, dict) and item.get("role") in ("user", "model", "assistant") and isinstance(item.get("text"), str):
+                            r = "assistant" if item["role"] in ("model", "assistant") else "user"
+                            messages.append({"role": r, "content": item["text"][:800]})
+                messages.append({"role": "user", "content": message.strip()})
+                response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": messages, "max_tokens": 800},
+                    timeout=15,
+                )
+                if response.status_code == 429:
+                    return JsonResponse({"error": "이용 한도에 도달했어요. 잠시 후 다시 시도해 주세요."}, status=429)
+                response.raise_for_status()
+                res_data = response.json()
+                if "choices" in res_data:
+                    choices = res_data.get("choices") or []
+                    reply = choices[0].get("message", {}).get("content", "") if choices else ""
+                elif "candidates" in res_data:
+                    candidates = res_data.get("candidates") or []
+                    parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+                    reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+                if reply:
+                    break
+            except Exception as e:
+                logger.warning(f"Groq API call ({model}) failed, attempting fallback: {e}")
+                last_error = e
 
     # 2. Try Gemini API if Groq wasn't configured or failed
     if not reply and gemini_key:
@@ -187,6 +193,9 @@ def chat(request):
 
     if not reply:
         logger.error(f"Fitbot AI generation failed completely: {last_error}")
-        return JsonResponse({"error": "답변 연결에 실패했어요. 잠시 후 다시 시도해 주세요."}, status=503)
+        diag = ""
+        if isinstance(last_error, requests.HTTPError) and last_error.response is not None:
+            diag = f" (오류 {last_error.response.status_code})"
+        return JsonResponse({"error": f"답변 연결에 실패했어요.{diag} 잠시 후 다시 시도해 주세요."}, status=503)
 
     return JsonResponse({"reply": reply[:3000], "facilities": facilities})

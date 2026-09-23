@@ -156,24 +156,36 @@ KAKAO_REDIRECT_URI = (
 # --------------------------------------------------------------------------
 # 🤖 NetFit 핏봇 (Groq & Gemini AI Chatbot) 설정
 # --------------------------------------------------------------------------
+def _clean_str(val):
+    if not val:
+        return ""
+    val = val.strip()
+    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+        val = val[1:-1].strip()
+    return val
+
 _groq_local_file = BASE_DIR / "netfit_groq.local.env"
 if _groq_local_file.exists():
     try:
         for _line in _groq_local_file.read_text(encoding="utf-8").splitlines():
             if _line.startswith("GROQ_API_KEY="):
-                _k = _line.split("=", 1)[1].strip()
+                _k = _clean_str(_line.split("=", 1)[1])
                 if _k and not os.getenv("GROQ_API_KEY"):
                     os.environ["GROQ_API_KEY"] = _k
     except Exception:
         pass
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
-GEMINI_API_KEY = (
-    os.getenv("GEMINI_API_KEY", "").strip()
-    or os.getenv("GOOGLE_API_KEY", "").strip()
+GROQ_API_KEY = (
+    _clean_str(os.getenv("GROQ_API_KEY"))
+    or _clean_str(os.getenv("GROQ_KEY"))
 )
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip()
+GROQ_MODEL = _clean_str(os.getenv("GROQ_MODEL")) or "openai/gpt-oss-20b"
+GEMINI_API_KEY = (
+    _clean_str(os.getenv("GEMINI_API_KEY"))
+    or _clean_str(os.getenv("GEMINI_KEY"))
+    or _clean_str(os.getenv("GOOGLE_API_KEY"))
+)
+GEMINI_MODEL = _clean_str(os.getenv("GEMINI_MODEL")) or "gemini-1.5-flash"
 FITBOT_REQUIRE_LOGIN = True
 FITBOT_REGIONS = [
     "서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시",
@@ -182,4 +194,5 @@ FITBOT_REGIONS = [
     "경상남도", "제주특별자치도",
 ]
 FITBOT_FACILITY_SEARCH = "fitness.services.search_facilities_for_fitbot"
+
 
