@@ -2059,37 +2059,26 @@ h2 { font-size: 20px; }
 
 @media (min-width: 851px) {
   .dash {
-    grid-template-rows: auto auto minmax(0, 1fr);
-    column-gap: 28px;
-    row-gap: 20px;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 24px;
+    align-items: start;
   }
-  .dashboard-left, .dashboard-main {
-    display: contents;
+  .dashboard-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 340px;
+    box-sizing: border-box;
   }
-  .dashboard-left > .card {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .dashboard-left > .sports-news-card {
-    grid-column: 1;
-    grid-row: 2 / 4;
-    height: 100%;
-  }
-  .dashboard-main > .hero {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .dashboard-main > .stats {
-    grid-column: 2;
-    grid-row: 2;
-    margin-top: 0;
-  }
-  .dashboard-main > .compact-party-quests {
-    grid-column: 2;
-    grid-row: 3;
-    height: 100%;
-    margin-top: 0 !important;
+  .dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 

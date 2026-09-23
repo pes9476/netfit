@@ -1,32 +1,59 @@
 {% extends "fitness/base.html" %}
 {% block content %}
-<article class="weather-card" id="todayWeather" data-fallback-latitude="{{ weather_latitude }}" data-fallback-longitude="{{ weather_longitude }}" style="background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(56,189,248,0.25); border-radius: 16px; padding: 14px 20px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
-  <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 280px;">
-    <div class="weather-icon" id="weatherIcon" style="width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 245, 155, 0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">🌤️</div>
-    <div>
+<article class="weather-card" id="todayWeather" data-fallback-latitude="{{ weather_latitude }}" data-fallback-longitude="{{ weather_longitude }}" style="background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(56,189,248,0.25); border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
+  <!-- 🌤️ 좌측: 실시간 날씨 브리핑 & 날짜 + 상태 요약 (GPS 새로고침 아래까지 시원하고 큼직하게 확장) -->
+  <div style="display: flex; align-items: center; gap: 14px; flex: 0 0 auto; min-width: 360px;">
+    <div class="weather-icon" id="weatherIcon" style="width: 48px; height: 48px; border-radius: 14px; background: rgba(0, 245, 155, 0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; box-shadow: 0 0 16px rgba(0,245,155,0.25);">🌤️</div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <!-- 1행: 타이틀 + 지역 + GPS 버튼 -->
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <span style="font-size: 13px; font-weight: 800; color: #FFFFFF;">실시간 날씨 브리핑</span>
-        <span id="weatherLocationBadge" style="font-size: 11px; font-weight: 900; padding: 2px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); color: #38BDF8;">
+        <span style="font-size: 13.5px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.2px;">실시간 날씨 브리핑</span>
+        <span id="weatherLocationBadge" style="font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); color: #38BDF8;">
           <i id="weatherLocationIcon" class="fa-solid fa-house-user"></i>
           <span id="weatherLocationLabel">📍 홈 지역 ({{ user.profile.area }})</span>
         </span>
-        <button type="button" id="btnSyncWeatherGPS" onclick="syncWeatherWithGPS()" style="cursor: pointer; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: #E2E8F0; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
+        <button type="button" id="btnSyncWeatherGPS" onclick="syncWeatherWithGPS()" style="cursor: pointer; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: #E2E8F0; font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
           <i id="btnGpsIcon" class="fa-solid fa-satellite-dish" style="color: #38BDF8;"></i>
           <span id="btnGpsText">내 GPS 위치로 찾기</span>
         </button>
       </div>
-      <div style="margin-top: 5px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
-        <b id="weatherSummary" style="color: #FFFFFF; font-size: 14px; font-weight: 800; line-height: 1;">불러오는 중…</b>
-        <span id="weatherWindInfo" style="color: var(--text-dim); font-size: 12px; line-height: 1; vertical-align: baseline;"></span>
+
+      <!-- 2행: 오늘 날짜 + 실시간 날씨 요약 + 풍속 (크기 확대 & 여유로운 간격으로 1행 아래를 든든하게 채움) -->
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span id="todayDateBadge" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 900; color: #FFFFFF; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22); padding: 3px 10px; border-radius: 7px; letter-spacing: -0.2px; white-space: nowrap;">
+          <i class="fa-regular fa-calendar" style="color: var(--neon-mint); font-size: 12px;"></i>
+          <span id="todayDateText">{% now "n/j/D" %}</span>
+        </span>
+        <div style="display: inline-flex; align-items: center; gap: 8px;">
+          <b id="weatherSummary" style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1; letter-spacing: -0.2px;">불러오는 중…</b>
+          <span id="weatherWindInfo" style="color: #CBD5E1; font-size: 12.5px; font-weight: 700; line-height: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px;"></span>
+        </div>
       </div>
     </div>
   </div>
-  <div style="display: flex; align-items: center; gap: 10px; text-align: right; flex-shrink: 0; flex-wrap: wrap;">
-    <div id="todayDateBadge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #E2E8F0; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.16); padding: 6px 13px; border-radius: 10px; letter-spacing: -0.2px; white-space: nowrap;">
-      <i class="fa-regular fa-calendar" style="color: var(--neon-mint); font-size: 12px;"></i>
-      <span id="todayDateText">2026/9/17/목</span>
+
+  <!-- ⚡ 중앙~우측: 실시간 스포츠 뉴스 티커 (너비 시원하게 대폭 확장!) -->
+  <div class="weather-sports-ticker" style="flex: 1 1 340px; min-width: 260px; background: rgba(0,0,0,0.32); border: 1px solid rgba(0,245,155,0.3); border-radius: 12px; padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-sizing: border-box; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--neon-mint)'; this.style.boxShadow='0 0 14px rgba(0,245,155,0.2)'" onmouseout="this.style.borderColor='rgba(0,245,155,0.3)'; this.style.boxShadow='none'">
+    <div style="display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0;">
+      <span style="font-size: 11px; font-weight: 900; padding: 3px 9px; border-radius: 6px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.35); display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;">
+        <i class="fa-solid fa-bolt"></i> 실시간 스포츠
+      </span>
+      <div id="sportsTickerTrack" style="flex: 1 1 0; min-width: 0; position: relative; overflow: hidden; height: 20px; line-height: 20px;">
+        <a id="dashboardNewsTickerSlotA" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(0); opacity: 1; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
+          최신 스포츠 뉴스를 불러오는 중…
+        </a>
+        <a id="dashboardNewsTickerSlotB" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-100%); opacity: 0; pointer-events: none; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
+        </a>
+      </div>
     </div>
-    <p id="weatherWorkoutTip" style="margin: 0; font-size: 12px; color: var(--neon-mint); font-weight: 700; background: rgba(0,245,155,0.08); border: 1px solid rgba(0,245,155,0.2); padding: 6px 14px; border-radius: 10px;">날씨 확인 중</p>
+    <button type="button" id="btnRefreshTickerNews" style="cursor: pointer; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: #CBD5E1; font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'; this.style.color='#FFFFFF'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#CBD5E1'" title="스포츠 뉴스 새로고침">
+      <i id="btnRefreshTickerIcon" class="fa-solid fa-rotate-right" style="font-size: 10px;"></i>
+    </button>
+  </div>
+
+  <!-- 🏃‍♂️ 우측: 실시간 운동 추천 팁 -->
+  <div style="display: flex; align-items: center; flex-shrink: 0;">
+    <p id="weatherWorkoutTip" style="margin: 0; font-size: 12px; color: var(--neon-mint); font-weight: 700; background: rgba(0,245,155,0.08); border: 1px solid rgba(0,245,155,0.2); padding: 7px 14px; border-radius: 10px; white-space: nowrap;">날씨 확인 중</p>
   </div>
 </article>
 
@@ -190,7 +217,7 @@
       </p>
     </article>
     <!-- 🎯 NETFIT 미션 허브 (일일 미션 3개 & 주간 미션 10개) -->
-    <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
+    <section class="panel dashboard-quests compact-solo-quests" style="margin-top: 0; display: flex; flex-direction: column;">
       <!-- 상단 헤더 및 탭 전환 -->
       <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
         <div>
@@ -490,10 +517,18 @@
     <article class="hero hero-badge-deck">
       
       <!-- 좌측: 나의 배지 컬렉션 -->
-      <div style="display: flex; flex-direction: column; justify-content: flex-start; gap: 14px;">
+      <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; gap: 14px;">
         <div>
-          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 8px; background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.4); color: var(--neon-mint); font-size: 11.5px; font-weight: 900; margin-bottom: 12px;">
-            <i class="fa-solid fa-medal"></i> 나의 배지 컬렉션
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 8px; background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.4); color: var(--neon-mint); font-size: 11.5px; font-weight: 900;">
+              <i class="fa-solid fa-medal"></i> 나의 배지 컬렉션
+            </div>
+            <!-- 🏛️ 국민체력100 공공데이터 뱃지 버튼 -->
+            <button type="button" onclick="openPublicDataModal()" style="cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8; font-size: 11px; font-weight: 800; transition: all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.22)'; this.style.borderColor='#38BDF8'" onmouseout="this.style.background='rgba(56,189,248,0.12)'; this.style.borderColor='rgba(56,189,248,0.4)'" title="국민체력100 공공데이터 기준 안내 보기">
+              <i class="fa-solid fa-landmark"></i>
+              <span>국민체력100 공공데이터 기준</span>
+              <i class="fa-solid fa-circle-info" style="font-size: 10px; opacity: 0.8;"></i>
+            </button>
           </div>
           <h1 style="font-size: clamp(22px, 2.5vw, 30px); font-weight: 900; line-height: 1.35; margin: 0 0 16px; color: #FFFFFF;">
             오늘의 운동이<br><span style="color: var(--neon-mint);">우리의 내기 점수</span>가 돼요.
@@ -528,12 +563,19 @@
             <span>운동 기록하고 배지 받기</span>
             <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
           </a>
-          <small style="display: block; margin-top: 8px; font-size: 11px; color: var(--text-dim);">90분 이상 금 · 60분 이상 은 · 30분 이상 동 배지를 수여합니다.</small>
+          <small style="display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: var(--text-dim); flex-wrap: wrap;">
+            <span>90분 금 · 60분 은 · 30분 동 배지</span>
+            <span style="color: rgba(255,255,255,0.2);">|</span>
+            <a href="javascript:void(0)" onclick="openPublicDataModal()" style="color: #38BDF8; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;">
+              <i class="fa-solid fa-landmark" style="font-size: 10px;"></i> 국민체력100 기준 연동
+            </a>
+          </small>
         </div>
+
       </div>
 
       <!-- 우측: 핵심 메뉴 & 최근 운동 피드 (일체형 사이버 글래스 콘솔) -->
-      <div style="background: linear-gradient(180deg, rgba(16, 26, 44, 0.85) 0%, rgba(10, 16, 28, 0.95) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; justify-content: flex-start; gap: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); backdrop-filter: blur(12px);">
+      <div style="background: linear-gradient(180deg, rgba(16, 26, 44, 0.85) 0%, rgba(10, 16, 28, 0.95) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; gap: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); backdrop-filter: blur(12px);">
         
         <!-- 🧭 핵심 메뉴 (Quick Action) -->
         <div>
@@ -642,31 +684,11 @@
     </article>
 
 
-    <!-- ⚡ 실시간 스포츠 뉴스 티커 바 (파티 일일미션 바로 위! - 고정 높이/너비로 옆 칸 흔들림 0%) -->
-    <article class="panel sports-news-ticker-panel" style="padding: 12px 18px; margin: 0; background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(0,245,155,0.3); border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); height: 50px; box-sizing: border-box; display: flex; align-items: center;">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
-        <div style="display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0;">
-          <span style="font-size: 11px; font-weight: 900; padding: 4px 9px; border-radius: 8px; background: rgba(0,245,155,0.15); color: var(--neon-mint); border: 1px solid rgba(0,245,155,0.35); display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;">
-            <i class="fa-solid fa-bolt"></i> 실시간 스포츠
-          </span>
-          <div id="sportsTickerTrack" style="flex: 1 1 0; min-width: 0; position: relative; overflow: hidden; height: 20px; line-height: 20px;">
-            <a id="dashboardNewsTickerSlotA" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(0); opacity: 1; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
-              최신 스포츠 뉴스를 불러오는 중…
-            </a>
-            <a id="dashboardNewsTickerSlotB" href="#" target="_blank" rel="noopener noreferrer" style="position: absolute; left: 0; top: 0; width: 100%; height: 20px; line-height: 20px; color: #E2E8F0; font-size: 12.5px; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-100%); opacity: 0; pointer-events: none; transition: color 0.2s; will-change: transform, opacity;" onmouseover="this.style.color='var(--neon-mint)'" onmouseout="this.style.color='#E2E8F0'">
-            </a>
-          </div>
-        </div>
-        <button type="button" id="btnRefreshTickerNews" style="cursor: pointer; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: #CBD5E1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'; this.style.color='#FFFFFF'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#CBD5E1'">
-          <i id="btnRefreshTickerIcon" class="fa-solid fa-rotate-right"></i> <span>새로고침</span>
-        </button>
-      </div>
-    </article>
 
     <!-- 👥 우리 파티 미션 허브 (우측 컬럼: 솔로 미션 허브와 1:1 완벽 대칭 구조) -->
     {% if active_party %}
-      <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; flex: 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+      <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
           <div>
             <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
@@ -703,8 +725,8 @@
         </div>
 
         <!-- 1. 파티 일일 미션 뷰 (1개씩 페이징) -->
-        <div id="partyDailyMissionView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+        <div id="partyDailyMissionView" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px; flex-shrink: 0;">
             <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
               오늘의 파티 미션 <b style="color: #FFFFFF;">{{ party_daily_missions|length }}개</b> (협동 2 + 주변시설 1)
             </span>
@@ -726,9 +748,9 @@
             </div>
           </div>
 
-          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
             {% for quest in party_daily_missions %}
-              <article class="party-daily-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+              <article class="party-daily-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; padding: 10px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(56, 189, 248, 0.3) transparent;">
                 <div>
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     {% if quest.mission_category == 'FACILITY' %}
@@ -966,8 +988,8 @@
         </div>
 
         <!-- 2. 파티 주간 미션 뷰 (1개씩 페이징) -->
-        <div id="partyWeeklyMissionView" style="display: none; flex-direction: column; gap: 10px; flex: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
+        <div id="partyWeeklyMissionView" style="display: none; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px; flex-shrink: 0;">
             <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
               이번 주 파티 미션 <b style="color: #FFFFFF;">{{ party_weekly_missions|length }}개</b> (주간 협동 & 누적 10)
             </span>
@@ -989,9 +1011,9 @@
             </div>
           </div>
 
-          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
             {% for quest in party_weekly_missions %}
-              <article class="party-weekly-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; padding: 12px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+              <article class="party-weekly-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; padding: 10px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(56, 189, 248, 0.3) transparent;">
                 <div>
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     {% if quest.mission_category == 'FACILITY' %}
@@ -1311,13 +1333,13 @@ details.ended-challenges-accordion summary::-webkit-details-marker {
 details.ended-challenges-accordion[open] .accordion-arrow {
   transform: rotate(180deg);
 }
-/* 배지 히어로 섹션 (PC에서는 기존 2열 유지, 850px 이하 모바일에서만 1열로 세로 정렬) */
+/* 배지 히어로 섹션 (PC에서는 2열 배치, 850px 이하 모바일에서만 1열로 세로 정렬) */
 .hero-badge-deck {
   display: grid;
   grid-template-columns: minmax(300px, 1.15fr) minmax(300px, 1fr);
   gap: 24px;
   align-items: flex-start;
-  padding: 26px 28px;
+  padding: 24px 26px;
   border-radius: 20px;
   background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(30, 27, 75, 0.85) 60%, rgba(15, 23, 42, 0.95) 100%);
   border: 1px solid rgba(99, 102, 241, 0.35);
@@ -1330,12 +1352,13 @@ details.ended-challenges-accordion[open] .accordion-arrow {
     padding: 20px 16px;
   }
 }
-/* 좌우 컬럼 레이아웃 */
+
+/* 좌우 컬럼 레이아웃 (자연스러운 2열 독립 배치) */
 .dash {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   gap: 24px;
-  align-items: stretch;
+  align-items: start;
 }
 @media(max-width: 960px) {
   .dash {
@@ -1354,17 +1377,11 @@ details.ended-challenges-accordion[open] .accordion-arrow {
   .dashboard-left {
     width: 100%;
   }
-}
-.compact-solo-quests {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.compact-solo-quests .quest-cards {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  .dashboard-left > .card {
+    max-width: 420px;
+    margin: 0 auto;
+    width: 100%;
+  }
 }
 .dashboard-main {
   display: flex;
@@ -1374,22 +1391,60 @@ details.ended-challenges-accordion[open] .accordion-arrow {
   width: 100%;
   box-sizing: border-box;
 }
-.compact-party-quests {
-  flex: 1;
+.compact-solo-quests {
   display: flex;
   flex-direction: column;
 }
-/* 실시간 스포츠 뉴스 티커 바 - 텍스트 변경 시 주변 칸 흔들림 원천 차단 */
-.sports-news-ticker-panel {
-  width: 100%;
-  height: 50px;
-  box-sizing: border-box;
-  contain: layout paint;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+.compact-solo-quests .quest-cards {
+  display: flex;
+  flex-direction: column;
 }
-.sports-news-ticker-panel:hover {
-  border-color: var(--neon-mint);
-  box-shadow: 0 6px 22px rgba(0, 245, 155, 0.2);
+
+/* 👥 파티 미션 허브 (배지 컬렉션 바로 아래 위치, 나의 미션 높이와 1:1 완벽 일치) */
+.compact-party-quests {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 0 !important;
+}
+.compact-party-quests .quest-cards {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.compact-party-quests .party-daily-card,
+.compact-party-quests .party-weekly-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+}
+.compact-party-quests .party-daily-card::-webkit-scrollbar,
+.compact-party-quests .party-weekly-card::-webkit-scrollbar {
+  width: 4px;
+}
+.compact-party-quests .party-daily-card::-webkit-scrollbar-thumb,
+.compact-party-quests .party-weekly-card::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+}
+
+/* ⚡ 상단 날씨 바에 통합된 실시간 스포츠 뉴스 티커 반응형 */
+.weather-sports-ticker {
+  contain: layout paint;
+}
+@media (max-width: 820px) {
+  .weather-sports-ticker {
+    order: 3;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
 }
 </style>
 
@@ -1523,13 +1578,64 @@ function fetchWeatherWithCoords(lat, lng) {
     });
 }
 
-// 페이지 로드 시 초기 날씨 및 오늘 날짜 표시
+// ==========================================================================
+// 📏 좌우 카드 세로 높이 1:1 완벽 일치 (캐릭터 & 나의미션 원본 크기 절대 불변)
+// 1행: [나의 배지 컬렉션] 세로 길이 = [캐릭터 칸] 세로 길이
+// 2행: [우리 파티 미션] 세로 길이 = [나의 미션] 세로 길이
+// * 기준인 캐릭터 칸과 나의 미션 칸의 크기는 절대 건드리지 않고, 우측 카드들이 이를 추종함
+// ==========================================================================
+function syncDashboardHeights() {
+  const heroBadge = document.querySelector('.hero-badge-deck');
+  const partyQuests = document.querySelector('.compact-party-quests');
+  if (!heroBadge) return;
+
+  if (window.innerWidth <= 960) {
+    heroBadge.style.height = '';
+    if (partyQuests) partyQuests.style.height = '';
+    return;
+  }
+
+  const charCard = document.querySelector('.dashboard-left > .card');
+  const soloQuests = document.querySelector('.dashboard-left > .compact-solo-quests');
+
+  if (charCard && heroBadge) {
+    const h1 = charCard.offsetHeight;
+    if (h1 > 0) {
+      heroBadge.style.boxSizing = 'border-box';
+      heroBadge.style.height = h1 + 'px';
+    }
+  }
+
+  if (soloQuests && partyQuests) {
+    const h2 = soloQuests.offsetHeight;
+    if (h2 > 0) {
+      partyQuests.style.boxSizing = 'border-box';
+      partyQuests.style.height = h2 + 'px';
+    }
+  }
+}
+
+// 페이지 로드 시 초기 날씨 및 오늘 날짜 표시 & 카드 높이 동기화
 document.addEventListener("DOMContentLoaded", () => {
+  syncDashboardHeights();
+  window.addEventListener('load', syncDashboardHeights);
+  window.addEventListener('resize', syncDashboardHeights);
+
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(() => {
+      syncDashboardHeights();
+    });
+    const charCard = document.querySelector('.dashboard-left > .card');
+    const soloQuests = document.querySelector('.dashboard-left > .compact-solo-quests');
+    if (charCard) observer.observe(charCard);
+    if (soloQuests) observer.observe(soloQuests);
+  }
+
   const dateSpan = document.getElementById('todayDateText');
   if (dateSpan) {
     const now = new Date();
     const days = ['일', '월', '화', '수', '목', '금', '토'];
-    dateSpan.textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}/${days[now.getDay()]}`;
+    dateSpan.textContent = `${now.getMonth() + 1}/${now.getDate()}/${days[now.getDay()]}`;
   }
 
   const card = document.getElementById('todayWeather');
@@ -1843,6 +1949,7 @@ function renderDailyMissionPage() {
 function changeDailyPage(delta) {
   currentDailyPage += delta;
   renderDailyMissionPage();
+  setTimeout(syncDashboardHeights, 10);
 }
 
 // 📑 주간 미션 (1개씩 페이징)
@@ -1880,6 +1987,7 @@ function renderWeeklyMissionPage() {
 function changeWeeklyPage(delta) {
   currentWeeklyPage += delta;
   renderWeeklyMissionPage();
+  setTimeout(syncDashboardHeights, 10);
 }
 
 // 🔄 일일 / 주간 미션 탭 전환
@@ -1914,6 +2022,7 @@ function switchMissionTab(tab) {
     }
     renderWeeklyMissionPage();
   }
+  setTimeout(syncDashboardHeights, 10);
 }
 
 function openSoloQuestListModal() {
@@ -1968,6 +2077,7 @@ function switchPartyMissionTab(tab) {
     }
     renderPartyWeeklyMissionPage();
   }
+  setTimeout(syncDashboardHeights, 10);
 }
 
 // 📑 파티 일일미션 페이징 (1개씩 보기로 컴팩트화)
