@@ -47,11 +47,18 @@
 #netfit-fitbot .fb-search{grid-column:span 2;background:linear-gradient(135deg,#00f59b 0%,#00b87a 100%);color:#090d16;font-weight:900;border:0;border-radius:9px;padding:8px;font-size:12.5px;transition:opacity .15s}
 #netfit-fitbot .fb-search:hover{opacity:.9}
 
-/* 대화 메시지 영역 */
-#netfit-fitbot .fb-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#080d14;overscroll-behavior:contain}
-#netfit-fitbot .fb-msg{padding:11px 14px;background:rgba(255,255,255,0.06);color:#f1f5f9;border:1px solid rgba(255,255,255,0.07);max-width:90%;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0;font-size:13px;line-height:1.55}
-#netfit-fitbot .fb-msg.user{align-self:flex-end;background:rgba(0,245,155,0.18);color:#e6fff5;border:1px solid rgba(0,245,155,0.38);box-shadow:0 2px 10px rgba(0,245,155,0.12)}
-#netfit-fitbot .fb-msg.error{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+/* 대화 메시지 영역 및 인스타/카톡 프로필 아바타 */
+#netfit-fitbot .fb-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px;background:#080d14;overscroll-behavior:contain}
+#netfit-fitbot .fb-msg-wrap{display:flex;align-items:flex-start;gap:9px;width:100%}
+#netfit-fitbot .fb-msg-wrap.user{justify-content:flex-end}
+#netfit-fitbot .fb-msg-wrap.error{justify-content:center}
+#netfit-fitbot .fb-avatar{width:34px;height:34px;min-width:34px;border-radius:50%;background:#132030;border:1.5px solid rgba(0,245,155,0.4);box-shadow:0 3px 8px rgba(0,0,0,0.5),0 0 10px rgba(0,245,155,0.15);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;margin-top:2px}
+#netfit-fitbot .fb-avatar img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))}
+#netfit-fitbot .fb-bubble-group{display:flex;flex-direction:column;gap:6px;max-width:82%}
+#netfit-fitbot .fb-msg-wrap.user .fb-bubble-group{max-width:88%;align-items:flex-end}
+#netfit-fitbot .fb-msg{padding:10px 13px;background:rgba(255,255,255,0.06);color:#f1f5f9;border:1px solid rgba(255,255,255,0.07);border-radius:15px;border-top-left-radius:3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.55;width:fit-content}
+#netfit-fitbot .fb-msg.user{background:rgba(0,245,155,0.18);color:#e6fff5;border:1px solid rgba(0,245,155,0.38);box-shadow:0 2px 10px rgba(0,245,155,0.12);border-radius:15px;border-top-right-radius:3px}
+#netfit-fitbot .fb-msg.error{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:12px;font-size:12px}
 #netfit-fitbot .fb-note{margin:0;padding:6px 14px;font-size:10px;color:#64748b;background:#080d14;border-top:1px solid rgba(255,255,255,0.04)}
 
 /* 입력창 & 전송 버튼 */
@@ -169,9 +176,54 @@
   });
   function safeLink(url){try{const u=new URL(url,location.href);return ['http:','https:'].includes(u.protocol)?u.href:null}catch{return null}}
   function drawEntry(entry){
-    const node = document.createElement('div'); node.className='fb-msg '+entry.kind; node.textContent=entry.text; messages.append(node);
-    for(const f of entry.facilities||[]){const card=document.createElement('div');card.className='fb-facility';const name=document.createElement('strong');name.textContent=f.name;const address=document.createElement('p');address.textContent=f.address;card.append(name,address);const href=safeLink(f.url);if(href){const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='지도에서 보기';card.append(link)}messages.append(card)}
-    if(entry.more_url){const href=safeLink(entry.more_url);if(href){const link=document.createElement('a');link.href=href;link.className='fb-more';link.textContent='내 주변 시설 페이지 열기';messages.append(link)}}
+    const wrap = document.createElement('div');
+    wrap.className = 'fb-msg-wrap ' + entry.kind;
+    if (entry.kind === 'bot') {
+      const avatar = document.createElement('div');
+      avatar.className = 'fb-avatar';
+      const img = document.createElement('img');
+      img.src = entry.avatar || bots[current].image;
+      img.alt = bots[current].name;
+      avatar.append(img);
+      wrap.append(avatar);
+    }
+    const group = document.createElement('div');
+    group.className = 'fb-bubble-group';
+    const node = document.createElement('div');
+    node.className = 'fb-msg ' + entry.kind;
+    node.textContent = entry.text;
+    group.append(node);
+    for(const f of entry.facilities||[]){
+      const card = document.createElement('div');
+      card.className = 'fb-facility';
+      const name = document.createElement('strong');
+      name.textContent = f.name;
+      const address = document.createElement('p');
+      address.textContent = f.address;
+      card.append(name, address);
+      const href = safeLink(f.url);
+      if(href){
+        const link = document.createElement('a');
+        link.href = href;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = '지도에서 보기';
+        card.append(link);
+      }
+      group.append(card);
+    }
+    if(entry.more_url){
+      const href = safeLink(entry.more_url);
+      if(href){
+        const link = document.createElement('a');
+        link.href = href;
+        link.className = 'fb-more';
+        link.textContent = '내 주변 시설 페이지 열기';
+        group.append(link);
+      }
+    }
+    wrap.append(group);
+    messages.append(wrap);
   }
   function renderMessages(){messages.replaceChildren();state[current].entries.forEach(drawEntry);messages.scrollTop=messages.scrollHeight;const busy=state[current].busy;$('.fb-input').disabled=busy;$('form button').disabled=busy;$('.fb-search').disabled=busy;messages.setAttribute('aria-busy',String(busy))}
   function render(){
