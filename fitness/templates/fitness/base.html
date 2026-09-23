@@ -86,7 +86,7 @@
                   <i class="fa-solid fa-bell"></i> 파티 초대 {{ pending_party_invitation_count }}건 도착!
                 </a>
               {% endif %}
-              {% for party in header_user_parties|default:user.parties.all %}
+              {% for party in header_user_parties %}
                 <div class="party-accordion-item">
                   <button type="button"
                     class="party-accordion-btn"

@@ -60,6 +60,17 @@ class PartyEnhancementsTestCase(TestCase):
         self.assertNotIn(ended_party.name, names)
         self.assertNotIn(ended_today.name, names)
 
+    def test_header_does_not_fall_back_to_all_parties_when_every_bet_ended(self):
+        self.party.challenge_end = date.today() - timedelta(days=1)
+        self.party.save(update_fields=["challenge_end"])
+        cache.clear()
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.context["header_user_parties"], [])
+        self.assertContains(response, "참여 중인 파티가 없어요.")
+
     def test_direct_quest_does_not_create_ai_missions(self):
         """직접 입력으로 파티 퀘스트 생성 시 AI 퀘스트가 자동 생성되지 않고 내가 만든 퀘스트만 유지된다."""
         q1 = DailyQuest.objects.create(
