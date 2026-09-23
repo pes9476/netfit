@@ -21,26 +21,20 @@ def env_list(name):
     return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
 
 
-ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT_ID"))
 ON_RENDER = env_bool("RENDER") or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
-ON_DEPLOYMENT = ON_RAILWAY or ON_RENDER
+ON_DEPLOYMENT = ON_RENDER
 DEBUG = env_bool("DEBUG", not ON_DEPLOYMENT)
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("Set SECRET_KEY before starting with DEBUG=False.")
     SECRET_KEY = "django-insecure-local-development-only-netfit"
-PUBLIC_DOMAIN = (
-    os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
-    or os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
-)
+PUBLIC_DOMAIN = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 if DEBUG:
     ALLOWED_HOSTS += ["127.0.0.1", "localhost", "testserver"]
 if PUBLIC_DOMAIN:
     ALLOWED_HOSTS.append(PUBLIC_DOMAIN)
-if ON_RAILWAY:
-    ALLOWED_HOSTS.append("healthcheck.railway.app")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 if PUBLIC_DOMAIN:
     CSRF_TRUSTED_ORIGINS.append(f"https://{PUBLIC_DOMAIN}")

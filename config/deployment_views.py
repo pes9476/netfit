@@ -20,7 +20,7 @@ def healthz(request):
 @login_required
 @require_safe
 def serve_media(request, path):
-    """Serve images only from MEDIA_ROOT (the Railway persistent volume)."""
+    """Serve images only from MEDIA_ROOT (the persistent disk)."""
     root = Path(settings.MEDIA_ROOT).resolve()
     target = (root / path).resolve()
     if not target.is_relative_to(root) or not target.is_file():

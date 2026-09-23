@@ -46,7 +46,7 @@ class DeploymentTests(TestCase):
 class RenderSettingsTests(SimpleTestCase):
     def test_render_hostname_and_secure_defaults_are_detected(self):
         environment = os.environ.copy()
-        for name in ("USE_SQLITE", "RAILWAY_ENVIRONMENT_ID", "RAILWAY_PUBLIC_DOMAIN"):
+        for name in ("USE_SQLITE",):
             environment.pop(name, None)
         environment.update({
             "RENDER": "true",

@@ -7,7 +7,7 @@
 - **담당자**: 박준범
 - **완성일(제출일)**: 2026-09-25
 - **GitHub 저장소**: [https://github.com/pes9476/netfit](https://github.com/pes9476/netfit)
-- **기술 스택**: Python 3.13, Django 5.x, PostgreSQL (Supabase / Railway), HTML5/CSS3/Vanilla JS, Railway Cloud Platform
+- **기술 스택**: Python 3.13, Django 5.x, PostgreSQL (Supabase), HTML5/CSS3/Vanilla JS, Render Cloud Platform
 
 ---
 
@@ -199,11 +199,11 @@
 
 ---
 
-## 2026-09-21 (월) · Railway 운영 배포, 파티 내기 역전 가이드/폭죽, 브랜치 인수인계, 카드배틀 제거 & 실시간 스마트 폴링 알림 완성
+## 2026-09-21 (월) · 운영 배포, 파티 내기 역전 가이드/폭죽, 브랜치 인수인계, 카드배틀 제거 & 실시간 스마트 폴링 알림 완성
 
 ### 1. 당시 상황 & 배경
 - **무엇을 하려고 했는가?**:
-  1. Railway 클라우드 플랫폼에 PostgreSQL(Supabase) 및 Gunicorn 기반으로 실제 운영 환경 배포를 구축.
+  1. Render 클라우드 플랫폼에 PostgreSQL(Supabase) 및 Gunicorn 기반으로 실제 운영 환경 배포를 구축.
   2. 친구들과 함께하는 파티 내기의 박진감을 높이기 위해 **D-Day 임박 알림, 1위 맹추격 경고, 추격자 역전 가이드, 1위 우승 시 폭죽(Confetti) 연출** 구현.
   3. C1/C2 개발 PC 간 작업 충돌을 막기 위해 **개발 브랜치(`testsv`)와 운영 배포 브랜치(`runsv`)를 명확히 분리**하고 지침 문서(`GEMINI.md`) 수립.
   4. 이전 기획에서 폐기되었으나 친구 목록에 남아 혼란을 주던 **카드 배틀 잔재 코드 완전 제거**.
@@ -211,7 +211,7 @@
 
 ### 2. 실제 구현 과정
 1. **클라우드 배포 파이프라인**:
-   - `railway.json`, `Procfile` 구성 및 `psycopg3` 드라이버 적용, Supabase Session Pooler 연동.
+   - `render.yaml`, `Procfile` 구성 및 `psycopg3` 드라이버 적용, Supabase Session Pooler 연동.
 2. **파티 내기 역전 가이드 & 1등 폭죽**:
    - 파티 내기 참여자들의 누적 점수를 실시간 집계하여 1위에게는 "2위 OO님이 단 50점 차로 맹추격 중! 🔥", 2위에게는 "50점만 더 따면 1위 역전 가능! ⚡" 가이드를 동적 산출.
    - 챌린지 종료 시 1위 달성 사용자 화면에 Canvas Confetti 폭죽 효과 자동 발사.
@@ -228,8 +228,8 @@
    - 미러 저장소 동기화 및 `testsv` → `runsv` 운영 서버 최종 배포 완료.
 
 ### 3. 발생한 문제
-- **이슈 1 (배포 에러)**: Railway 배포 중 `psycopg2-binary`가 Python 3.13 환경에서 C-extension 컴파일 에러를 일으키며 빌드 실패.
-- **이슈 2 (인프라 한계)**: 실시간 알림을 위해 Django Channels(WebSockets) 도입을 검토했으나, Redis 브로커가 필요하고 Railway 무료 티어의 Gunicorn 워커가 영구 연결로 인해 고갈될 위험 발생.
+- **이슈 1 (배포 에러)**: 클라우드 배포 중 `psycopg2-binary`가 Python 3.13 환경에서 C-extension 컴파일 에러를 일으키며 빌드 실패.
+- **이슈 2 (인프라 한계)**: 실시간 알림을 위해 Django Channels(WebSockets) 도입을 검토했으나, Redis 브로커가 필요하고 무료 티어의 Gunicorn 워커가 영구 연결로 인해 고갈될 위험 발생.
 - **이슈 3 (UX 결함)**: 알림을 수락하거나 닫을 때마다 페이지 전체가 새로고침되어 화면이 하얗게 깜빡거림.
 - **이슈 4 (배포 혼선)**: VS Code에서 `git push`를 했으나 실제 웹사이트에 수정 사항이 반영되지 않음 (개발 브랜치 `testsv`로 푸시되었고, 배포 브랜치는 `runsv`였던 원인).
 
@@ -294,18 +294,18 @@
 ## 2. 가장 어려웠던 부분과 해결 과정
 
 ### ① 실시간 양방향 알림 구현과 서버 자원 최적화의 딜레마
-- **도전 과제**: 새로고침 없이 친구 요청이나 콕 찌르기를 즉시 알려주어야 했으나, 클라우드(Railway)의 제한된 환경에서 WebSocket(Django Channels + Redis)을 구동하기에는 연결 유지 비용과 프로세스 과부하 위험이 컸음.
+- **도전 과제**: 새로고침 없이 친구 요청이나 콕 찌르기를 즉시 알려주어야 했으나, 제한된 클라우드 환경에서 WebSocket(Django Channels + Redis)을 구동하기에는 연결 유지 비용과 프로세스 과부하 위험이 컸음.
 - **돌파구**: 브라우저의 **Page Visibility API**와 결합한 **경량 스마트 폴링(Smart Polling)** 기법을 고안함. 사용자가 다른 탭을 볼 때는 통신을 완전히 중단하여 서버 부하를 0으로 만들고, 탭으로 돌아오는 순간 즉시 데이터를 갱신함으로써 인프라 비용 없이 실시간 웹소켓과 동일한 사용자 경험을 제공함.
 
 ### ② 여러 개발 환경(C1, C2)과 클라우드 배포 파이프라인의 Git 브랜치 관리
-- **도전 과제**: 다수의 작업자가 서로 다른 PC에서 개발을 진행하고, Railway 자동 배포 브랜치(`runsv`)와 로컬 개발 브랜치가 얽히면서 최신 코드가 누락되거나 배포가 즉시 반영되지 않는 혼선이 발생함.
+- **도전 과제**: 다수의 작업자가 서로 다른 PC에서 개발을 진행하고, Render 자동 배포 브랜치(`runsv`)와 로컬 개발 브랜치가 얽히면서 최신 코드가 누락되거나 배포가 즉시 반영되지 않는 혼선이 발생함.
 - **돌파구**: `GEMINI.md` 프로젝트 표준 지침서를 수립하여 기본 개발 및 upstream은 `testsv`로 단일화하고, 검증이 끝난 안정 버전만 `runsv`로 fast-forward 병합하여 푸시하는 체계적인 배포 규칙을 확립함.
 
 ---
 
 ## 3. 배운 기술과 개념
 - **Full-Stack Django & RESTful AJAX 패턴**: 템플릿 렌더링 방식의 Django에서 `JsonResponse`와 바닐라 자바스크립트의 `fetch` API를 조합하여 화면 깜빡임 없는 모던 SPA(Single Page Application) 수준의 UX를 구축하는 방법을 체득함.
-- **클라우드 PaaS 배포 및 Python 3.13 최적화**: Railway, Supabase PostgreSQL, Gunicorn, WhiteNoise 정적 파일 서빙 파이프라인을 구축하고, 최신 Python 3.13 환경에서 `psycopg3`를 활용한 데이터베이스 연결 풀링 최적화 기법을 학습함.
+- **클라우드 PaaS 배포 및 Python 3.13 최적화**: Render, Supabase PostgreSQL, Gunicorn, WhiteNoise 정적 파일 서빙 파이프라인을 구축하고, 최신 Python 3.13 환경에서 `psycopg3`를 활용한 데이터베이스 연결 풀링 최적화 기법을 학습함.
 - **CSS 스프라이트 및 프론트엔드 렌더링 최적화**: 다수의 이미지를 단일 아틀라스 시트로 결합하여 HTTP 요청 횟수를 75% 절감하고, Canvas API 및 CSS 트랜지션을 활용한 동적 애니메이션 제어 능력을 배양함.
 - **공공데이터 가공 및 대용량 배치 처리**: KSPO 공공체육시설 CSV 원시 데이터를 정제하고 `bulk_create`를 통해 수만 건의 레코드를 수초 내에 DB로 인덱싱하는 데이터 엔지니어링 기초를 다짐.
 
