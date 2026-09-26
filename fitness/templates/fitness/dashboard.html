@@ -25,7 +25,7 @@
           <span id="todayDateText">{% now "n/j/D" %}</span>
         </span>
         <div style="display: inline-flex; align-items: center; gap: 8px;">
-          <b id="weatherSummary" style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1; letter-spacing: -0.2px;">불러오는 중…</b>
+          <b id="weatherSummary" class="notranslate" translate="no" style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1; letter-spacing: -0.2px;">불러오는 중…</b>
           <span id="weatherWindInfo" style="color: #CBD5E1; font-size: 12.5px; font-weight: 700; line-height: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px;"></span>
         </div>
       </div>
@@ -1499,7 +1499,7 @@ function applyWeatherToDOM(w) {
     }
   }
   if (summary) {
-    summary.innerHTML = `<span style="color: ${w.color || '#38BDF8'}; font-weight: 900;">${w.condition}</span> · <span style="color: #FFFFFF;">${w.temperature}℃</span>`;
+    summary.innerHTML = `<span class="notranslate" translate="no" style="color: ${w.color || '#38BDF8'}; font-weight: 900;">${w.condition}</span> · <span style="color: #FFFFFF;">${w.temperature}℃</span>`;
   }
   if (windInfo) {
     windInfo.textContent = `풍속 ${w.windspeed}m/s`;
