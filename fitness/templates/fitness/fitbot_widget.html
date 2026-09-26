@@ -166,23 +166,25 @@
   const script = document.currentScript;
   const config = {...script.dataset};
   const bots = [
-    {id:'coach', name:'백호 · 운동 코치', image:config.tiger, line:'운동이 궁금해? 내가 도와줄게!', intro:'나는 운동을 잘할 수 있게 도와주는 백호 핏봇이야! 목표나 운동 방법이 궁금하면 편하게 물어봐.'},
-    {id:'facility', name:'포동 · 시설 안내', image:config.bear, line:'가까운 운동 시설을 찾고 있어? 내가 찾아볼게!', intro:'나는 운동 시설을 안내하는 포동 핏봇이야! 지역과 찾는 시설을 골라주면 NETFIT에 등록된 곳을 보여줄게.'},
-    {id:'meal', name:'토리 · 식단 도우미', image:config.hamster, line:'오늘 뭐 먹을지 고민돼? 같이 생각해보자!', intro:'나는 식사 아이디어를 함께 고르는 토리 핏봇이야! 먹고 싶은 음식이나 선호하는 식단을 말해줘.'},
-    {id:'court', name:'아콩 · 변명재판소', image:config.dino, line:'오늘 운동을 못 했다고? 변명을 들어볼게!', intro:'나는 변명재판소의 아콩 판사야! 오늘 운동을 못 한 이유를 말하면 재미있게 판결하고 작은 다음 행동을 제안할게.'}
+    {id:'coach', tabName:'백호', name:'백호 · 운동 코치', image:config.tiger, line:'운동이 궁금해? 내가 도와줄게!', intro:'나는 운동을 잘할 수 있게 도와주는 백호 핏봇이야! 목표나 운동 방법이 궁금하면 편하게 물어봐.'},
+    {id:'facility', tabName:'포동', name:'포동 · 시설 안내', image:config.bear, line:'가까운 운동 시설을 찾고 있어? 내가 찾아볼게!', intro:'나는 운동 시설을 안내하는 포동 핏봇이야! 지역과 찾는 시설을 골라주면 NETFIT에 등록된 곳을 보여줄게.'},
+    {id:'meal', tabName:'토리', name:'토리 · 식단 도우미', image:config.hamster, line:'오늘 뭐 먹을지 고민돼? 같이 생각해보자!', intro:'나는 식사 아이디어를 함께 고르는 토리 핏봇이야! 먹고 싶은 음식이나 선호하는 식단을 말해줘.'},
+    {id:'court', tabName:'아콩', name:'아콩 · 변명재판소', image:config.dino, line:'오늘 운동을 못 했다고? 변명을 들어볼게!', intro:'나는 변명재판소의 아콩 판사야! 오늘 운동을 못 한 이유를 말하면 재미있게 판결하고 작은 다음 행동을 제안할게.'}
   ];
   const commonGuide = '우리 네 핏봇은 이렇게 도와줘! 백호는 운동 상담, 포동은 시설 안내, 토리는 식단 안내, 아콩은 변명재판소를 맡고 있어. 다른 핏봇이 궁금하면 위에서 캐릭터를 바꿔봐!';
   const root = document.createElement('aside'); root.id = 'netfit-fitbot';
+  root.className = 'notranslate';
+  root.setAttribute('translate', 'no');
   root.setAttribute('aria-label', 'NETFIT 핏봇');
-  root.innerHTML = `<div class="fb-launch"><p class="fb-bubble" role="status" hidden></p><button class="fb-dismiss" type="button" aria-label="핏봇 위젯 닫기">×</button><div class="fb-cards" role="group" aria-label="핏봇 캐릭터 선택"></div></div>
-    <section class="fb-dialog" role="dialog" aria-label="핏봇 상담" hidden>
-      <header class="fb-head"><img alt=""><strong class="fb-title"></strong><button class="fb-dialog-close" type="button" aria-label="상담창 닫기">×</button></header>
-      <nav class="fb-tabs" aria-label="상담 캐릭터 선택"></nav>
-      <div class="fb-filters" hidden><label>지역<select aria-label="시설 지역"></select></label><label>시설 검색<input class="fb-query" maxlength="60" placeholder="예: 수영장, 강남"></label><button type="button" class="fb-search">시설 찾기</button></div>
-      <div class="fb-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
-      <p class="fb-note">대화 내용은 AI 답변을 위해 전송됩니다. 민감한 개인정보는 입력하지 마세요.</p>
-      <form><input class="fb-input" maxlength="800" aria-label="핏봇 질문" placeholder="궁금한 점을 물어보세요" required><button type="submit">전송</button></form>
-    </section><div class="fb-toast" role="status" hidden>상단 메뉴의 '핏봇'을 눌러 언제든 다시 불러올 수 있습니다. <button type="button" data-fitbot-open style="margin-left:6px;background:#137c63;color:#fff;border:0;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;">지금 열기</button></div><button class="fb-reopen-pill" type="button" data-fitbot-open hidden title="핏봇 열기"><span>🤖</span> 핏봇</button>`;
+  root.innerHTML = `<div class="fb-launch"><p class="fb-bubble notranslate" translate="no" role="status" hidden></p><button class="fb-dismiss" type="button" aria-label="핏봇 위젯 닫기">×</button><div class="fb-cards" role="group" aria-label="핏봇 캐릭터 선택"></div></div>
+    <section class="fb-dialog notranslate" translate="no" role="dialog" aria-label="핏봇 상담" hidden>
+      <header class="fb-head"><img alt=""><strong class="fb-title notranslate" translate="no"></strong><button class="fb-dialog-close" type="button" aria-label="상담창 닫기">×</button></header>
+      <nav class="fb-tabs notranslate" translate="no" aria-label="상담 캐릭터 선택"></nav>
+      <div class="fb-filters notranslate" translate="no" hidden><label>지역<select aria-label="시설 지역"></select></label><label>시설 검색<input class="fb-query" maxlength="60" placeholder="예: 수영장, 강남"></label><button type="button" class="fb-search">시설 찾기</button></div>
+      <div class="fb-messages notranslate" translate="no" role="log" aria-live="polite" aria-relevant="additions text"></div>
+      <p class="fb-note notranslate" translate="no">대화 내용은 AI 답변을 위해 전송됩니다. 민감한 개인정보는 입력하지 마세요.</p>
+      <form><input class="fb-input notranslate" translate="no" maxlength="800" aria-label="핏봇 질문" placeholder="궁금한 점을 물어보세요" required><button type="submit" class="notranslate" translate="no">전송</button></form>
+    </section><div class="fb-toast notranslate" translate="no" role="status" hidden>상단 메뉴의 '핏봇'을 눌러 언제든 다시 불러올 수 있습니다. <button type="button" data-fitbot-open style="margin-left:6px;background:#137c63;color:#fff;border:0;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px;">지금 열기</button></div><button class="fb-reopen-pill notranslate" translate="no" type="button" data-fitbot-open hidden title="핏봇 열기"><span>🤖</span> 핏봇</button>`;
   document.body.append(root);
   const $ = q => root.querySelector(q), launch = $('.fb-launch'), dialog = $('.fb-dialog'), cards = $('.fb-cards'), messages = $('.fb-messages');
   const state = bots.map(b => ({entries:[{text:b.intro, kind:'bot'},{text:commonGuide, kind:'bot'}], history:[], busy:false}));
@@ -215,7 +217,7 @@
     face.addEventListener('pointermove',event=>{if(event.pointerType==='mouse'||event.pointerType==='pen')speak(i)}); face.addEventListener('pointerleave',()=>{hideBubble();scheduleCollapse()});
     face.addEventListener('focus',()=>speak(i)); face.addEventListener('blur',hideBubble);
     face.onclick=()=>{current=i;opener=face;hideBubble();openChat()};
-    const button = document.createElement('button'); button.type='button'; button.textContent=b.name.split(' · ')[0]; button.onclick=()=>select(i); $('.fb-tabs').append(button);
+    const button = document.createElement('button'); button.type='button'; button.className='notranslate'; button.setAttribute('translate','no'); button.textContent=b.tabName || b.name.split(' · ')[0]; button.onclick=()=>select(i); $('.fb-tabs').append(button);
   });
   function safeLink(url){try{const u=new URL(url,location.href);return ['http:','https:'].includes(u.protocol)?u.href:null}catch{return null}}
   function drawEntry(entry){
@@ -223,7 +225,8 @@
     wrap.className = 'fb-msg-wrap ' + entry.kind;
     if (entry.kind === 'bot') {
       const avatar = document.createElement('div');
-      avatar.className = 'fb-avatar';
+      avatar.className = 'fb-avatar notranslate';
+      avatar.setAttribute('translate', 'no');
       const img = document.createElement('img');
       const standingList = [config.tigerStanding, config.bearStanding, config.hamsterStanding, config.dinoStanding];
       img.src = entry.avatar || standingList[current] || bots[current].image;
@@ -234,7 +237,8 @@
     const group = document.createElement('div');
     group.className = 'fb-bubble-group';
     const node = document.createElement('div');
-    node.className = 'fb-msg ' + entry.kind;
+    node.className = 'fb-msg ' + entry.kind + ' notranslate';
+    node.setAttribute('translate', 'no');
     node.textContent = entry.text;
     group.append(node);
     for(const f of entry.facilities||[]){
