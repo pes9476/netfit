@@ -78,7 +78,33 @@ class WebFlowTests(TestCase):
         self.client.post(reverse("outfit_shop"), {"action": "equip", "outfit": "CAP"})
         user.profile.refresh_from_db()
         self.assertEqual(user.profile.equipped_outfit, "CAP")
-        self.assertContains(self.client.get(reverse("dashboard")), "outfit-cap")
+        self.assertContains(self.client.get(reverse("dashboard")), 'data-equipped="CAP"')
+        self.assertContains(self.client.get(reverse("profile")), 'data-equipped="CAP"')
+
+    def test_multiple_equipped_items_follow_mascot_on_dashboard_and_profile(self):
+        user = User.objects.create_user(username="fitted-shopper", password=None)
+        profile = user.profile
+        profile.avatar_preference = "SOFT"
+        for code in ("BAND", "GLASS", "HEADSET"):
+            profile.equip_outfit(code)
+        profile.save(update_fields=["avatar_preference", "equipped_outfit"])
+        self.client.force_login(user)
+
+        for page in ("dashboard", "profile"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(page))
+                self.assertContains(response, 'data-netfit-fitting')
+                self.assertContains(response, 'data-style="soft"')
+                self.assertContains(response, 'data-equipped="BAND,GLASS,HEADSET"')
+                self.assertContains(response, "fitness/js/netfit-outfits.js")
+
+        profile.unequip_outfit("GLASS")
+        profile.save(update_fields=["equipped_outfit"])
+        for page in ("dashboard", "profile"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(page))
+                self.assertContains(response, 'data-equipped="BAND,HEADSET"')
+                self.assertNotContains(response, 'data-equipped="BAND,GLASS,HEADSET"')
 
     def test_daily_quest_badge_is_awarded_only_once(self):
         user = User.objects.create_user(username="quest-runner", password=None)

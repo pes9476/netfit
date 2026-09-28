@@ -1,5 +1,8 @@
 {% extends "fitness/base.html" %}
+{% load static %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'fitness/css/netfit-outfits.css' %}">
+<script src="{% static 'fitness/js/netfit-outfits.js' %}" defer></script>
 <article class="weather-card" id="todayWeather" data-fallback-latitude="{{ weather_latitude }}" data-fallback-longitude="{{ weather_longitude }}" style="background: linear-gradient(90deg, rgba(16,25,42,0.92) 0%, rgba(12,18,30,0.96) 100%); border: 1px solid rgba(56,189,248,0.25); border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
   <!-- 🌤️ 좌측: 실시간 날씨 브리핑 & 날짜 + 상태 요약 (GPS 새로고침 아래까지 시원하고 큼직하게 확장) -->
   <div style="display: flex; align-items: center; gap: 14px; flex: 0 0 auto; min-width: 360px;">
@@ -209,7 +212,10 @@
         <span><i class="fa-solid fa-id-card-clip" style="color: var(--neon-mint); margin-right: 6px;"></i>{{ user.profile.display_name|default:"내 캐릭터" }}</span>
       </div>
       <div class="card-character dashboard-character-stage">
-        <div class="avatar-roster avatar-{{ user.profile.sprite_gender }} age-{{ user.profile.age_group }} style-{{ user.profile.body_style|lower }} outfit-{{ user.profile.equipped_outfit|lower }}"></div>
+        <div class="netfit-fitting" data-netfit-fitting
+             data-style="{{ user.profile.body_style|lower }}"
+             data-equipped="{{ user.profile.equipped_outfits_list|join:',' }}"
+             data-asset-root="{% static 'fitness/img/' %}"></div>
         <span class="scene-caption">{% if latest_record %}오늘: {{ latest_record.workout_name }}{% else %}오늘 운동을 기록해요{% endif %}</span>
       </div>
       <p class="card-note">
