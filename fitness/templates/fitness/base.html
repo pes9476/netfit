@@ -1,9 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="notranslate" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
   <title>넷핏 NETFIT · 핏배틀</title>
   
   <!-- Pretendard Variable & FontAwesome 6.5.1 -->
@@ -22,7 +23,7 @@
         <a href="{% url 'dashboard' %}" class="logo">
           <i class="fa-solid fa-bolt" style="color: var(--neon-mint);"></i>
           <span><b>NetFit</b></span>
-          <small>MOVE · GROW · BATTLE</small>
+          <small>NETWORK · FITNESS</small>
         </a>
 
         <div class="user header-actions">
@@ -59,12 +60,6 @@
             <span style="color: var(--trophy-gold); font-weight: 800; font-size: 11px;">튼튼머니</span>
           </button>
 
-          <!-- 핏봇 (AI 코치) 열기 버튼 -->
-          <button type="button" data-fitbot-open class="header-icon" title="AI 코치 핏봇 열기" style="background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.35); color: var(--neon-mint); cursor: pointer; border-radius: 8px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px;">
-            <i class="fa-solid fa-robot" style="color: var(--neon-mint);"></i>
-            <span style="color: var(--neon-mint); font-weight: 800; font-size: 11px;">핏봇</span>
-          </button>
-
           <!-- 새 파티 만들기 -->
           <a class="header-icon" href="{% url 'onboarding_group' %}" title="새 파티 만들기">
             <i class="fa-solid fa-plus" style="color: var(--neon-mint);"></i>
@@ -86,7 +81,7 @@
                   <i class="fa-solid fa-bell"></i> 파티 초대 {{ pending_party_invitation_count }}건 도착!
                 </a>
               {% endif %}
-              {% for party in header_user_parties|default:user.parties.all %}
+              {% for party in header_user_parties %}
                 <div class="party-accordion-item">
                   <button type="button"
                     class="party-accordion-btn"

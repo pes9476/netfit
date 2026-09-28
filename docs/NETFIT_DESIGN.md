@@ -5,13 +5,13 @@
 - `fitness/static/fitness/css/netfit-mascots.css`: 네 캐릭터 이미지와 움직임.
 - `fitness/static/fitness/img/netfit-mascots.png`: 첨부 이미지를 바탕으로 배경을 제거·재구성한 PNG 시트. 원본 파일의 단순 복사는 아니며 AI 이미지 편집 결과입니다.
 - 네 마스코트는 프로필에서 직접 선택합니다. 인바디·BMI·나이·성별로 자동 변경하지 않습니다.
-- 기존 avatar_preference 저장값을 호환용으로 유지합니다. ACTIVE/AUTO/SLIM=백호, MUSCULAR=백곰, SOFT=햄스터, BALANCED=아기공룡. DB 구조 변경은 없습니다.
+- 기존 avatar_preference 저장값을 호환용으로 유지합니다. ACTIVE/AUTO/SLIM=백호, MUSCULAR=포동, SOFT=토리, BALANCED=아콩. DB 구조 변경은 없습니다.
 - 인바디 기록, BMI 계산, 로그인, 회원가입, 운동 경험치, 랭킹, 친구, 배틀, 시설, 튼튼머니 팝업 유지.
 - 캐릭터 움직임은 CSS 애니메이션이며 3D 모델 렌더링이 아닙니다. 동작 줄이기 설정을 존중합니다.
 
 ## 이미지 편집
 
-Built-in image_gen 사용. 입력은 사용자 첨부 캐릭터 이미지 네 장입니다. 출력 시트 순서는 왼쪽 위 백호, 오른쪽 위 백곰, 왼쪽 아래 햄스터, 오른쪽 아래 아기공룡입니다.
+Built-in image_gen 사용. 입력은 사용자 첨부 캐릭터 이미지 네 장입니다. 출력 시트 순서는 왼쪽 위 백호, 오른쪽 위 포동, 왼쪽 아래 토리, 오른쪽 아래 아콩입니다.
 
 사용한 프롬프트:
 

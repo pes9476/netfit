@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-load_dotenv(BASE_DIR / "netfit_groq.local.env")
+load_dotenv(BASE_DIR / "netfit_gemini.local.env")
 
 def env_bool(name, default=False):
     return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -21,26 +21,20 @@ def env_list(name):
     return [value.strip() for value in os.getenv(name, "").split(",") if value.strip()]
 
 
-ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT_ID"))
 ON_RENDER = env_bool("RENDER") or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
-ON_DEPLOYMENT = ON_RAILWAY or ON_RENDER
+ON_DEPLOYMENT = ON_RENDER
 DEBUG = env_bool("DEBUG", not ON_DEPLOYMENT)
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("Set SECRET_KEY before starting with DEBUG=False.")
     SECRET_KEY = "django-insecure-local-development-only-netfit"
-PUBLIC_DOMAIN = (
-    os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
-    or os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
-)
+PUBLIC_DOMAIN = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 if DEBUG:
     ALLOWED_HOSTS += ["127.0.0.1", "localhost", "testserver"]
 if PUBLIC_DOMAIN:
     ALLOWED_HOSTS.append(PUBLIC_DOMAIN)
-if ON_RAILWAY:
-    ALLOWED_HOSTS.append("healthcheck.railway.app")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 if PUBLIC_DOMAIN:
     CSRF_TRUSTED_ORIGINS.append(f"https://{PUBLIC_DOMAIN}")
@@ -160,9 +154,52 @@ KAKAO_REDIRECT_URI = (
 )
 
 # --------------------------------------------------------------------------
-# 🤖 NetFit 핏봇 (Groq AI Chatbot) 설정
+# 🤖 NetFit 핏봇 (Groq & Gemini AI Chatbot) 설정
 # --------------------------------------------------------------------------
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+def _clean_str(val):
+    if not val:
+        return ""
+    val = str(val).strip()
+    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+        val = val[1:-1].strip()
+    if val.startswith("GROQ_API_KEY="):
+        val = val.split("=", 1)[1].strip()
+    if val.startswith("GEMINI_API_KEY="):
+        val = val.split("=", 1)[1].strip()
+    if val.startswith("Bearer "):
+        val = val[7:].strip()
+    return val
+
+_groq_local_file = BASE_DIR / "netfit_groq.local.env"
+if _groq_local_file.exists():
+    try:
+        for _line in _groq_local_file.read_text(encoding="utf-8").splitlines():
+            if _line.startswith("GROQ_API_KEY="):
+                _k = _clean_str(_line.split("=", 1)[1])
+                if _k and not os.getenv("GROQ_API_KEY"):
+                    os.environ["GROQ_API_KEY"] = _k
+    except Exception:
+        pass
+
+GROQ_API_KEY = ""
+GEMINI_API_KEY = ""
+
+for _env_k, _env_v in os.environ.items():
+    _ck = _env_k.strip().upper()
+    _cv = _clean_str(_env_v)
+    if not _cv:
+        continue
+    if _cv.startswith("gsk_"):
+        GROQ_API_KEY = _cv
+    elif _cv.startswith("AIza"):
+        GEMINI_API_KEY = _cv
+    elif _ck in ("GROQ_API_KEY", "GROQ_KEY", "GROQ") and not GROQ_API_KEY:
+        GROQ_API_KEY = _cv
+    elif _ck in ("GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY") and not GEMINI_API_KEY:
+        GEMINI_API_KEY = _cv
+
+GROQ_MODEL = _clean_str(os.getenv("GROQ_MODEL")) or "openai/gpt-oss-20b"
+GEMINI_MODEL = _clean_str(os.getenv("GEMINI_MODEL")) or "gemini-1.5-flash"
 FITBOT_REQUIRE_LOGIN = True
 FITBOT_REGIONS = [
     "서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시",
@@ -171,3 +208,5 @@ FITBOT_REGIONS = [
     "경상남도", "제주특별자치도",
 ]
 FITBOT_FACILITY_SEARCH = "fitness.services.search_facilities_for_fitbot"
+
+

@@ -87,8 +87,8 @@ class BattleForm(forms.ModelForm):
 class ProfileForm(forms.ModelForm):
     avatar_preference = forms.ChoiceField(
         label="마스코트 선택",
-        choices=[("ACTIVE", "백호"), ("MUSCULAR", "백곰"),
-                 ("SOFT", "햄스터"), ("BALANCED", "아기공룡")],
+        choices=[("ACTIVE", "백호"), ("MUSCULAR", "포동"),
+                 ("SOFT", "토리"), ("BALANCED", "아콩")],
         widget=forms.Select(attrs={"class": "input"}),
     )
     nickname = forms.CharField(label="닉네임", max_length=30)

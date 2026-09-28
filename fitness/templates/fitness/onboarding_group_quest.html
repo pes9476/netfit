@@ -2,7 +2,7 @@
 {% block content %}
 <section class="onboarding-shell compact">
   <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 운동 방식</span><i></i><span class="active">4 그룹 설정</span></div>
-  <header class="onboarding-heading"><span>PARTY MISSION</span><h1>{{ party.name }} 파티 미션을 어떻게 시작할까요?</h1><p>직접 파티 일일미션을 만들거나, AI 추천 파티 미션 팩(일일 3개 + 주간 10개)을 바로 시작할 수 있어요.</p></header>
+  <header class="onboarding-heading"><span>PARTY MISSION</span><h1>{{ party.name }} 파티 미션을 어떻게 시작할까요?</h1><p>파티원과 함께 도전할 파티 미션을 설정해보세요.</p></header>
   
   {% if existing_quests %}
     <div class="panel" style="margin-top: 18px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(16, 24, 39, 0.85);">
@@ -105,7 +105,7 @@
       <input type="hidden" name="action" value="ai">
       <span>✨</span>
       <h2>AI 협동 미션 팩 추천</h2>
-      <p>파티원 전원이 함께 즐기는 일일 협동 미션(3개)과 주간 누적 미션(10개)을 즉시 생성해요.</p>
+      <p>파티원 전원이 함께 즐기는 파티 맞춤 협동 미션을 즉시 생성해요.</p>
       <button class="button" type="submit">AI 파티 미션 팩 시작하기</button>
     </form>
 

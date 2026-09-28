@@ -236,18 +236,54 @@ def dashboard(request):
     personal_quests = daily_missions
     completed_personal_ids = {q.id for q in daily_missions if q.is_completed}
 
-    # 👥 파티 미션 허브 (일일 3개 + 주간 10개 순수 파티 협동 미션)
+    # 👥 파티 미션 허브 (사용자가 파티 생성 시 설정한 퀘스트 전용 및 기간 종료 처리)
+    today_date = timezone.localdate()
+    now_dt = timezone.now()
+
+    def is_party_ended(p):
+        if not p or not p.challenge_end:
+            return False
+        end_time = p.challenge_end_time or time(23, 59, 59)
+        deadline_dt = timezone.make_aware(datetime.combine(p.challenge_end, end_time))
+        return deadline_dt < now_dt
+
+    user_parties = request.user.parties.order_by("-id")
+    candidate_party = None
     party_id_param = request.GET.get("party_id")
-    if party_id_param and request.user.parties.filter(id=party_id_param).exists():
-        active_party = request.user.parties.get(id=party_id_param)
-        request.session["active_party_id"] = active_party.id
-    elif "active_party_id" in request.session and request.user.parties.filter(id=request.session["active_party_id"]).exists():
-        active_party = request.user.parties.get(id=request.session["active_party_id"])
+    if party_id_param and user_parties.filter(id=party_id_param).exists():
+        candidate_party = user_parties.get(id=party_id_param)
+        request.session["active_party_id"] = candidate_party.id
+    elif "active_party_id" in request.session and user_parties.filter(id=request.session["active_party_id"]).exists():
+        candidate_party = user_parties.get(id=request.session["active_party_id"])
     else:
-        user_parties = request.user.parties.order_by("-id")
-        active_party = user_parties.filter(
-            Q(challenge_end__isnull=True) | Q(challenge_end__gte=timezone.localdate())
-        ).first() or user_parties.first()
+        # 진행 중인 파티를 우선 조회
+        candidate_party = user_parties.filter(
+            Q(challenge_end__isnull=True) | Q(challenge_end__gte=today_date)
+        ).first()
+        if not candidate_party and user_parties.exists():
+            candidate_party = user_parties.first()
+
+    active_party = None
+    has_ended_party = False
+    ended_party = None
+
+    if candidate_party:
+        if is_party_ended(candidate_party):
+            # 선택/후보 파티가 기간 종료된 경우, 다른 활성 파티가 있는지 확인
+            other_active = [p for p in user_parties if not is_party_ended(p)]
+            if other_active and not party_id_param:
+                active_party = other_active[0]
+                request.session["active_party_id"] = active_party.id
+            else:
+                # 활성 파티가 없거나 사용자가 종료된 파티를 선택한 경우 -> 대시보드에 파티미션을 띄우지 않고 운동 유도 멘트 표시
+                active_party = None
+                has_ended_party = True
+                ended_party = candidate_party
+        else:
+            active_party = candidate_party
+    elif user_parties.exists():
+        has_ended_party = True
+        ended_party = user_parties.first()
 
     party_daily_missions = []
     party_weekly_missions = []
@@ -255,14 +291,14 @@ def dashboard(request):
     if active_party:
         party_data = sync_party_mission_progress(active_party, request.user)
         party_daily_missions = party_data["daily_missions"]
-        party_weekly_missions = party_data["weekly_missions"]
-        party_has_direct_missions = any(getattr(q, 'source', '') == 'DIRECT' for q in party_daily_missions)
+        party_weekly_missions = []
+        party_has_direct_missions = True
         group_quests = party_daily_missions
     else:
         group_quests = []
 
     completed_group_ids = {
-        q.id for q in (party_daily_missions + party_weekly_missions)
+        q.id for q in party_daily_missions
         if getattr(q, 'is_completed', False)
     }
 
@@ -305,6 +341,8 @@ def dashboard(request):
         "today_attended": today_attended,
         "week_attendances": week_attendances,
         "active_party": active_party,
+        "has_ended_party": has_ended_party,
+        "ended_party": ended_party,
         "user_all_parties": request.user.parties.all(),
         "party_daily_missions": party_daily_missions,
         "party_has_direct_missions": party_has_direct_missions,
@@ -1507,17 +1545,18 @@ def weather_api(request):
     lat = request.GET.get("lat")
     lng = request.GET.get("lng")
     loc_name = request.GET.get("loc_name", "")
+    force_refresh = request.GET.get("refresh") in ("1", "true", "True")
     user_area = request.user.profile.area if request.user.is_authenticated else "서울특별시"
 
     if lat and lng:
         try:
-            w = get_weather_data(lat=float(lat), lon=float(lng), location_name=loc_name, is_gps=True)
+            w = get_weather_data(lat=float(lat), lon=float(lng), location_name=loc_name, is_gps=True, force_refresh=force_refresh)
             return JsonResponse({"status": "success", "weather": w})
         except ValueError:
             pass
 
     coords = weather_coordinates(user_area)
-    w = get_weather_data(lat=coords[0], lon=coords[1], location_name=user_area, is_gps=False)
+    w = get_weather_data(lat=coords[0], lon=coords[1], location_name=user_area, is_gps=False, force_refresh=force_refresh)
     return JsonResponse({"status": "success", "weather": w})
 
 
@@ -1755,16 +1794,15 @@ def onboarding_group_quest(request, party_id):
             return redirect("onboarding_group_quest", party_id=party.id)
 
         if action in ["ai", "facility"]:
-            from .services import generate_party_daily_missions, generate_party_weekly_missions
-            generate_party_daily_missions(party)
-            generate_party_weekly_missions(party)
+            from .services import generate_party_daily_missions
             party.workout_type = "러닝"
             party.save(update_fields=["workout_type"])
+            generate_party_daily_missions(party)
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! AI 일일(3개) & 주간(10개) 협동 미션이 시작됩니다.")
+            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! 파티 협동 미션이 시작됩니다.")
             return redirect("dashboard")
 
         submit_action = request.POST.get("submit_action", "finish")
@@ -1795,9 +1833,6 @@ def onboarding_group_quest(request, party_id):
                 quest_date=today,
                 is_active=True,
             )
-            # 직접입력 퀘스트이므로 AI 일일미션은 자동 생성하지 않습니다!
-            from .services import generate_party_weekly_missions
-            generate_party_weekly_missions(party)
 
             profile = request.user.profile
             profile.workout_mode = "GROUP"

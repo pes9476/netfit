@@ -140,37 +140,102 @@ REGION_COORDINATES = {
     "제주특별자치도": (33.4996, 126.5312),
 }
 
-# 2. WMO 기상 코드 분석
-def interpret_weather_code(code, temp=20):
-    if code == 0:
-        cond, icon, color = "맑음", "fa-sun", "#F59E0B"
-        msg = "쾌청한 맑은 날씨! 야외 러닝과 라이딩하기에 최적입니다."
-    elif code in [1, 2]:
-        cond, icon, color = "구름 조금", "fa-cloud-sun", "#38BDF8"
-        msg = "선선하고 쾌적한 날씨, 야외 인터벌 트레이닝을 추천합니다!"
-    elif code == 3:
-        cond, icon, color = "흐림", "fa-cloud", "#94A3B8"
-        msg = "햇빛 걱정 없이 시원하게 유산소 운동하기에 좋습니다."
-    elif code in [45, 48]:
-        cond, icon, color = "안개", "fa-smog", "#94A3B8"
-        msg = "시야가 다소 흐리니 안전에 유의하여 가볍게 조깅하세요."
-    elif code in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
-        cond, icon, color = "비/소나기", "fa-cloud-showers-heavy", "#60A5FA"
-        msg = "비가 오니 실내 체육관 근력 운동이나 수영을 추천합니다."
-    elif code in [71, 73, 75, 77, 85, 86]:
-        cond, icon, color = "눈", "fa-snowflake", "#E0F2FE"
-        msg = "눈이 오니 미끄럼에 유의하시고 실내 홈트를 즐겨보세요."
-    elif code in [95, 96, 99]:
+# 2. 기상 코드 및 강수/운량 상태 정밀 분석 (기상청 표준 운량 및 WMO 코드 통합)
+def interpret_weather_code(code, temp=20, text_desc="", precip=0.0, cloud_cover=None, is_day=1):
+    t_desc = (text_desc or "").lower()
+
+    # 1. 강수 및 악천후 판별 (최우선 순위)
+    is_thunder = (
+        ("thunder" in t_desc)
+        or ("뇌우" in t_desc)
+        or (code in [95, 96, 99, 200, 386, 389, 392, 395])
+    )
+    is_snow = (
+        ("snow" in t_desc)
+        or ("sleet" in t_desc)
+        or ("눈" in t_desc)
+        or (code in [71, 73, 75, 77, 85, 86, 179, 182, 185, 227, 230, 317, 320, 323, 326, 329, 332, 335, 338, 350, 362, 365, 368, 371, 374, 377])
+    )
+    is_shower = (
+        ("shower" in t_desc)
+        or ("소나기" in t_desc)
+        or (code in [80, 81, 82, 353, 356, 359])
+    )
+    is_drizzle = (
+        ("drizzle" in t_desc)
+        or ("이슬비" in t_desc)
+        or (code in [51, 53, 55, 263, 266, 281, 284])
+    )
+    is_rain = (
+        is_shower
+        or is_drizzle
+        or (precip >= 0.1)
+        or ("rain" in t_desc)
+        or ("비" in t_desc)
+        or (code in [61, 63, 65, 176, 293, 296, 299, 302, 305, 308, 311, 314])
+    )
+    is_fog = (
+        ("fog" in t_desc)
+        or ("mist" in t_desc)
+        or ("안개" in t_desc)
+        or (code in [45, 48, 143, 248, 260])
+    )
+
+    if is_thunder:
         cond, icon, color = "뇌우", "fa-bolt", "#F43F5E"
         msg = "낙뢰 위험이 있으니 야외 운동을 피하고 실내 휴식을 권장합니다."
+    elif is_snow:
+        cond, icon, color = "눈", "fa-snowflake", "#E0F2FE"
+        msg = "눈이 오니 미끄럼에 유의하시고 실내 홈트를 즐겨보세요."
+    elif is_shower:
+        cond, icon, color = "소나기", "fa-cloud-showers-heavy", "#3B82F6"
+        msg = "국지성 소나기가 내리니 안전한 실내 시설 운동을 추천합니다."
+    elif is_drizzle:
+        cond, icon, color = "이슬비", "fa-cloud-rain", "#60A5FA"
+        msg = "가벼운 이슬비가 내립니다. 모자나 방수 자켓을 챙겨 운동하세요."
+    elif is_rain:
+        cond, icon, color = "비", "fa-cloud-showers-heavy", "#3B82F6"
+        msg = "비가 오니 실내 체육관 근력 운동이나 수영을 추천합니다."
+    elif is_fog:
+        cond, icon, color = "안개", "fa-smog", "#94A3B8"
+        msg = "시야가 다소 흐리니 안전에 유의하여 가볍게 조깅하세요."
     else:
-        cond, icon, color = "보통", "fa-cloud-sun", "#00F59B"
-        msg = "오늘도 활기차게 운동하고 체력을 길러보세요!"
+        # 2. 하늘 상태 판별 (기상청 표준 운량 기준: 0~20% 맑음, 21~50% 대체로 맑음, 51~80% 구름 많음, 81~100% 흐림)
+        c_val = cloud_cover if cloud_cover is not None else (
+            90 if code in [3, 119, 122] else (
+                65 if code in [2, 116] else (
+                    35 if code == 1 else 10
+                )
+            )
+        )
 
-    if temp >= 30:
-        msg = "기온이 높으니 충분한 수분을 섭취하며 무리하지 마세요."
-    elif temp <= 0:
-        msg = "영하의 기온입니다. 부상 방지를 위해 충분한 웜업 후 운동하세요."
+        if c_val >= 80 or code in [3, 119, 122] or ("overcast" in t_desc) or ("흐림" in t_desc):
+            cond, icon, color = "흐림", "fa-cloud", "#94A3B8"
+            msg = "햇빛 걱정 없이 시원하게 유산소 운동하기에 좋습니다."
+        elif c_val >= 50 or code == 2 or ("cloudy" in t_desc):
+            cond = "구름 많음"
+            icon = "fa-cloud-sun" if is_day else "fa-cloud-moon"
+            color = "#38BDF8"
+            msg = "선선하고 쾌적한 날씨, 야외 인터벌 트레이닝을 추천합니다!"
+        elif c_val >= 20 or code == 1 or ("partly" in t_desc):
+            cond = "대체로 맑음"
+            icon = "fa-cloud-sun" if is_day else "fa-cloud-moon"
+            color = "#FBBF24"
+            msg = "화창하고 상쾌한 공기! 가벼운 러닝과 산책을 즐겨보세요."
+        else:
+            cond = "맑음"
+            icon = "fa-sun" if is_day else "fa-moon"
+            color = "#F59E0B"
+            msg = "쾌청한 맑은 날씨! 야외 러닝과 라이딩하기에 최적입니다."
+
+    if temp >= 33:
+        msg = "폭염 특보 수준입니다. 야외 활동을 피하고 충분한 수분을 섭취하세요."
+    elif temp >= 28:
+        msg = "기온이 높으니 무리하지 마시고 수분을 충분히 보충하세요."
+    elif temp <= -5:
+        msg = "한파 주의! 부상 방지를 위해 실내 웜업 및 홈트를 추천합니다."
+    elif temp <= 5:
+        msg = "쌀쌀한 날씨입니다. 체온 유지를 위해 겉옷을 잘 챙겨 입으세요."
     return cond, icon, color, msg
 
 # 3. 실시간 GPS 좌표 -> 실제 한국 동네명 역지오코딩 (가산동, 부평동 등)
@@ -207,25 +272,54 @@ def reverse_geocode_korean(lat, lon):
 
     return "내 위치 (실시간 GPS)"
 
-# 4. 실시간 날씨 데이터 수집 함수 (Open-Meteo 무료 API)
-def get_weather_data(lat=37.5665, lon=126.9780, location_name="서울특별시", is_gps=False):
+# 날씨 메모리 캐시 (2분 TTL)
+_WEATHER_CACHE = {}
+
+# 4. 실시간 날씨 데이터 수집 함수 (초정밀 Open-Meteo 실시간 관측/예보 연동)
+def get_weather_data(lat=37.5665, lon=126.9780, location_name="서울특별시", is_gps=False, force_refresh=False):
     if is_gps or location_name in ["실시간 GPS 위치", "내 위치", "실시간 GPS"]:
         real_location = reverse_geocode_korean(lat, lon)
         if real_location:
             location_name = real_location
 
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=auto"
-    try:
-        r = requests.get(url, timeout=3.5).json()
-        current = r.get("current_weather", {})
-        temp = current.get("temperature", 20.0)
-        wind = current.get("windspeed", 2.0)
-        code = current.get("weathercode", 0)
-        condition, icon, color, msg = interpret_weather_code(code, temp)
+    cache_key = (round(float(lat), 3), round(float(lon), 3))
+    now = time.time()
+    if not force_refresh and cache_key in _WEATHER_CACHE:
+        cached_time, cached_data = _WEATHER_CACHE[cache_key]
+        if now - cached_time < 120:  # 2분 캐시
+            cached_copy = dict(cached_data)
+            cached_copy["location_name"] = location_name
+            cached_copy["is_gps"] = is_gps
+            return cached_copy
 
-        return {
-            "temperature": round(float(temp), 1),
-            "windspeed": round(float(wind), 1),
+    # 1순위: Open-Meteo 고정밀 실시간 기상 관측/예보 (기온, 체감온도, 습도, 운량, 강수량, 풍속, 주/야간)
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?latitude={float(lat):.4f}&longitude={float(lon):.4f}"
+            f"&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,"
+            f"precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m&timezone=Asia/Seoul"
+        )
+        r = requests.get(url, timeout=3.5).json()
+        current = r.get("current", {})
+        temp = float(current.get("temperature_2m", 20.0))
+        feels = float(current.get("apparent_temperature", temp))
+        wind = round(float(current.get("wind_speed_10m", 2.0)), 1)
+        code = int(current.get("weather_code", 0))
+        cloud = int(current.get("cloud_cover", 0))
+        precip = float(current.get("precipitation", 0.0))
+        humidity = int(current.get("relative_humidity_2m", 50))
+        is_day = int(current.get("is_day", 1))
+
+        condition, icon, color, msg = interpret_weather_code(
+            code=code, temp=temp, precip=precip, cloud_cover=cloud, is_day=is_day
+        )
+
+        res = {
+            "temperature": round(temp, 1),
+            "apparent_temperature": round(feels, 1),
+            "humidity": humidity,
+            "cloud_cover": cloud,
+            "windspeed": wind,
             "weather_code": code,
             "condition": condition,
             "icon": icon,
@@ -235,14 +329,51 @@ def get_weather_data(lat=37.5665, lon=126.9780, location_name="서울특별시",
             "is_gps": is_gps,
             "lat": float(lat), "lon": float(lon),
         }
+        _WEATHER_CACHE[cache_key] = (now, res)
+        return res
     except Exception:
-        return {
-            "temperature": 21.0, "windspeed": 2.5, "weather_code": 0,
-            "condition": "맑음", "icon": "fa-cloud-sun", "color": "#38BDF8",
-            "message": "오늘도 활기차게 운동을 시작해보세요!",
-            "location_name": location_name, "is_gps": is_gps,
+        pass
+
+    # 2순위: Open-Meteo current_weather 심플 폴백
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={float(lat):.4f}&longitude={float(lon):.4f}&current_weather=true&timezone=auto"
+        r = requests.get(url, timeout=3.0).json()
+        cw = r.get("current_weather", {})
+        temp = float(cw.get("temperature", 20.0))
+        wind = round(float(cw.get("windspeed", 2.0)), 1)
+        code = int(cw.get("weathercode", 1))
+        is_day = int(cw.get("is_day", 1))
+        condition, icon, color, msg = interpret_weather_code(code=code, temp=temp, is_day=is_day)
+
+        res = {
+            "temperature": round(temp, 1),
+            "apparent_temperature": round(temp, 1),
+            "humidity": 50,
+            "cloud_cover": 30,
+            "windspeed": wind,
+            "weather_code": code,
+            "condition": condition,
+            "icon": icon,
+            "color": color,
+            "message": msg,
+            "location_name": location_name,
+            "is_gps": is_gps,
             "lat": float(lat), "lon": float(lon),
         }
+        _WEATHER_CACHE[cache_key] = (now, res)
+        return res
+    except Exception:
+        pass
+
+    # 3순위: 모든 API 실패 시 중립적 기본값 반환
+    return {
+        "temperature": 20.0, "apparent_temperature": 20.0, "humidity": 50, "cloud_cover": 20,
+        "windspeed": 2.0, "weather_code": 1,
+        "condition": "대체로 맑음", "icon": "fa-cloud-sun", "color": "#FBBF24",
+        "message": "오늘도 안전하고 즐겁게 운동을 즐겨보세요!",
+        "location_name": location_name, "is_gps": is_gps,
+        "lat": float(lat), "lon": float(lon),
+    }
 
 
 # ==============================================================================
@@ -1034,245 +1165,106 @@ def generate_party_daily_missions(party, today=None):
     if today is None:
         today = timezone.localdate()
 
+    # AI 생성 미션 및 주간 미션이 존재하면 데이터베이스에서 깔끔히 삭제
+    DailyQuest.objects.filter(party=party, source="AI").delete()
+    DailyQuest.objects.filter(party=party, period_type="WEEKLY").delete()
+
     p_workout = (party.workout_type or "러닝").strip()
-    existing = list(DailyQuest.objects.filter(
-        party=party, period_type="DAILY", quest_date=today, is_active=True
-    ))
 
-    # 기존 미션이 다른 운동 종목으로 생성되어 있다면 파티 종목에 맞게 업데이트
-    for q in existing:
-        if p_workout and q.workout_type != p_workout and p_workout != "기타":
-            q.workout_type = p_workout
-            if "러닝" in q.title and p_workout != "러닝":
-                q.title = q.title.replace("러닝", p_workout)
-            elif "웨이트" in q.title and p_workout != "헬스":
-                q.title = q.title.replace("웨이트", p_workout)
-            elif "농구" in q.title and p_workout != "농구":
-                q.title = q.title.replace("농구", p_workout)
-            q.save(update_fields=["workout_type", "title"])
+    # 파티 생성/설정 시 사용자가 등록한 원본 직접 입력(DIRECT) 퀘스트 목록 조회
+    all_direct_quests = list(DailyQuest.objects.filter(
+        party=party, source="DIRECT", is_active=True
+    ).order_by("id"))
 
-    # 사용자가 직접 입력한 퀘스트(DIRECT)가 존재할 경우:
-    # AI 퀘스트를 자동 생성하지 않고 사용자가 만든 직접입력 퀘스트만 단독 반환
-    direct_missions = [q for q in existing if q.source == "DIRECT"]
-    if direct_missions:
-        # 이전에 자동 생성된 AI 퀘스트가 섞여 있다면 정리하여 순수 직접입력 미션만 유지
-        DailyQuest.objects.filter(
-            party=party, period_type="DAILY", quest_date=today, source="AI"
-        ).delete()
-        return direct_missions
+    # 고유 템플릿 추출 (중복 등록 방지)
+    seen_templates = set()
+    templates = []
+    for q in all_direct_quests:
+        key = (q.title.strip(), q.workout_type, q.target_minutes)
+        if key not in seen_templates:
+            seen_templates.add(key)
+            templates.append(q)
 
-    if len(existing) >= 3:
-        return existing
-
-    created_missions = list(existing)
-    existing_titles = {q.title for q in existing}
-
-    owner = party.owner
-    owner_profile = getattr(owner, "profile", None) if owner else None
-    owner_area = getattr(owner_profile, "area", "서울특별시") or "서울특별시"
-    facilities = list(Facility.objects.filter(region=owner_area, is_active=True))
-
-    weekday = today.weekday()
-    day_seed = today.year * 1000 + today.timetuple().tm_yday
-
-    # 1. 파티 협동 메인 미션 (파티 운동 종목 맞춤)
-    templates = WORKOUT_PARTY_DAILY_TEMPLATES.get(p_workout)
-    if templates:
-        c_title, c_desc, c_mins, c_pts = templates[weekday % len(templates)]
-    else:
-        c_title = f"파티 협동 {p_workout} 30분"
-        c_desc = f"새로운 한 주를 여는 파티원들과의 30분 {p_workout} 협동 세션!"
-        c_mins, c_pts = 30, 50
-
-    if len(created_missions) < 1 and c_title not in existing_titles:
-        q1 = DailyQuest.objects.create(
+    # 직접 등록된 DIRECT 퀘스트가 없는 경우:
+    # 파티 생성 시 사용자가 설정한 파티 운동 종목과 목표 타이머 시간으로 1개의 맞춤 직접 퀘스트 생성
+    if not templates:
+        target_mins = party.target_timer_minutes or 30
+        q_title = f"{p_workout} {target_mins}분 완수하기"
+        q_desc = f"파티 목표: 파티원들과 함께 {p_workout} {target_mins}분 달성하기"
+        default_quest = DailyQuest.objects.create(
             party=party,
             creator=party.owner,
-            title=c_title,
-            description=c_desc,
+            title=q_title,
+            description=q_desc,
             workout_type=p_workout,
-            target_minutes=c_mins,
+            target_minutes=target_mins,
             period_type="DAILY",
             mission_category="WORKOUT",
             target_count=1,
-            reward_points=c_pts,
-            source="AI",
+            reward_points=50,
+            source="DIRECT",
             quest_date=today,
             is_active=True,
         )
-        created_missions.append(q1)
-        existing_titles.add(c_title)
+        templates = [default_quest]
 
-    # 2. 파티 협동 강화/테크닉 세션 (파티 운동 종목 맞춤)
-    strength_templates = WORKOUT_PARTY_SECONDARY_TEMPLATES.get(p_workout)
-    if strength_templates:
-        s_title, s_desc, s_mins, s_pts = strength_templates[weekday % len(strength_templates)]
-    else:
-        s_title = f"파티원과 함께 {p_workout} 인터벌 & 체력 강화 30분"
-        s_desc = f"파티원들과 함께 {p_workout} 세션을 집중 완수해보세요."
-        s_mins, s_pts = 30, 50
+    # 오늘(today) 날짜에 해당하는 미션이 있는지 확인하고, 없으면 복제 생성하여 오늘 퀘스트로 제공
+    today_quests = list(DailyQuest.objects.filter(
+        party=party, period_type="DAILY", quest_date=today, source="DIRECT", is_active=True
+    ).order_by("id"))
+    today_keys = {(q.title.strip(), q.workout_type, q.target_minutes) for q in today_quests}
 
-    if len(created_missions) < 2 and s_title not in existing_titles:
-        q2 = DailyQuest.objects.create(
-            party=party,
-            creator=party.owner,
-            title=s_title,
-            description=s_desc,
-            workout_type=p_workout,
-            target_minutes=s_mins,
-            period_type="DAILY",
-            mission_category="WORKOUT",
-            target_count=1,
-            reward_points=s_pts,
-            source="AI",
-            quest_date=today,
-            is_active=True,
-        )
-        created_missions.append(q2)
-        existing_titles.add(s_title)
-
-    # 3. 파티 체육시설 연계 또는 데일리 챌린지 (매일 변경, 파티 운동 종목 맞춤)
-    if len(created_missions) < 3:
-        if facilities:
-            nearby_facility = facilities[day_seed % len(facilities)]
-            f_title = f"[{nearby_facility.name}] 파티 체육시설 현장 인증 및 {p_workout} 30분"
-            f_desc = f"{owner_area} 체육시설에서 파티원들과 함께 {p_workout}을 즐기며 인증해보세요."
-            f_mins = 30
-            f_pts = 50
-            f_cat = "FACILITY"
-            f_fac = nearby_facility
-            f_cname = f"체육시설 파티 {p_workout}"
-        else:
-            f_title = f"파티 {p_workout} 데일리 챌린지 25분"
-            f_desc = f"파티원 전원이 힘을 모아 25분 {p_workout} 루틴을 완수하세요."
-            f_mins = 25
-            f_pts = 40
-            f_cat = "WORKOUT"
-            f_fac = None
-            f_cname = ""
-
-        if f_title not in existing_titles:
-            q3 = DailyQuest.objects.create(
+    for t in templates:
+        key = (t.title.strip(), t.workout_type, t.target_minutes)
+        if key not in today_keys:
+            new_q = DailyQuest.objects.create(
                 party=party,
-                creator=party.owner,
-                title=f_title,
-                description=f_desc,
-                workout_type=p_workout,
-                custom_workout_name=f_cname,
-                target_minutes=f_mins,
+                creator=t.creator or party.owner,
+                title=t.title,
+                description=t.description,
+                workout_type=t.workout_type,
+                custom_workout_name=t.custom_workout_name,
+                target_minutes=t.target_minutes,
                 period_type="DAILY",
-                mission_category=f_cat,
-                target_count=1,
-                facility=f_fac,
-                reward_points=f_pts,
-                source="AI",
+                mission_category=t.mission_category or "WORKOUT",
+                target_count=t.target_count or 1,
+                facility=t.facility,
+                reward_points=t.reward_points or 50,
+                source="DIRECT",
                 quest_date=today,
                 is_active=True,
             )
-            created_missions.append(q3)
-            existing_titles.add(f_title)
+            today_quests.append(new_q)
+            today_keys.add(key)
 
-    return created_missions
+    return today_quests
 
 
 def generate_party_weekly_missions(party, week_start=None):
     """
-    파티 주간 미션 10개 생성 (출석 누적 제외, 매주 변경):
-    - 파티의 운동 종목(party.workout_type)을 반영하여 매주 10개 파티 협동/합산 미션이 생성됩니다.
+    주간미션 제거 요청에 따라 파티 주간 미션을 생성하지 않고 빈 리스트를 반환합니다.
+    기존에 남아있는 파티 주간 미션이 있다면 정리합니다.
     """
-    if week_start is None:
-        week_start, _ = get_current_week_bounds()
-
-    p_workout = (party.workout_type or "러닝").strip()
-    existing = list(DailyQuest.objects.filter(
-        party=party, period_type="WEEKLY", week_start=week_start, is_active=True
-    ))
-
-    # 기존 주간 미션 중 종목 업데이트가 필요한 항목 동기화
-    for q in existing:
-        if p_workout and q.workout_type not in ["기타", p_workout] and p_workout != "기타":
-            q.workout_type = p_workout
-            if "러닝" in q.title and p_workout != "러닝":
-                q.title = q.title.replace("러닝", p_workout)
-            q.save(update_fields=["workout_type", "title"])
-
-    if len(existing) >= 10:
-        return existing[:10]
-
-    created_missions = list(existing)
-    existing_titles = {q.title for q in existing}
-
-    owner = party.owner
-    owner_profile = getattr(owner, "profile", None) if owner else None
-    owner_area = getattr(owner_profile, "area", "서울특별시") or "서울특별시"
-    facilities = list(Facility.objects.filter(region=owner_area, is_active=True))
-
-    week_num = week_start.isocalendar()[1]
-    cycle = week_num % len(PARTY_WEEKLY_SEASON_POOLS)
-    nearby_facility = facilities[week_num % len(facilities)] if facilities else None
-    facility_name = nearby_facility.name if nearby_facility else "우리 지역 공공체육시설"
-
-    pool = PARTY_WEEKLY_SEASON_POOLS[cycle]
-    for item in pool:
-        if len(created_missions) >= 10:
-            break
-        title = item["title"].replace("{facility_name}", facility_name)
-        desc = item["description"].replace("{owner_area}", owner_area)
-        w_type = item["workout_type"]
-
-        if p_workout and p_workout != "기타":
-            if w_type != "기타":
-                w_type = p_workout
-            if p_workout != "러닝":
-                title = title.replace("러닝/산책 거리 20km 완주하기", f"{p_workout} 150분 완주하기")
-                title = title.replace("러닝/산책 거리 25km 돌파하기", f"{p_workout} 180분 돌파하기")
-                title = title.replace("러닝", p_workout)
-                desc = desc.replace("러닝", p_workout)
-
-        if title in existing_titles:
-            continue
-
-        wq = DailyQuest.objects.create(
-            party=party,
-            creator=party.owner,
-            title=title,
-            description=desc,
-            workout_type=w_type,
-            target_minutes=item["target_minutes"],
-            period_type="WEEKLY",
-            mission_category=item["category"],
-            target_count=item["target_count"],
-            facility=nearby_facility if item.get("use_facility") else None,
-            week_start=week_start,
-            reward_points=item["reward_points"],
-            source="AI",
-            quest_date=week_start,
-            is_active=True,
-        )
-        created_missions.append(wq)
-        existing_titles.add(title)
-
-    return created_missions[:10]
+    DailyQuest.objects.filter(party=party, period_type="WEEKLY").delete()
+    return []
 
 
 def sync_party_mission_progress(party, current_user):
     """
-    파티원 전원의 오늘 및 이번 주 운동 데이터를 집계하여
-    파티 일일 미션(3개)과 파티 주간 미션(10개)의 진행률, 달성 현황 및 파티원 실시간 모니터링을 동기화합니다.
+    파티원 전원의 오늘 운동 데이터를 집계하여
+    파티 설정 일일 미션의 진행률, 달성 현황 및 파티원 실시간 모니터링을 동기화합니다.
     파티원들의 실시간 순위(rank)와 챌린지 점수(score)도 함께 계산하여 바인딩합니다.
     """
     today = timezone.localdate()
-    week_start, week_end = get_current_week_bounds(today)
 
     party_daily_missions = generate_party_daily_missions(party, today)
-    party_weekly_missions = generate_party_weekly_missions(party, week_start)
+    party_weekly_missions = []
 
     members = list(party.members.all().select_related("profile", "charactercard"))
     member_ids = [m.id for m in members]
 
-    # 오늘 및 이번 주 파티원 운동 기록
+    # 오늘 파티원 운동 기록
     party_today_records = list(WorkoutRecord.objects.filter(user_id__in=member_ids, created_at__date=today))
-    party_week_records = list(WorkoutRecord.objects.filter(user_id__in=member_ids, created_at__date__range=(week_start, week_end)))
 
     # 파티 배지 내기 스코어 및 순위 집계
     if party.challenge_start and party.challenge_end:
@@ -1304,26 +1296,13 @@ def sync_party_mission_progress(party, current_user):
     for idx, (m, pts) in enumerate(member_points_list, start=1):
         member_rank_map[m.id] = (idx, pts)
 
-    # 파티 주간 합산 지표
-    party_week_total_minutes = sum(r.minutes for r in party_week_records)
-    party_week_distinct_days = len({r.created_at.date() for r in party_week_records})
-    party_week_total_dist = sum(float(r.distance_km) for r in party_week_records)
-    party_week_distinct_types = len({r.workout_type for r in party_week_records if r.workout_type})
-    party_week_intense_count = sum(1 for r in party_week_records if r.minutes >= 40)
-    party_week_total_cals = sum(r.calories_burned for r in party_week_records)
-    party_facility_count = sum(1 for r in party_week_records if any(term in (r.location or "") for term in ["체육", "센터", "공원", "경기장", "시설", "방문"]))
-    party_week_daily_clears = BadgeAward.objects.filter(
-        user_id__in=member_ids, daily_quest__period_type="DAILY", awarded_at__date__range=(week_start, week_end)
-    ).count()
-    party_social_count = sum(1 for r in party_week_records if r.with_party)
-
-    all_party_quest_ids = [q.id for q in party_daily_missions + party_weekly_missions]
+    all_party_quest_ids = [q.id for q in party_daily_missions]
     all_awards = list(BadgeAward.objects.filter(daily_quest_id__in=all_party_quest_ids))
     award_map = {}
     for award in all_awards:
         award_map[(award.daily_quest_id, award.user_id)] = award
 
-    # 1. 파티 일일 미션 (3개)
+    # 1. 파티 설정 일일 미션
     for q in party_daily_missions:
         is_done = (q.id, current_user.id) in award_map
         q.is_completed = is_done
@@ -1352,103 +1331,14 @@ def sync_party_mission_progress(party, current_user):
             })
         q.members_monitoring = members_status
 
-    # 2. 파티 주간 미션 (10개)
-    for q in party_weekly_missions:
-        is_done = (q.id, current_user.id) in award_map
-        q.is_completed = is_done
-        q.badge_award = award_map.get((q.id, current_user.id))
-
-        t = q.title.lower()
-        if "km" in t:
-            dist = round(party_week_total_dist, 1)
-            target = q.target_count or 20
-            q.done_value = dist
-            q.target_value = target
-            q.done_label = f"{dist}/{target}km"
-            q.progress_percent = 100 if is_done else min(100, int((dist / target * 100)))
-        elif "kcal" in t or "칼로리" in t:
-            target = q.target_count or 2500
-            q.done_value = party_week_total_cals
-            q.target_value = target
-            q.done_label = f"{party_week_total_cals}/{target}kcal"
-            q.progress_percent = 100 if is_done else min(100, int((party_week_total_cals / target * 100)))
-        elif "종목" in t:
-            target = q.target_count or 3
-            q.done_value = party_week_distinct_types
-            q.target_value = target
-            q.done_label = f"{party_week_distinct_types}/{target}종목"
-            q.progress_percent = 100 if is_done else min(100, int((party_week_distinct_types / target * 100)))
-        elif "일 이상" in t or "일간" in t or "일 운동" in t or ("일" in t and "함께" in t):
-            target = q.target_count or 3
-            q.done_value = party_week_distinct_days
-            q.target_value = target
-            q.done_label = f"{party_week_distinct_days}/{target}일"
-            q.progress_percent = 100 if is_done else min(100, int((party_week_distinct_days / target * 100)))
-        elif "클리어" in t or "일일 미션" in t:
-            target = q.target_count or 5
-            q.done_value = party_week_daily_clears
-            q.target_value = target
-            q.done_label = f"{party_week_daily_clears}/{target}회"
-            q.progress_percent = 100 if is_done else min(100, int((party_week_daily_clears / target * 100)))
-        elif q.mission_category == "FACILITY" or "체육시설" in t or "시설" in t:
-            q.done_value = 1 if (party_facility_count > 0 or is_done) else 0
-            q.target_value = 1
-            q.done_label = f"{q.done_value}/1회"
-            q.progress_percent = 100 if (party_facility_count > 0 or is_done) else 0
-        elif "주말" in t and q.target_minutes:
-            weekend_mins = sum(r.minutes for r in party_week_records if r.created_at.weekday() in [5, 6])
-            q.done_value = 1 if (weekend_mins >= q.target_minutes or is_done) else 0
-            q.target_value = 1
-            q.done_label = f"{q.done_value}/1회"
-            q.progress_percent = 100 if (weekend_mins >= q.target_minutes or is_done) else 0
-        elif ("집중" in t or "세션" in t or "인터벌" in t or "트레이닝" in t) and q.target_minutes and q.mission_category == "WORKOUT":
-            intense_count = sum(1 for r in party_week_records if r.minutes >= q.target_minutes)
-            q.done_value = 1 if (intense_count > 0 or is_done) else 0
-            q.target_value = 1
-            q.done_label = f"{q.done_value}/1회"
-            q.progress_percent = 100 if (intense_count > 0 or is_done) else 0
-        elif q.mission_category == "CUMULATIVE" and q.target_minutes > 0:
-            target = q.target_minutes
-            q.done_value = party_week_total_minutes
-            q.target_value = target
-            q.done_label = f"{party_week_total_minutes}/{target}분"
-            q.progress_percent = 100 if is_done else min(100, int((party_week_total_minutes / target * 100)))
-        elif "배틀" in t:
-            target = q.target_count or 1
-            q.done_value = min(party_social_count, target) if not is_done else target
-            q.target_value = target
-            q.done_label = f"{q.done_value}/{target}회"
-            q.progress_percent = 100 if is_done else min(100, int((party_social_count / target * 100)))
-        else:
-            q.done_value = 0
-            q.target_value = 1
-            q.done_label = "0/1"
-            q.progress_percent = 100 if is_done else 0
-
-        # 파티원 실시간 모니터링 (순위 및 점수 포함, 1위부터 순위순 정렬)
-        members_status = []
-        for m, pts in member_points_list:
-            m_done = (q.id, m.id) in award_map
-            rank, score = member_rank_map[m.id]
-            members_status.append({
-                "user": m,
-                "name": m.profile.display_name or m.username,
-                "level": getattr(getattr(m, "charactercard", None), "level", 1),
-                "is_done": m_done,
-                "is_me": (m.id == current_user.id),
-                "rank": rank,
-                "score": score,
-            })
-        q.members_monitoring = members_status
-
     return {
         "daily_missions": party_daily_missions,
-        "weekly_missions": party_weekly_missions,
+        "weekly_missions": [],
     }
 
 
 def search_facilities_for_fitbot(region=None, query=None, request=None):
-    """Fitbot 백곰 시설 검색용 서비스 함수.
+    """Fitbot 포동 시설 검색용 서비스 함수.
     is_active=True인 시설 중 region 및 query 조건에 맞는 시설 최대 5개를 반환합니다."""
     from .models import Facility
     from django.db.models import Q

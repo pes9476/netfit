@@ -269,9 +269,10 @@ class WebFlowTests(TestCase):
 
         # 파티 생성 및 초대
         self.client.force_login(creator)
+        today = timezone.localdate()
         res = self.client.post(reverse("onboarding_group"), {
             "action": "create_room", "room_name": "주말 라이딩", "invitees": [guest.id],
-            "challenge_start": "2026-09-18", "challenge_end": "2026-09-25",
+            "challenge_start": today.isoformat(), "challenge_end": (today + timedelta(days=7)).isoformat(),
         })
         party = Party.objects.get(name="주말 라이딩")
         inv = PartyInvitation.objects.get(party=party, invitee=guest)
@@ -371,39 +372,36 @@ class WebFlowTests(TestCase):
         from fitness.services import generate_party_daily_missions, generate_party_weekly_missions, sync_party_mission_progress
         host = User.objects.create_user(username="party_host", password=None)
         member = User.objects.create_user(username="party_member", password=None)
-        party = Party.objects.create(name="팀 넷핏", owner=host)
+        party = Party.objects.create(name="팀 넷핏", owner=host, workout_type="러닝", target_timer_minutes=30)
         party.members.add(host, member)
 
         self.client.force_login(host)
 
-        # 1. 파티 일일 미션 3개 생성 확인 (출석 미션 제외)
+        # 1. 파티 일일 미션 생성 확인 (파티 설정 맞춤 미션 1개 이상, 출석 미션 제외)
         daily = generate_party_daily_missions(party)
-        self.assertEqual(len(daily), 3)
+        self.assertGreaterEqual(len(daily), 1)
         self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in daily))
         self.assertTrue(all(m.period_type == "DAILY" for m in daily))
+        self.assertTrue(all(m.source == "DIRECT" for m in daily))
 
-        # 2. 파티 주간 미션 10개 생성 확인 (출석 미션 제외)
+        # 2. 파티 주간 미션은 제거되어 빈 리스트 반환 확인
         weekly = generate_party_weekly_missions(party)
-        self.assertEqual(len(weekly), 10)
-        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in weekly))
-        self.assertTrue(all(m.period_type == "WEEKLY" for m in weekly))
+        self.assertEqual(len(weekly), 0)
 
         # 3. sync_party_mission_progress 확인 및 모니터링 확인
         party_data = sync_party_mission_progress(party, host)
-        self.assertEqual(len(party_data["daily_missions"]), 3)
-        self.assertEqual(len(party_data["weekly_missions"]), 10)
+        self.assertGreaterEqual(len(party_data["daily_missions"]), 1)
+        self.assertEqual(len(party_data["weekly_missions"]), 0)
         first_daily = party_data["daily_missions"][0]
         self.assertEqual(len(first_daily.members_monitoring), 2)
 
-        # 4. 대시보드 렌더링 확인 (파티 미션 허브, 탭, 목록보기 모달 등)
+        # 4. 대시보드 렌더링 확인 (파티 미션 허브, 목록보기 모달 등)
         dash = self.client.get(reverse("dashboard"))
         self.assertContains(dash, "PARTY MISSION HUB")
         self.assertContains(dash, "우리 파티 미션")
         self.assertContains(dash, "팀 넷핏")
-        self.assertContains(dash, "일일 (3)")
-        self.assertContains(dash, "주간 (10)")
         self.assertContains(dash, "groupDailyQuestListModal")
-        self.assertContains(dash, "groupWeeklyQuestListModal")
+        self.assertNotContains(dash, "groupWeeklyQuestListModal")
 
     def test_daily_and_weekly_missions_rotation_by_date_and_week(self):
         import datetime
@@ -412,7 +410,7 @@ class WebFlowTests(TestCase):
             generate_party_daily_missions, generate_party_weekly_missions
         )
         user = User.objects.create_user(username="rotation_user", password=None)
-        party = Party.objects.create(name="로테이션파티", owner=user)
+        party = Party.objects.create(name="로테이션파티", owner=user, workout_type="러닝", target_timer_minutes=30)
         party.members.add(user)
 
         # 1. 솔로 일일 미션: 날짜가 다르면(월요일 vs 화요일) 출석 외 2개 미션이 회전하여 변경됨
@@ -429,16 +427,14 @@ class WebFlowTests(TestCase):
         d2_ai_titles = [m.title for m in daily_d2[1:]]
         self.assertNotEqual(d1_ai_titles, d2_ai_titles)
 
-        # 2. 파티 일일 미션: 날짜가 다르면 3개 미션 전체가 회전하여 변경됨 (출석 미션 없음)
+        # 2. 파티 일일 미션: 날짜가 바뀌어도 파티 생성 시 설정한 고유 직접입력 템플릿 유지
         p_daily_d1 = generate_party_daily_missions(party, today=day1)
         p_daily_d2 = generate_party_daily_missions(party, today=day2)
-        self.assertEqual(len(p_daily_d1), 3)
-        self.assertEqual(len(p_daily_d2), 3)
-        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_daily_d1))
-        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_daily_d2))
-        p_d1_titles = [m.title for m in p_daily_d1]
-        p_d2_titles = [m.title for m in p_daily_d2]
-        self.assertNotEqual(p_d1_titles, p_d2_titles)
+        self.assertEqual(len(p_daily_d1), 1)
+        self.assertEqual(len(p_daily_d2), 1)
+        self.assertEqual(p_daily_d1[0].title, p_daily_d2[0].title)
+        self.assertEqual(p_daily_d1[0].workout_type, "러닝")
+        self.assertEqual(p_daily_d1[0].source, "DIRECT")
 
         # 3. 솔로 주간 미션: 주차가 다르면 출석 누적(1개) 외 9개 AI 미션이 회전하여 변경됨
         w1_start = datetime.date(2026, 9, 21)
@@ -453,16 +449,11 @@ class WebFlowTests(TestCase):
         w2_ai_titles = [m.title for m in weekly_w2[1:]]
         self.assertNotEqual(w1_ai_titles, w2_ai_titles)
 
-        # 4. 파티 주간 미션: 주차가 다르면 10개 파티 미션이 회전하여 변경됨 (출석 미션 없음)
+        # 4. 파티 주간 미션은 제거됨
         p_weekly_w1 = generate_party_weekly_missions(party, week_start=w1_start)
         p_weekly_w2 = generate_party_weekly_missions(party, week_start=w2_start)
-        self.assertEqual(len(p_weekly_w1), 10)
-        self.assertEqual(len(p_weekly_w2), 10)
-        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_weekly_w1))
-        self.assertFalse(any(m.mission_category == "ATTENDANCE" for m in p_weekly_w2))
-        p_w1_titles = [m.title for m in p_weekly_w1]
-        p_w2_titles = [m.title for m in p_weekly_w2]
-        self.assertNotEqual(p_w1_titles, p_w2_titles)
+        self.assertEqual(len(p_weekly_w1), 0)
+        self.assertEqual(len(p_weekly_w2), 0)
 
     def test_party_invite_by_nickname_and_accept_flow(self):
         """파티 생성 시 닉네임 검색 초대, 대시보드 초대장 수신, 수락 시 대시보드 파티 동기화 및 알림을 검증한다."""
@@ -877,12 +868,12 @@ class WebFlowTests(TestCase):
         run_party.members.add(host, member)
 
         run_daily = generate_party_daily_missions(run_party)
-        self.assertEqual(len(run_daily), 3)
+        self.assertEqual(len(run_daily), 1)
         for m in run_daily:
             self.assertEqual(m.workout_type, "러닝")
             self.assertIn("러닝", m.title)
 
-        # 2. 수영 파티 생성 -> 일일 미션 3개 모두 수영 종목인지 검증
+        # 2. 수영 파티 생성 -> 일일 미션 수영 종목인지 검증
         swim_party = Party.objects.create(
             name="물개파티",
             owner=host,
@@ -894,7 +885,7 @@ class WebFlowTests(TestCase):
         swim_party.members.add(host, member)
 
         swim_daily = generate_party_daily_missions(swim_party)
-        self.assertEqual(len(swim_daily), 3)
+        self.assertEqual(len(swim_daily), 1)
         for m in swim_daily:
             self.assertEqual(m.workout_type, "수영")
             self.assertIn("수영", m.title)

@@ -25,7 +25,7 @@
           <span id="todayDateText">{% now "n/j/D" %}</span>
         </span>
         <div style="display: inline-flex; align-items: center; gap: 8px;">
-          <b id="weatherSummary" style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1; letter-spacing: -0.2px;">불러오는 중…</b>
+          <b id="weatherSummary" class="notranslate" translate="no" style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1; letter-spacing: -0.2px;">불러오는 중…</b>
           <span id="weatherWindInfo" style="color: #CBD5E1; font-size: 12.5px; font-weight: 700; line-height: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px;"></span>
         </div>
       </div>
@@ -238,8 +238,8 @@
 
       <!-- 1. 일일 미션 뷰 (1개씩 페이징) -->
       <div id="dailyMissionView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35;">
+        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 16px; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35; flex-shrink: 0;">
             오늘의 미션 <b style="color: #FFFFFF;">{{ daily_missions|length }}개</b><br>
             <span style="font-size: 10px; color: var(--text-dim); font-weight: 600; white-space: nowrap;">(출석 1 + 맞춤 2)</span>
           </span>
@@ -401,9 +401,10 @@
 
       <!-- 2. 주간 미션 뷰 (1개씩 페이징) -->
       <div id="weeklyMissionView" style="display: none; flex-direction: column; gap: 10px; flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px;">
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
-            이번 주 미션 <b style="color: #FFFFFF;">{{ weekly_missions|length }}개</b> (출석누적 1 + AI 9)
+        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 16px; padding: 0 2px;">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; line-height: 1.35; flex-shrink: 0;">
+            이번 주 미션 <b style="color: #FFFFFF;">{{ weekly_missions|length }}개</b><br>
+            <span style="font-size: 10px; color: var(--text-dim); font-weight: 600; white-space: nowrap;">(출석누적 1 + AI 9)</span>
           </span>
           <div style="display: flex; align-items: center; gap: 6px;">
             <!-- 페이징 컨트롤 < 1 / 10 > -->
@@ -691,14 +692,14 @@
       <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
         <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
           <div>
-            <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <h2>우리 파티 미션</h2>
-              <span style="font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); border-radius: 6px; padding: 1px 7px;">
+            <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px; display: block; margin-bottom: 3px;">PARTY MISSION HUB</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
+              <h2 style="margin: 0; font-size: 18px; font-weight: 900; line-height: 1; display: inline-flex; align-items: center;">우리 파티 미션</h2>
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); border-radius: 6px; padding: 3px 8px; line-height: 1; height: 24px; box-sizing: border-box;">
                 <i class="fa-solid fa-users"></i> {{ active_party.name }}
               </span>
               {% if active_party.workout_type %}
-                <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 1px 7px;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 3px 8px; line-height: 1; height: 24px; box-sizing: border-box;">
                   <i class="fa-solid fa-person-running"></i> {{ active_party.workout_type }}
                 </span>
               {% endif %}
@@ -706,15 +707,6 @@
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <!-- 일일 / 주간 탭 스위처 -->
-            <div style="display: inline-flex; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 3px; gap: 4px;">
-              <button type="button" id="tabBtnPartyDaily" onclick="switchPartyMissionTab('daily')" style="border: none; background: rgba(56, 189, 248, 0.2); color: #38BDF8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
-                <i class="fa-solid fa-bolt"></i> 일일 ({{ party_daily_missions|length }})
-              </button>
-              <button type="button" id="tabBtnPartyWeekly" onclick="switchPartyMissionTab('weekly')" style="border: none; background: transparent; color: #94A3B8; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;">
-                <i class="fa-solid fa-calendar-week"></i> 주간 ({{ party_weekly_missions|length }})
-              </button>
-            </div>
             <a href="{% url 'activity' %}?workout_type={{ active_party.workout_type|default:'러닝'|urlencode }}&target={{ active_party.target_timer_minutes|default:'30' }}" class="button btn-mint" style="padding: 6px 12px; font-size: 11px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="파티 운동 인증하러 가기">
               <i class="fa-solid fa-circle-check"></i> 인증하기
             </a>
@@ -729,7 +721,7 @@
         <div id="partyDailyMissionView" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px; flex-shrink: 0;">
             <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
-              오늘의 파티 미션 <b style="color: #FFFFFF;">{{ party_daily_missions|length }}개</b> {% if party_has_direct_missions %}(직접 설정 {{ party_daily_missions|length }}개){% else %}(협동 2 + 주변시설 1){% endif %}
+              파티 설정 미션 <b style="color: #FFFFFF;">{{ party_daily_missions|length }}개</b>
             </span>
             <div style="display: flex; align-items: center; gap: 6px;">
               <!-- 페이징 컨트롤 < 1 / N > (1개씩 보기로 컴팩트하게 축소) -->
@@ -993,236 +985,47 @@
             {% endfor %}
           </div>
         </div>
+      </section>
+    {% elif has_ended_party %}
+      <section class="panel dashboard-quests compact-party-quests" style="margin-top: 0; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(245, 158, 11, 0.35); background: linear-gradient(135deg, rgba(16, 24, 39, 0.95), rgba(15, 23, 42, 0.9));">
+        <div>
+          <span style="color: #F59E0B; font-size: 11px; font-weight: 900; letter-spacing: 1px; display: block; margin-bottom: 3px;">CHALLENGE COMPLETED</span>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; margin-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 900; line-height: 1; display: inline-flex; align-items: center;">우리 파티 미션</h2>
+            {% if ended_party %}
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 3px 8px; line-height: 1;">
+                <i class="fa-solid fa-flag-checkered"></i> {{ ended_party.name }} (내기 종료)
+              </span>
+            {% endif %}
+          </div>
+          
+          <div style="padding: 16px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 20px;">🔥</span>
+              <b style="color: #FFFFFF; font-size: 14.5px; font-weight: 800;">파티 퀘스트 내기 기간이 종료되었습니다! 수고하셨습니다.</b>
+            </div>
+            <p style="color: #CBD5E1; font-size: 13px; margin: 0; line-height: 1.65;">
+              함께 땀 흘린 파티원들과 멋진 도전을 완수하셨네요!<br>
+              내기 기간은 끝났지만 건강한 운동 루틴은 계속됩니다. 개인 운동 기록을 이어가거나 새로운 파티를 만들어 새로운 내기 챌린지에 도전해보세요! 💪✨
+            </p>
+          </div>
 
-        <!-- 2. 파티 주간 미션 뷰 (1개씩 페이징) -->
-        <div id="partyWeeklyMissionView" style="display: none; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 2px; flex-shrink: 0;">
-            <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">
-              이번 주 파티 미션 <b style="color: #FFFFFF;">{{ party_weekly_missions|length }}개</b> (주간 협동 & 누적 10)
-            </span>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <!-- 페이징 컨트롤 < 1 / 10 > (1개씩 보기로 컴팩트하게 축소) -->
-              <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 2px 5px;">
-                <button type="button" id="partyWeeklyPrevBtn" onclick="changePartyWeeklyPage(-1)" title="이전 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
-                  <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <span id="partyWeeklyPageIndicator" style="font-size: 10.5px; font-weight: 800; color: #94A3B8; min-width: 28px; text-align: center;">1/{{ party_weekly_missions|length|default:10 }}</span>
-                <button type="button" id="partyWeeklyNextBtn" onclick="changePartyWeeklyPage(1)" title="다음 미션" style="background: none; border: none; color: #E2E8F0; font-size: 10px; cursor: pointer; padding: 3px 5px; line-height: 1; border-radius: 4px;">
-                  <i class="fa-solid fa-chevron-right"></i>
-                </button>
-              </div>
-              <button type="button" onclick="openGroupWeeklyQuestListModal()" class="button secondary" style="padding: 5px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(56,189,248,0.35); color: #38BDF8;" title="전체 파티 주간미션 목록보기">
-                <i class="fa-solid fa-list-ul"></i>
-                <span>목록보기</span>
+          {% if ended_challenges %}
+            <div style="margin-bottom: 10px;">
+              <button type="button" class="button secondary" onclick="openEndedPartyHistoryModal()" style="padding: 7px 12px; font-size: 11.5px; font-weight: 700; color: #CBD5E1; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-trophy" style="color: var(--trophy-gold);"></i> 지난 챌린지 최종 순위 보기
               </button>
             </div>
-          </div>
+          {% endif %}
+        </div>
 
-          <div class="quest-cards" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow: hidden;">
-            {% for quest in party_weekly_missions %}
-              <article class="party-weekly-card" data-index="{{ forloop.counter0 }}" style="display: {% if forloop.first %}flex{% else %}none{% endif %}; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; padding: 10px 14px; background: rgba(16,24,39,0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(56, 189, 248, 0.3) transparent;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    {% if quest.mission_category == 'FACILITY' %}
-                      <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 2px 7px;">
-                        <i class="fa-solid fa-building-circle-check"></i> 주변 시설 · {{ quest.reward_points }}P
-                      </span>
-                    {% else %}
-                      <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.15); color: var(--trophy-gold); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 2px 7px;">
-                        <i class="fa-solid fa-chart-line"></i> 주간 누적 · {{ quest.reward_points }}P
-                      </span>
-                    {% endif %}
-
-                    {% if quest.is_completed %}
-                      <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint);"><i class="fa-solid fa-circle-check"></i> 완료</span>
-                    {% else %}
-                      <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">도전 중 ⏱️</span>
-                    {% endif %}
-                  </div>
-
-                  <h3 style="font-size: 14px; margin: 7px 0 2px; color: #FFFFFF;">{{ quest.title }}</h3>
-                  <p style="color: var(--text-muted); font-size: 11.5px; margin: 0 0 8px;">{{ quest.description }}</p>
-
-                  <!-- 주간 누적 진행률 바 -->
-                  <div style="margin: 4px 0 8px; background: rgba(0,0,0,0.25); padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                      <span style="color: #38BDF8; font-size: 11.5px; font-weight: 800;">
-                        {% if quest.is_completed %}
-                          <i class="fa-solid fa-medal" style="color: var(--trophy-gold);"></i> 파티 주간 목표 달성!
-                        {% else %}
-                          <i class="fa-solid fa-spinner"></i> 파티 합산 진행 현황
-                        {% endif %}
-                      </span>
-                      <span style="color: #94A3B8; font-size: 11px; font-weight: 700;">{{ quest.done_label }} ({{ quest.progress_percent }}%)</span>
-                    </div>
-                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
-                      <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
-                    </div>
-                  </div>
-
-                  <!-- 👥 파티 참여자 실시간 모니터링 & 파티 챌린지 상세 (Photo 1 & Photo 2 통합) -->
-                  {% if quest.members_monitoring %}
-                    <div class="party-members-monitoring-box" style="margin: 6px 0 10px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px 10px;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; user-select: none;">
-                        <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #94A3B8;">
-                          <i class="fa-solid fa-users" style="color: #38BDF8;"></i> 파티원 이번 주 미션 현황 ({{ quest.members_monitoring|length }}명)
-                        </span>
-                        <button type="button" onclick="togglePartyChallengeDetail(this, 'weekly_{{ quest.id }}')" style="background: none; border: none; display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; color: #38BDF8; cursor: pointer; padding: 2px 4px;">
-                          <span>상세보기</span>
-                          <i class="fa-solid fa-chevron-down" style="font-size: 9px; transition: transform 0.2s;"></i>
-                        </button>
-                      </div>
-
-                      <!-- 파티원 칩 (순위 + 이름 + 점수 + 달성 현황) -->
-                      <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
-                        {% for member in quest.members_monitoring %}
-                          <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
-                            {% if member.rank == 1 %}
-                              <span style="font-size: 11px; font-weight: 900; color: var(--trophy-gold);">🏆 1위</span>
-                            {% elif member.rank == 2 %}
-                              <span style="font-size: 11px; font-weight: 900; color: #CBD5E1;">🥈 2위</span>
-                            {% elif member.rank == 3 %}
-                              <span style="font-size: 11px; font-weight: 900; color: #CD7F32;">🥉 3위</span>
-                            {% elif member.rank %}
-                              <span style="font-size: 11px; font-weight: 800; color: #94A3B8;">{{ member.rank }}위</span>
-                            {% endif %}
-                            <span style="font-size: 11px; color: #CBD5E1; font-weight: 700;">
-                              {% if member.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ member.name }}
-                            </span>
-                            <b style="font-size: 10.5px; font-weight: 800; color: var(--trophy-gold);">{{ member.score }}점</b>
-                            <span style="color: rgba(255,255,255,0.2); font-size: 10px;">·</span>
-                            {% if member.is_done %}
-                              <span style="font-size: 10px; font-weight: 800; color: var(--neon-mint);">🏅 완료</span>
-                            {% else %}
-                              <span style="font-size: 10px; font-weight: 700; color: #94A3B8;">⏱️ 도전 중</span>
-                            {% endif %}
-                            {% if not member.is_me and active_party %}
-                              <button type="button" onclick="openPokeModal('{{ member.user.id }}', '{{ member.name|escapejs }}', '{{ active_party.id }}')" title="{{ member.name }}님 콕 찌르기" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FBBF24; padding: 1px 5px; border-radius: 4px; font-size: 9.5px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 2px; margin-left: 2px;">
-                                👉 콕
-                              </button>
-                            {% endif %}
-                          </div>
-                        {% endfor %}
-                      </div>
-
-                      <!-- 2번째 사진 정보: 배지 내기 상세 정보 (상세보기 클릭 시 펼쳐짐) -->
-                      {% if active_challenge or active_party.challenge_start %}
-                        <div id="party_challenge_detail_weekly_{{ quest.id }}" style="display: none; margin-top: 8px; padding: 10px; background: rgba(16, 25, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;">
-                          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                              <span style="color: var(--trophy-gold); font-size: 10.5px; font-weight: 900; letter-spacing: 0.8px;">PARTY CHALLENGE</span>
-                              <span style="background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 5px;">대결 진행 중 ⏱️</span>
-                            </div>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                              <button type="button" class="button btn-mint" onclick="openPartyResultModal('{{ active_party.id }}')" style="padding: 3px 10px; font-size: 10.5px; font-weight: 800; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; cursor: pointer; border-radius: 6px; box-shadow: 0 2px 8px rgba(245,158,11,0.25);">
-                                <i class="fa-solid fa-trophy"></i> 순위 결과 보기
-                              </button>
-                              {% if ended_challenges %}
-                                <button type="button" class="button secondary" onclick="openEndedPartyHistoryModal()" style="padding: 3px 8px; font-size: 10.5px; font-weight: 700; color: #CBD5E1; border-radius: 6px; cursor: pointer;">
-                                  <i class="fa-solid fa-clock-rotate-left"></i> 지난 기록 ({{ ended_challenges|length }}건)
-                                </button>
-                              {% endif %}
-                            </div>
-                          </div>
-
-                          <div style="font-size: 13.5px; font-weight: 900; color: #FFFFFF; margin: 3px 0 6px;">
-                            <i class="fa-solid fa-flag-checkered" style="color: var(--trophy-gold); margin-right: 5px;"></i>{{ active_party.name }} 배지 내기
-                          </div>
-
-                          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11px;">
-                            <span style="color: #94A3B8;">
-                              {{ active_party.challenge_start|date:'Y.m.d' }} ~ {{ active_party.challenge_end|date:'Y.m.d' }}
-                              {% if active_challenge.end_time_formatted %}
-                                <b style="color: #FBBF24;">({{ active_challenge.end_time_formatted }} 마감)</b>
-                              {% endif %}
-                            </span>
-                            {% if active_party.workout_type %}
-                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 1px 7px; border-radius: 5px;">
-                                <i class="fa-solid fa-person-running"></i> 운동 종목: {{ active_party.workout_type }}
-                              </span>
-                            {% endif %}
-                            {% if active_party.target_timer_minutes %}
-                              <span style="font-size: 10.5px; font-weight: 800; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); padding: 1px 7px; border-radius: 5px;">
-                                <i class="fa-solid fa-hourglass-half"></i> 하루 목표 {{ active_party.target_timer_minutes }}분
-                              </span>
-                            {% endif %}
-                          </div>
-
-                          <!-- ⏱️ 내기 마감 타이머 (Image 2 style) -->
-                          {% if active_challenge.deadline_iso %}
-                            <div class="party-live-ticker-box" data-deadline="{{ active_challenge.deadline_iso }}" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 245, 155, 0.08); border: 1px solid rgba(0, 245, 155, 0.3); border-radius: 6px; padding: 4px 10px; margin-bottom: 6px;">
-                              <i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); font-size: 12px;"></i>
-                              <span style="font-size: 11px; font-weight: 700; color: #94A3B8;">내기 마감 타이머:</span>
-                              <span class="party-live-ticker-text" style="font-family: 'Courier New', monospace; font-size: 12px; font-weight: 900; color: var(--neon-mint); letter-spacing: 0.5px;">계산 중...</span>
-                            </div>
-                          {% endif %}
-
-                          <!-- 🎁 내기 보상 (Image 2 style) -->
-                          {% if active_party.challenge_reward %}
-                            <div style="font-size: 11.5px; color: #E2E8F0; margin-top: 4px;">
-                              🎁 내기 보상: <b style="color: #F59E0B; font-weight: 900;">{{ active_party.challenge_reward }}</b>
-                            </div>
-                          {% endif %}
-
-                          <!-- D-Day 및 역전 가이드 알림 배너 -->
-                          {% if active_challenge.is_dday %}
-                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
-                              <span>🚨</span> <b>D-DAY 오늘 자정 내기 종료!</b> 오늘 쌓은 배지 점수가 최종 승부를 결정합니다.
-                            </div>
-                          {% elif active_challenge.reversal_guide %}
-                            <div style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FCA5A5; display: flex; align-items: center; gap: 6px;">
-                              <span>🔥</span> <b>{{ active_challenge.reversal_guide }}</b>
-                            </div>
-                          {% elif active_challenge.pursuit_warning %}
-                            <div style="margin-top: 8px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 6px 10px; font-size: 11px; color: #FDE68A; display: flex; align-items: center; gap: 6px;">
-                              <span>👑</span> <b>{{ active_challenge.pursuit_warning }}</b>
-                            </div>
-                          {% endif %}
-                        </div>
-                      {% endif %}
-                    </div>
-                  {% endif %}
-                </div>
-
-                {% if quest.is_completed %}
-                  <div style="display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(0,245,155,0.1); border: 1px solid rgba(0,245,155,0.3); border-radius: 8px;">
-                    <b style="color: var(--neon-mint); font-size: 12px;"><i class="fa-solid fa-circle-check"></i> 완료 · {{ quest.reward_points }}P 수령 완료</b>
-                  </div>
-                {% elif quest.progress_percent >= 100 %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" style="margin: 0;">
-                    {% csrf_token %}
-                    <button type="submit" class="button btn-mint" style="width: 100%; padding: 8px 10px; font-size: 12px; font-weight: 900;">
-                      <i class="fa-solid fa-gift"></i> 목표 달성! 배지 & {{ quest.reward_points }}점 받기
-                    </button>
-                  </form>
-                {% else %}
-                  <form method="post" action="{% url 'complete_daily_quest' 'group' quest.id %}" enctype="multipart/form-data" style="display: flex; gap: 6px; align-items: stretch;">
-                    {% csrf_token %}
-                    {% if quest.target_minutes %}
-                      <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 12px rgba(245,158,11,0.25);">
-                        {% if quest.progress_percent > 0 %}
-                          <i class="fa-solid fa-person-running"></i>
-                          <span>파티 운동 계속하기 ({{ quest.remaining_minutes }}분)</span>
-                        {% else %}
-                          <i class="fa-solid fa-play"></i>
-                          <span>파티 미션 시작</span>
-                        {% endif %}
-                      </a>
-                    {% else %}
-                      <a href="{% url 'activity' %}" class="button btn-mint" style="flex: 1; padding: 8px 10px; font-size: 11.5px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
-                        <i class="fa-solid fa-play"></i> <span>운동 기록하기</span>
-                      </a>
-                    {% endif %}
-                    <label class="button secondary" style="cursor: pointer; padding: 8px 10px; font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;" title="인증 사진 첨부">
-                      <i class="fa-solid fa-camera" style="color: #38BDF8;"></i>
-                      <span>인증</span>
-                      <input type="file" name="proof_image" accept="image/*" style="display: none;" onchange="this.form.submit()">
-                    </label>
-                  </form>
-                {% endif %}
-              </article>
-            {% endfor %}
-          </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+          <a class="button btn-mint" href="{% url 'activity' %}" style="flex: 1; text-decoration: none; padding: 10px 16px; font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <i class="fa-solid fa-person-running"></i> 개인 운동 기록하러 가기
+          </a>
+          <a class="button secondary" href="{% url 'onboarding_group' %}" style="flex: 1; text-decoration: none; padding: 10px 16px; font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;">
+            <i class="fa-solid fa-plus"></i> 새 파티 챌린지 만들기
+          </a>
         </div>
       </section>
     {% else %}
@@ -1230,7 +1033,7 @@
         <div>
           <span style="color: #38BDF8; font-size: 11px; font-weight: 900; letter-spacing: 1px;">PARTY MISSION HUB</span>
           <h2>우리 파티 미션</h2>
-          <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">파티를 만들고 파티원들과 함께 일일(3개) & 주간(10개) 협동 미션에 도전해보세요!</p>
+          <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">파티를 만들고 파티원들과 함께 협동 미션에 도전해보세요!</p>
         </div>
         <a class="button btn-mint" href="{% url 'onboarding_group' %}" style="align-self: flex-start; text-decoration: none; padding: 10px 18px; font-weight: 800;">
           <i class="fa-solid fa-users-viewfinder"></i> 파티 만들기
@@ -1498,10 +1301,14 @@ function applyWeatherToDOM(w) {
     }
   }
   if (summary) {
-    summary.innerHTML = `<span style="color: ${w.color || '#38BDF8'}; font-weight: 900;">${w.condition}</span> · <span style="color: #FFFFFF;">${w.temperature}℃</span>`;
+    summary.innerHTML = `<span class="notranslate" translate="no" style="color: ${w.color || '#38BDF8'}; font-weight: 900;">${w.condition}</span> · <span style="color: #FFFFFF;">${w.temperature}℃</span>`;
   }
   if (windInfo) {
-    windInfo.textContent = `풍속 ${w.windspeed}m/s`;
+    let windText = `풍속 ${w.windspeed}m/s`;
+    if (w.apparent_temperature !== undefined && w.apparent_temperature !== null && Math.abs(w.apparent_temperature - w.temperature) >= 1) {
+      windText += ` (체감 ${w.apparent_temperature}℃)`;
+    }
+    windInfo.textContent = windText;
   }
   if (tip) {
     tip.textContent = w.message || "오늘도 즐겁게 운동하세요!";
@@ -1561,13 +1368,14 @@ function syncWeatherWithGPS(isAuto = false) {
   }
 }
 
-function fetchWeatherWithCoords(lat, lng) {
+function fetchWeatherWithCoords(lat, lng, forceRefresh = true) {
   const btnText = document.getElementById("btnGpsText");
   const btnIcon = document.getElementById("btnGpsIcon");
   const latVal = typeof lat === "number" ? lat.toFixed(5) : parseFloat(lat).toFixed(5);
   const lngVal = typeof lng === "number" ? lng.toFixed(5) : parseFloat(lng).toFixed(5);
+  const refreshParam = forceRefresh ? '&refresh=true' : '';
 
-  fetch(`/api/weather/?lat=${latVal}&lng=${lngVal}&loc_name=실시간 GPS`)
+  fetch(`/api/weather/?lat=${latVal}&lng=${lngVal}&loc_name=실시간 GPS${refreshParam}`)
     .then(res => res.json())
     .then(data => {
       if (data && data.status === "success" && data.weather) {
@@ -2052,41 +1860,6 @@ function closeWeeklyQuestListModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// 📑 파티 미션 탭 전환
-function switchPartyMissionTab(tab) {
-  const dailyView = document.getElementById('partyDailyMissionView');
-  const weeklyView = document.getElementById('partyWeeklyMissionView');
-  const tabBtnDaily = document.getElementById('tabBtnPartyDaily');
-  const tabBtnWeekly = document.getElementById('tabBtnPartyWeekly');
-
-  if (tab === 'daily') {
-    if (dailyView) dailyView.style.display = 'flex';
-    if (weeklyView) weeklyView.style.display = 'none';
-    if (tabBtnDaily) {
-      tabBtnDaily.style.background = 'rgba(56, 189, 248, 0.2)';
-      tabBtnDaily.style.color = '#38BDF8';
-    }
-    if (tabBtnWeekly) {
-      tabBtnWeekly.style.background = 'transparent';
-      tabBtnWeekly.style.color = '#94A3B8';
-    }
-    renderPartyDailyMissionPage();
-  } else {
-    if (dailyView) dailyView.style.display = 'none';
-    if (weeklyView) weeklyView.style.display = 'flex';
-    if (tabBtnWeekly) {
-      tabBtnWeekly.style.background = 'rgba(56, 189, 248, 0.2)';
-      tabBtnWeekly.style.color = '#38BDF8';
-    }
-    if (tabBtnDaily) {
-      tabBtnDaily.style.background = 'transparent';
-      tabBtnDaily.style.color = '#94A3B8';
-    }
-    renderPartyWeeklyMissionPage();
-  }
-  setTimeout(syncDashboardHeights, 10);
-}
-
 // 📑 파티 일일미션 페이징 (1개씩 보기로 컴팩트화)
 let currentPartyDailyPage = 0;
 const partyDailyPageSize = 1;
@@ -2124,43 +1897,6 @@ function changePartyDailyPage(delta) {
   renderPartyDailyMissionPage();
 }
 
-// 📑 파티 주간미션 페이징 (1개씩 보기로 컴팩트화)
-let currentPartyWeeklyPage = 0;
-const partyWeeklyPageSize = 1;
-function renderPartyWeeklyMissionPage() {
-  const cards = document.querySelectorAll('.party-weekly-card');
-  if (!cards.length) return;
-  const totalPages = Math.ceil(cards.length / partyWeeklyPageSize);
-  if (currentPartyWeeklyPage >= totalPages) currentPartyWeeklyPage = totalPages - 1;
-  if (currentPartyWeeklyPage < 0) currentPartyWeeklyPage = 0;
-
-  cards.forEach((card, idx) => {
-    const pIdx = Math.floor(idx / partyWeeklyPageSize);
-    card.style.display = (pIdx === currentPartyWeeklyPage) ? 'flex' : 'none';
-  });
-
-  const ind = document.getElementById('partyWeeklyPageIndicator');
-  if (ind) ind.textContent = `${currentPartyWeeklyPage + 1}/${totalPages}`;
-
-  const prevBtn = document.getElementById('partyWeeklyPrevBtn');
-  const nextBtn = document.getElementById('partyWeeklyNextBtn');
-  if (prevBtn) {
-    prevBtn.disabled = (currentPartyWeeklyPage === 0);
-    prevBtn.style.opacity = (currentPartyWeeklyPage === 0) ? '0.35' : '1';
-    prevBtn.style.cursor = (currentPartyWeeklyPage === 0) ? 'not-allowed' : 'pointer';
-  }
-  if (nextBtn) {
-    nextBtn.disabled = (currentPartyWeeklyPage === totalPages - 1);
-    nextBtn.style.opacity = (currentPartyWeeklyPage === totalPages - 1) ? '0.35' : '1';
-    nextBtn.style.cursor = (currentPartyWeeklyPage === totalPages - 1) ? 'not-allowed' : 'pointer';
-  }
-}
-
-function changePartyWeeklyPage(delta) {
-  currentPartyWeeklyPage += delta;
-  renderPartyWeeklyMissionPage();
-}
-
 function openGroupDailyQuestListModal() {
   const modal = document.getElementById('groupDailyQuestListModal');
   if (modal) modal.style.display = 'flex';
@@ -2171,21 +1907,10 @@ function closeGroupDailyQuestListModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function openGroupWeeklyQuestListModal() {
-  const modal = document.getElementById('groupWeeklyQuestListModal');
-  if (modal) modal.style.display = 'flex';
-}
-
-function closeGroupWeeklyQuestListModal() {
-  const modal = document.getElementById('groupWeeklyQuestListModal');
-  if (modal) modal.style.display = 'none';
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   renderDailyMissionPage();
   renderWeeklyMissionPage();
   renderPartyDailyMissionPage();
-  renderPartyWeeklyMissionPage();
 });
 </script>
 
@@ -2397,93 +2122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div></div>
       {% endif %}
       <button type="button" onclick="closeGroupDailyQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
-    </div>
-  </div>
-</div>
-
-<!-- 📋 우리 파티 주간미션 전체 목록보기 팝업 모달 -->
-<div id="groupWeeklyQuestListModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeGroupWeeklyQuestListModal();">
-  <div style="background: #111A2C; border: 1px solid rgba(56,189,248,0.4); border-radius: 18px; max-width: 540px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.7); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <i class="fa-solid fa-calendar-week" style="color: #38BDF8; font-size: 16px;"></i>
-        <b style="color: #FFFFFF; font-size: 15px;">우리 파티 주간 미션 전체 목록</b>
-        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 2px 7px; font-weight: 800;">총 {{ party_weekly_missions|length }}개</span>
-      </div>
-      <button type="button" onclick="closeGroupWeeklyQuestListModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 18px; cursor: pointer; padding: 4px; display: flex; align-items: center;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#94A3B8'" title="닫기">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: calc(85vh - 120px);">
-      {% for quest in party_weekly_missions %}
-        <div style="padding: 14px; background: rgba(16,24,39,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11.5px; font-weight: 800; color: {% if quest.mission_category == 'FACILITY' %}#38BDF8{% else %}var(--trophy-gold){% endif %};">
-              {% if quest.mission_category == 'FACILITY' %}주변 시설 · {{ quest.reward_points }}P{% else %}주간 누적 · {{ quest.reward_points }}P{% endif %}
-            </span>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              {% if quest.is_completed %}
-                <span style="font-size: 11px; font-weight: 800; color: var(--neon-mint); background: rgba(0,245,155,0.15); border: 1px solid rgba(0,245,155,0.3); padding: 2px 8px; border-radius: 6px;">
-                  <i class="fa-solid fa-circle-check"></i> 완료
-                </span>
-              {% else %}
-                <span style="font-size: 11px; font-weight: 800; color: #38BDF8; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 6px;">
-                  {{ quest.done_label }} ({{ quest.progress_percent }}%)
-                </span>
-                {% if quest.target_minutes %}
-                  <a href="{% url 'activity' %}?workout_type={{ quest.workout_type }}&target={{ quest.remaining_minutes }}" class="button btn-mint" style="padding: 3px 9px; font-size: 11px; font-weight: 800; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fa-solid fa-play"></i> 미션 시작
-                  </a>
-                {% endif %}
-              {% endif %}
-            </div>
-          </div>
-
-          <div>
-            <h4 style="font-size: 14px; margin: 2px 0 4px; color: #FFFFFF;">{{ quest.title }}</h4>
-            <p style="color: var(--text-muted); font-size: 11.5px; margin: 0;">{{ quest.description }}</p>
-          </div>
-
-          <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
-            <div style="width: {{ quest.progress_percent }}%; height: 100%; background: linear-gradient(90deg, #F59E0B, var(--neon-mint)); border-radius: 4px;"></div>
-          </div>
-
-          {% if quest.members_monitoring %}
-            <div style="background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 8px 10px; margin-top: 4px;">
-              <span style="font-size: 11px; color: #94A3B8; font-weight: 800; display: block; margin-bottom: 6px;">파티원 달성 현황</span>
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                {% for m in quest.members_monitoring %}
-                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                    <span style="color: #CBD5E1; display: inline-flex; align-items: center; gap: 4px;">
-                      {% if m.rank == 1 %}
-                        <span style="color: var(--trophy-gold); font-weight: 800;">🥇 1위</span>
-                      {% elif m.rank == 2 %}
-                        <span style="color: #CBD5E1; font-weight: 800;">🥈 2위</span>
-                      {% elif m.rank == 3 %}
-                        <span style="color: #CD7F32; font-weight: 800;">🥉 3위</span>
-                      {% elif m.rank %}
-                        <span style="color: #94A3B8; font-weight: 700;">{{ m.rank }}위</span>
-                      {% endif %}
-                      {% if m.is_me %}<b style="color: var(--neon-mint);">[나]</b> {% endif %}{{ m.name }}
-                      <b style="color: var(--trophy-gold); margin-left: 2px;">{{ m.score }}점</b>
-                    </span>
-                    {% if m.is_done %}
-                      <span style="color: var(--neon-mint); font-weight: 800;">완료 🏅</span>
-                    {% else %}
-                      <span style="color: #94A3B8;">도전 중 ⏱️</span>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
-
-    <div style="padding: 12px 18px; display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06);">
-      <button type="button" onclick="closeGroupWeeklyQuestListModal()" class="button secondary" style="padding: 6px 16px; font-size: 12px;">닫기</button>
     </div>
   </div>
 </div>
