@@ -327,7 +327,7 @@ node --test fitness/test_outfit_renderer.cjs
 |---|---|---|
 | 박준범 | 실시간 대시보드, 파티, 핏봇 이중화, 시설 자동화·운영상태 | [@juntigger](https://github.com/juntigger) |
 | 박은서 | 착용 렌더러, 핏봇 Gemini, 파티 표시, 운영 배포 | [@pes9476](https://github.com/pes9476) |
-| 기욱 | 브랜치 통합, 마이그레이션, 문서 관리, 데이터 대안 조사 | [확인 필요] |
+| 기욱 | Supabase·DB 연결 및 모델 구성, 관리자 환경 점검, 백엔드 테스트·디버깅과 안정성 개선, CI/CD·ETL 파이프라인 설계, 브랜치·마이그레이션 통합 및 기술 문서화 | [@GitJANG961013)(https://github.com/GitJANG961013) |
 | 어진 | [확인 필요] | [확인 필요] |
 
 ---
