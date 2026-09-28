@@ -1788,6 +1788,7 @@ def onboarding_group_quest(request, party_id):
                         is_active=True,
                     )
                     added_count += 1
+                    break
 
             if not party.workout_type:
                 party.workout_type = p_workout
@@ -1797,7 +1798,10 @@ def onboarding_group_quest(request, party_id):
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"🎉 '{party.name}' 파티에 AI 맞춤 협동 미션 팩({added_count}개)이 추가되었습니다!")
+            if added_count:
+                messages.success(request, f"🎉 '{party.name}' 파티에 AI 추천 미션 1개가 추가되었습니다!")
+            else:
+                messages.info(request, "오늘 추가할 수 있는 새로운 AI 추천 미션이 없습니다.")
             return redirect("dashboard")
 
         if action == "facility":
@@ -1888,6 +1892,7 @@ def onboarding_group_quest(request, party_id):
                         is_active=True,
                     )
                     added_count += 1
+                    break
 
             if not party.workout_type:
                 party.workout_type = p_workout
@@ -1897,7 +1902,10 @@ def onboarding_group_quest(request, party_id):
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"🎉 '{party.name}' 파티에 체육시설 연계 미션({added_count}개)이 추가되었습니다!")
+            if added_count:
+                messages.success(request, f"🎉 '{party.name}' 파티에 체육시설 연계 미션 1개가 추가되었습니다!")
+            else:
+                messages.info(request, "오늘 추가할 수 있는 새로운 체육시설 연계 미션이 없습니다.")
             return redirect("dashboard")
 
         submit_action = request.POST.get("submit_action", "finish")
