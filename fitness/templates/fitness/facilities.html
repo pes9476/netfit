@@ -185,6 +185,17 @@
             <span style="font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); color: #38BDF8;">
               {{ facility.facility_type|default:"공공체육시설" }}
             </span>
+
+            <!-- ⏰ 실시간 운영 상태 뱃지 (영업중 / 운영종료 / 상시개방 / 학교개방) -->
+            {% if facility.operating_info %}
+              <span style="font-size: 10.5px; font-weight: 900; padding: 2px 9px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; background: {{ facility.operating_info.badge_bg }}; border: 1px solid {{ facility.operating_info.badge_border }}; color: {{ facility.operating_info.badge_color }};">
+                <i class="{{ facility.operating_info.badge_icon }}"></i>
+                <span>{{ facility.operating_info.status_label }}</span>
+                {% if facility.operating_info.status_detail %}
+                  <span style="opacity: 0.85; font-size: 10px; font-weight: 700;">· {{ facility.operating_info.status_detail }}</span>
+                {% endif %}
+              </span>
+            {% endif %}
           </div>
 
           <small style="color: var(--text-muted); font-size: 12px; margin-top: 6px; display: block; line-height: 1.4;">
@@ -196,10 +207,30 @@
               <span style="color: #94A3B8;">{{ facility.region }} 야외·공원 체육시설 (정밀 GPS 좌표 연동 완료)</span>
             {% endif %}
           </small>
+
+          <!-- 🕒 실시간 운영시간 및 이용 안내 -->
+          {% if facility.operating_info %}
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 11.5px; color: #CBD5E1; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-regular fa-clock" style="color: var(--trophy-gold); font-size: 11px;"></i>
+                <span style="color: #94A3B8;">운영시간:</span>
+                <b style="color: #FFFFFF;">{{ facility.operating_info.hours_text }}</b>
+              </span>
+              {% if facility.operating_info.holiday_text %}
+                <span style="color: var(--text-dim); font-size: 11px;">({{ facility.operating_info.holiday_text }})</span>
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
       </div>
 
       <div style="display: flex; gap: 7px; align-items: center; flex-wrap: wrap; flex-shrink: 0;">
+        <!-- 네이버 지도 정보 & 실시간 영업시간 확인 -->
+        <a href="{{ facility.naver_place_url }}" target="_blank" class="button btn-ghost route-popup" style="padding: 7px 11px; font-size: 11px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: rgba(3, 199, 90, 0.12); border: 1px solid rgba(3, 199, 90, 0.45); color: #03C75A; font-weight: 800;" title="네이버 지도에서 실시간 영업시간, 전화번호, 휴무일 상세 보기">
+          <i class="fa-solid fa-circle-info" style="color: #03C75A; font-size: 12px;"></i>
+          <span>네이버 정보·영업시간</span>
+        </a>
+
         <!-- 네이버 지도 길찾기 (좌표 직결로 100% 작동) -->
         <a href="{{ facility.naver_directions_url|default:facility.naver_map_url }}" target="_blank" class="button btn-ghost route-popup" style="padding: 7px 13px; font-size: 11px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: rgba(3, 199, 90, 0.08); border: 1px solid rgba(3, 199, 90, 0.35); color: #E2E8F0;">
           <i class="fa-solid fa-map-location-dot" style="color: #03C75A; font-size: 12px;"></i> 

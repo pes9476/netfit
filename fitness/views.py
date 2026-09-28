@@ -553,6 +553,15 @@ def activity_view(request):
                     "facility_type": f.facility_type or "공공체육시설",
                     "distance_km": f.distance_km if hasattr(f, "distance_km") else None,
                     "kakao_map_url": f.kakao_map_url,
+                    "operating_info": {
+                        "status_label": f.operating_info["status_label"],
+                        "badge_bg": f.operating_info["badge_bg"],
+                        "badge_border": f.operating_info["badge_border"],
+                        "badge_color": f.operating_info["badge_color"],
+                        "badge_icon": f.operating_info["badge_icon"],
+                        "status_detail": f.operating_info.get("status_detail", ""),
+                        "hours_display": f.operating_info.get("hours_display", ""),
+                    } if getattr(f, "operating_info", None) else None,
                 }
                 for f in recommendations
             ]
@@ -1793,16 +1802,170 @@ def onboarding_group_quest(request, party_id):
             messages.info(request, "파티 미션이 삭제되었습니다.")
             return redirect("onboarding_group_quest", party_id=party.id)
 
-        if action in ["ai", "facility"]:
-            from .services import generate_party_daily_missions
-            party.workout_type = "러닝"
-            party.save(update_fields=["workout_type"])
-            generate_party_daily_missions(party)
+        if action == "ai":
+            p_workout = (party.workout_type or "러닝").strip()
+            ai_missions_data = [
+                {
+                    "title": f"파티원과 함께하는 {p_workout} 30분 달성",
+                    "description": f"파티원 전원이 오늘 각자 {p_workout} 30분을 완수하여 목표를 달성하세요!",
+                    "workout_type": p_workout,
+                    "target_minutes": 30,
+                    "mission_category": "WORKOUT",
+                    "reward_points": 50,
+                },
+                {
+                    "title": f"파티 활력 충전 인터벌 {p_workout} 20분",
+                    "description": f"심박수를 끌어올리는 인터벌 {p_workout} 세션 20분을 집중해서 달려보세요.",
+                    "workout_type": p_workout,
+                    "target_minutes": 20,
+                    "mission_category": "WORKOUT",
+                    "reward_points": 40,
+                },
+                {
+                    "title": "부상 방지 전신 코어 스트레칭 15분",
+                    "description": "운동 전후 굳어있는 관절과 근육을 풀어주는 필수 스트레칭 미션입니다.",
+                    "workout_type": "요가",
+                    "target_minutes": 15,
+                    "mission_category": "WORKOUT",
+                    "reward_points": 30,
+                },
+            ]
+            added_count = 0
+            for m_data in ai_missions_data:
+                if not DailyQuest.objects.filter(party=party, title=m_data["title"], quest_date=today).exists():
+                    DailyQuest.objects.create(
+                        party=party,
+                        creator=request.user,
+                        title=m_data["title"],
+                        description=m_data["description"],
+                        workout_type=m_data["workout_type"],
+                        target_minutes=m_data["target_minutes"],
+                        period_type="DAILY",
+                        mission_category=m_data["mission_category"],
+                        reward_points=m_data["reward_points"],
+                        source="DIRECT",
+                        quest_date=today,
+                        is_active=True,
+                    )
+                    added_count += 1
+                    break
+
+            if not party.workout_type:
+                party.workout_type = p_workout
+                party.save(update_fields=["workout_type"])
+
             profile = request.user.profile
             profile.workout_mode = "GROUP"
             profile.onboarding_completed = True
             profile.save(update_fields=["workout_mode", "onboarding_completed"])
-            messages.success(request, f"🎉 '{party.name}' 파티가 생성되었습니다! 파티 협동 미션이 시작됩니다.")
+            if added_count:
+                messages.success(request, f"🎉 '{party.name}' 파티에 AI 추천 미션 1개가 추가되었습니다!")
+            else:
+                messages.info(request, "오늘 추가할 수 있는 새로운 AI 추천 미션이 없습니다.")
+            return redirect("dashboard")
+
+        if action == "facility":
+            p_workout = (party.workout_type or "러닝").strip()
+            nearby_facilities = list(Facility.objects.filter(is_active=True, region=request.user.profile.area)[:2])
+            if not nearby_facilities:
+                nearby_facilities = list(Facility.objects.filter(is_active=True)[:2])
+
+            facility_missions_data = []
+            if nearby_facilities:
+                f1 = nearby_facilities[0]
+                facility_missions_data.append({
+                    "title": f"[{f1.name}] 공공체육시설 방문 및 30분 운동",
+                    "description": f"{f1.name} 체육시설을 직접 방문하여 파티원과 함께 운동을 즐겨보세요.",
+                    "workout_type": p_workout,
+                    "target_minutes": 30,
+                    "mission_category": "FACILITY",
+                    "facility": f1,
+                    "reward_points": 50,
+                })
+                if len(nearby_facilities) > 1:
+                    f2 = nearby_facilities[1]
+                    facility_missions_data.append({
+                        "title": f"[{f2.name}] 체육시설 파티원 동반 출석 20분",
+                        "description": f"{f2.name} 주변을 탐방하며 가볍게 몸을 풀어보세요.",
+                        "workout_type": p_workout,
+                        "target_minutes": 20,
+                        "mission_category": "FACILITY",
+                        "facility": f2,
+                        "reward_points": 40,
+                    })
+                facility_missions_data.append({
+                    "title": "우리 동네 체육시설 주변 야외 러닝 25분",
+                    "description": "가까운 공공체육시설 둘레를 가볍게 조깅하며 활력을 충전하세요.",
+                    "workout_type": "러닝",
+                    "target_minutes": 25,
+                    "mission_category": "WORKOUT",
+                    "facility": None,
+                    "reward_points": 30,
+                })
+            else:
+                facility_missions_data = [
+                    {
+                        "title": "우리 동네 공공체육시설 방문 및 30분 운동",
+                        "description": "가까운 공공체육시설을 직접 방문하여 파티원과 함께 운동을 즐겨보세요.",
+                        "workout_type": p_workout,
+                        "target_minutes": 30,
+                        "mission_category": "FACILITY",
+                        "facility": None,
+                        "reward_points": 50,
+                    },
+                    {
+                        "title": "공원 및 체육시설 연계 유산소 20분",
+                        "description": "체육시설 주변을 가볍게 조깅하며 활력을 충전하세요.",
+                        "workout_type": p_workout,
+                        "target_minutes": 20,
+                        "mission_category": "WORKOUT",
+                        "facility": None,
+                        "reward_points": 40,
+                    },
+                    {
+                        "title": "야외 체육시설 쿨다운 스트레칭 15분",
+                        "description": "체육시설에서 운동 후 전신 근육을 풀어주는 마무리 스트레칭입니다.",
+                        "workout_type": "요가",
+                        "target_minutes": 15,
+                        "mission_category": "WORKOUT",
+                        "facility": None,
+                        "reward_points": 30,
+                    },
+                ]
+
+            added_count = 0
+            for m_data in facility_missions_data:
+                if not DailyQuest.objects.filter(party=party, title=m_data["title"], quest_date=today).exists():
+                    DailyQuest.objects.create(
+                        party=party,
+                        creator=request.user,
+                        title=m_data["title"],
+                        description=m_data["description"],
+                        workout_type=m_data["workout_type"],
+                        target_minutes=m_data["target_minutes"],
+                        period_type="DAILY",
+                        mission_category=m_data["mission_category"],
+                        facility=m_data.get("facility"),
+                        reward_points=m_data["reward_points"],
+                        source="DIRECT",
+                        quest_date=today,
+                        is_active=True,
+                    )
+                    added_count += 1
+                    break
+
+            if not party.workout_type:
+                party.workout_type = p_workout
+                party.save(update_fields=["workout_type"])
+
+            profile = request.user.profile
+            profile.workout_mode = "GROUP"
+            profile.onboarding_completed = True
+            profile.save(update_fields=["workout_mode", "onboarding_completed"])
+            if added_count:
+                messages.success(request, f"🎉 '{party.name}' 파티에 체육시설 연계 미션 1개가 추가되었습니다!")
+            else:
+                messages.info(request, "오늘 추가할 수 있는 새로운 체육시설 연계 미션이 없습니다.")
             return redirect("dashboard")
 
         submit_action = request.POST.get("submit_action", "finish")

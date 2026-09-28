@@ -54,25 +54,42 @@ class Command(BaseCommand):
         source_url = options.get("source_url")
         if source_url:
             safe_url = sanitize_source_url(source_url)
-            run = DataSyncRun.objects.create(
-                status=DataSyncRun.STATUS_RUNNING,
-                source_name="facility-url",
-                source_url=safe_url,
-            )
-            self._fail(run, "공식 시설 데이터 URL이 확정되지 않아 URL 동기화를 사용할 수 없습니다.")
+            try:
+                run = DataSyncRun.objects.create(
+                    status=DataSyncRun.STATUS_RUNNING,
+                    source_name="facility-url",
+                    source_url=safe_url,
+                )
+            except IntegrityError as exc:
+                raise CommandError("facility-url 동기화가 이미 실행 중입니다.") from exc
 
-        path = Path(options["source_path"])
-        source_name = path.name or "facility-csv"
-        try:
-            run = DataSyncRun.objects.create(
-                status=DataSyncRun.STATUS_RUNNING,
-                source_name=source_name,
-            )
-        except IntegrityError as exc:
-            raise CommandError(f"{source_name} 동기화가 이미 실행 중입니다.") from exc
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    source_url,
+                    headers={"User-Agent": "NetFitFacilitySync/1.0 (Mozilla/5.0)"},
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    raw = resp.read()
+            except Exception as exc:
+                self._fail(run, f"URL에서 시설 데이터를 다운로드할 수 없습니다: {exc}")
+        else:
+            path = Path(options["source_path"])
+            source_name = path.name or "facility-csv"
+            try:
+                run = DataSyncRun.objects.create(
+                    status=DataSyncRun.STATUS_RUNNING,
+                    source_name=source_name,
+                )
+            except IntegrityError as exc:
+                raise CommandError(f"{source_name} 동기화가 이미 실행 중입니다.") from exc
+
+            try:
+                raw = path.read_bytes()
+            except Exception as exc:
+                self._fail(run, f"파일을 읽을 수 없습니다: {exc}")
 
         try:
-            raw = path.read_bytes()
             if not raw.strip():
                 self._fail(run, "빈 시설 파일은 동기화할 수 없습니다.")
             checksum = hashlib.sha256(raw).hexdigest()
@@ -126,6 +143,12 @@ class Command(BaseCommand):
                 with transaction.atomic():
                     for line_number, row in enumerate(rows, start=2):
                         if (row.get("DEL_AT") or "").strip().upper() == "Y":
+                            try:
+                                source_record_id = facility_source_record_id(row)
+                                # 이미 등록되어 있던 시설이 폐업/삭제된 경우 비활성화(Soft Delete)
+                                Facility.objects.filter(source_record_id=source_record_id, is_active=True).update(is_active=False)
+                            except Exception:
+                                pass
                             skipped += 1
                             continue
                         try:

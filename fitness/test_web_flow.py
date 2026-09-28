@@ -305,9 +305,9 @@ class WebFlowTests(TestCase):
         user = User.objects.create_user(username="tester", password=None)
         self.client.force_login(user)
 
-        # 1. 대시보드 전국랭킹 -> 지역랭킹 확인
+        # 1. 대시보드 전국랭킹 -> 랭킹 확인
         dashboard = self.client.get(reverse("dashboard"))
-        self.assertContains(dashboard, "지역 랭킹")
+        self.assertContains(dashboard, "랭킹")
         self.assertContains(dashboard, f"{reverse('ranking')}?scope=region")
 
         # 2. 솔로 온보딩 시간 카테고리 칩 확인

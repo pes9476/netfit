@@ -77,7 +77,22 @@
           <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
           <div style="flex: 1; min-width: 0;">
             <b class="facility-name-text">{{ facility.name }}</b>
-            <small>{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</small>
+            {% if facility.operating_info and facility.operating_info.hours_display %}
+              <div style="font-size: 11px; color: #CBD5E1; margin: 2px 0 3px; display: flex; align-items: center; gap: 4px;">
+                <i class="fa-regular fa-clock" style="color: var(--trophy-gold); font-size: 10px;"></i>
+                <span style="color: #94A3B8;">운영:</span>
+                <b style="color: #FFFFFF;">{{ facility.operating_info.hours_display }}</b>
+              </div>
+            {% endif %}
+            <small style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="color: var(--text-muted);">{{ facility.facility_type|default:'공공체육시설' }}{% if facility.distance_km != None %} · {{ facility.distance_km }}km{% endif %}</span>
+              {% if facility.operating_info %}
+                <span style="font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px; background: {{ facility.operating_info.badge_bg }}; border: 1px solid {{ facility.operating_info.badge_border }}; color: {{ facility.operating_info.badge_color }};">
+                  <i class="{{ facility.operating_info.badge_icon }}" style="font-size: 8.5px;"></i>
+                  {{ facility.operating_info.status_label }}
+                </span>
+              {% endif %}
+            </small>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('{{ facility.name|escapejs }}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>
@@ -360,12 +375,30 @@ function renderRecommendedFacilities(facilities) {
     const safeName = (f.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const safeType = (f.facility_type || '공공체육시설').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const escapedAttr = safeName.replace(/'/g, "\\'");
+    const op = f.operating_info;
+    const opHours = op && op.hours_display ? `
+      <div style="font-size: 11px; color: #CBD5E1; margin: 2px 0 3px; display: flex; align-items: center; gap: 4px;">
+        <i class="fa-regular fa-clock" style="color: var(--trophy-gold); font-size: 10px;"></i>
+        <span style="color: #94A3B8;">운영:</span>
+        <b style="color: #FFFFFF;">${op.hours_display}</b>
+      </div>
+    ` : '';
+    const opBadge = op ? `
+      <span style="font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px; background: ${op.badge_bg}; border: 1px solid ${op.badge_border}; color: ${op.badge_color};">
+        <i class="${op.badge_icon}" style="font-size: 8.5px;"></i>
+        ${op.status_label}
+      </span>
+    ` : '';
     return `
       <article class="facility-picker-card" onclick="selectFacilityToLocation('${escapedAttr}', this)" title="클릭하면 운동 장소로 자동 입력됩니다" style="cursor: pointer; transition: all 0.2s ease;">
         <span class="icon" style="width: 36px; height: 36px; font-size: 15px;"><i class="fa-solid fa-building-columns"></i></span>
         <div style="flex: 1; min-width: 0;">
           <b class="facility-name-text">${safeName}</b>
-          <small>${safeType}${distText}</small>
+          ${opHours}
+          <small style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="color: var(--text-muted);">${safeType}${distText}</span>
+            ${opBadge}
+          </small>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button type="button" class="button btn-mint" onclick="event.stopPropagation(); selectFacilityToLocation('${escapedAttr}', this.closest('article'))" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; white-space: nowrap;">선택</button>

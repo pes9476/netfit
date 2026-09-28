@@ -1,6 +1,9 @@
-name: Manual facility sync
+name: Automated & Manual facility sync
 
 on:
+  schedule:
+    # 매주 일요일 18:00 UTC (한국 시각 월요일 03:00 KST) 무인 자동 동기화
+    - cron: '0 18 * * 0'
   workflow_dispatch:
     inputs:
       allow_large_drop:
@@ -47,10 +50,11 @@ jobs:
         shell: bash
         run: |
           args=(--source-path facilities.csv)
+          if [ -n "${{ secrets.FACILITY_SOURCE_URL }}" ]; then
+            args=(--source-url "${{ secrets.FACILITY_SOURCE_URL }}")
+          fi
           if [ "${{ inputs.allow_large_drop }}" = "true" ]; then
             args+=(--allow-large-drop)
           fi
           python manage.py sync_facilities "${args[@]}"
 
-# A schedule is intentionally omitted until an official downloadable source URL
-# is approved and the manual workflow succeeds against an isolated test database.

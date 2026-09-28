@@ -1,0 +1,29 @@
+/* One coordinate plane and one animation for both the body and equipment. */
+.netfit-fitting {
+  width: var(--fitting-size, 180px);
+  aspect-ratio: 1;
+  position: relative;
+  flex: none;
+  margin-bottom: 14px;
+  isolation: isolate;
+}
+.netfit-fitting svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 90%;
+  animation: fitting-breathe 3s ease-in-out infinite;
+}
+.netfit-fitting[data-style="active"] svg,
+.netfit-fitting[data-style="slim"] svg { animation-duration: 2s; }
+.netfit-fitting[data-style="soft"] svg { animation-duration: 2.4s; }
+.netfit-fitting image { pointer-events: none; }
+.netfit-fitting[data-paused="true"] svg { animation: none; }
+@keyframes fitting-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .netfit-fitting svg { animation: none; }
+}

@@ -32,6 +32,7 @@ jobs:
           fitness.test_local_auth
           fitness.test_logout
           fitness.test_mascots
+          fitness.test_party_enhancements
           fitness.test_web_flow
           fitness.test_facility_sync
           fitness.test_facility_migration

@@ -390,6 +390,17 @@ class Facility(models.Model):
     def kakao_map_url(self, value):
         self._kakao_map_url = value
 
+    @property
+    def naver_place_url(self):
+        search_term = f"{self.name} {self.address}".strip() if self.address else self.name
+        return f"https://map.naver.com/p/search/{urllib.parse.quote(search_term)}"
+
+    @property
+    def operating_info(self):
+        from .facility_sync import get_facility_operating_info
+        return get_facility_operating_info(self)
+
+
 
 class DataSyncRun(models.Model):
     STATUS_PENDING = "PENDING"

@@ -241,3 +241,67 @@ class SyncFacilitiesTests(FacilityCommandTestMixin, TestCase):
         run = DataSyncRun.objects.get()
         self.assertEqual(run.status, DataSyncRun.STATUS_FAILED)
         self.assertEqual(run.source_url, "https://example.com/data.csv")
+
+    def test_deleted_row_soft_deletes_existing_facility(self):
+        # 1. 기존 시설 등록
+        row1 = facility_row(SOURCE_RECORD_ID="fac-del-1", FCLTY_NM="사라질 체육관", DEL_AT="N")
+        path1 = self.write_csv([row1], name="source.csv")
+        self.run_sync(path1)
+        expected_id = facility_source_record_id(row1)
+        facility = Facility.objects.get(source_record_id=expected_id)
+        self.assertTrue(facility.is_active)
+
+        # 2. DEL_AT == 'Y'로 갱신된 파일 동기화 -> 비활성화(Soft Delete) 검증
+        row2 = facility_row(SOURCE_RECORD_ID="fac-del-1", FCLTY_NM="사라질 체육관", DEL_AT="Y")
+        path2 = self.write_csv([row2], name="source.csv")
+        self.run_sync(path2)
+        facility.refresh_from_db()
+        self.assertFalse(facility.is_active)
+
+    def test_facility_operating_info_classification_and_naver_urls(self):
+        from datetime import datetime
+        from django.utils import timezone
+        from fitness.facility_sync import get_facility_operating_info
+
+        # 1. 야외 공원 / 간이운동장 -> 상시 개방
+        park = Facility.objects.create(name="중앙공원 간이운동장", facility_type="간이운동장", region="인천광역시")
+        park_info = get_facility_operating_info(park)
+        self.assertEqual(park_info["status_code"], "ALWAYS_OPEN")
+        self.assertEqual(park_info["status_label"], "상시 개방")
+        self.assertIn("24시간", park_info["hours_text"])
+
+        # 2. 학교 체육시설 -> 평일 낮(수업 중) vs 방과 후/주말(학교 개방)
+        school = Facility.objects.create(name="가정초등학교", facility_type="간이운동장", region="인천광역시")
+        day_time = timezone.make_aware(datetime(2026, 9, 21, 11, 0))  # 2026-09-21 월요일 11:00
+        school_day_info = get_facility_operating_info(school, now=day_time)
+        self.assertEqual(school_day_info["status_code"], "SCHOOL_RESTRICTED")
+        self.assertEqual(school_day_info["status_label"], "수업 중")
+
+        weekend_time = timezone.make_aware(datetime(2026, 9, 20, 14, 0))  # 2026-09-20 일요일 14:00
+        school_weekend_info = get_facility_operating_info(school, now=weekend_time)
+        self.assertEqual(school_weekend_info["status_code"], "SCHOOL_OPEN")
+        self.assertEqual(school_weekend_info["status_label"], "학교 개방")
+
+        # 3. 실내 수영장 / 체육센터 -> 평일 주간(운영 중) vs 심야(운영 종료) vs 월요일(정기 휴무)
+        center = Facility.objects.create(name="올림픽수영장", facility_type="수영장", region="서울특별시")
+        open_time = timezone.make_aware(datetime(2026, 9, 22, 14, 0))  # 화요일 14:00
+        center_open_info = get_facility_operating_info(center, now=open_time)
+        self.assertEqual(center_open_info["status_code"], "OPEN")
+        self.assertEqual(center_open_info["status_label"], "운영 중")
+        self.assertEqual(center_open_info["hours_display"], "평일 06:00 ~ 22:00")
+
+        night_time = timezone.make_aware(datetime(2026, 9, 22, 23, 30))  # 화요일 23:30
+        center_night_info = get_facility_operating_info(center, now=night_time)
+        self.assertEqual(center_night_info["status_code"], "CLOSED")
+        self.assertEqual(center_night_info["status_label"], "운영 종료")
+
+        monday_time = timezone.make_aware(datetime(2026, 9, 21, 14, 0))  # 월요일 14:00
+        center_monday_info = get_facility_operating_info(center, now=monday_time)
+        self.assertEqual(center_monday_info["status_code"], "HOLIDAY")
+        self.assertEqual(center_monday_info["status_label"], "오늘 휴무")
+        self.assertEqual(center_monday_info["hours_display"], "매주 월요일 정기휴무")
+
+        # 4. 네이버 플레이스 상세 정보 URL 검증
+        self.assertIn("map.naver.com/p/search", center.naver_place_url)
+        self.assertIn("%EC%98%AC%EB%A6%BC%ED%94%BD%EC%88%98%EC%98%81%EC%9E%A5", center.naver_place_url)
+
