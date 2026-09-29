@@ -312,11 +312,47 @@ netfit/
 
 ### 6-1. 공공 체육시설 데이터 정제 & 무결성 파이프라인 (Data Pipeline)
 
-<p align="center">
-  <img src="docs/readme-assets/data-metrics-dashboard.png" alt="NetFit 데이터 정량 수치화 대시보드" width="95%" style="border-radius: 10px; border: 1px solid #30363d;" />
-  <br/>
-  <em>공공데이터 정제 파이프라인, 국민체력100 게이미피케이션 연계 및 시스템 무결성 정량 지표 대시보드</em>
-</p>
+```mermaid
+flowchart TD
+    subgraph S1["1. 전국 공공체육시설 데이터 수집"]
+        Raw["📥 공공데이터포털 API 원본 수집<br/><b>44,612건 (100.0%)</b>"]
+    end
+
+    subgraph S2["2. 데이터 무결성 검증 및 이상치 격리"]
+        Filter{"정합성 검증<br/>(휴·폐업 및 좌표 결측)"}
+        Drop["🚫 비활성·결측 시설 격리<br/><b>9,039건 (20.3%)</b>"]
+        Active["✅ 유효 활성 시설 확보<br/><b>35,573건 (79.7%)</b>"]
+    end
+
+    subgraph S3["3. 공간 인덱싱 DB 적재 및 무결성 유지"]
+        New["🆕 신규 시설 DB 적재<br/><b>35,144건 (78.8%)</b>"]
+        Merge["🔄 동일 시설 ID 맵핑 통합<br/><b>429건 (0.9%)</b>"]
+        SoftDel["🛡️ Soft Delete 정책 적용<br/><b>회원 운동기록 외래키 100% 보존</b>"]
+    end
+
+    Raw --> Filter
+    Filter -->|휴·폐업 필터링| Drop
+    Filter -->|유효성 검증 통과| Active
+    Active --> New
+    Active --> Merge
+    Drop -.->|이력 보존| SoftDel
+
+    classDef raw fill:#0f172a,stroke:#64748b,stroke-width:1.5px,color:#f8fafc;
+    classDef filter fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#ffffff;
+    classDef drop fill:#450a0a,stroke:#f87171,stroke-width:1.5px,color:#fca5a5;
+    classDef active fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#a7f3d0;
+    classDef new fill:#0c4a6e,stroke:#38bdf8,stroke-width:1.5px,color:#bae6fd;
+    classDef merge fill:#451a03,stroke:#fbbf24,stroke-width:1.5px,color:#fde68a;
+    classDef soft fill:#3b0764,stroke:#c084fc,stroke-width:1.5px,color:#f5d0fe;
+
+    class Raw raw;
+    class Filter filter;
+    class Drop drop;
+    class Active active;
+    class New new;
+    class Merge merge;
+    class SoftDel soft;
+```
 
 > 공공데이터포털의 전국 공공 체육시설 인프라 데이터를 전수 수집하고, 결측치 필터링 및 중복 통합을 거쳐 고신뢰성 서비스 DB로 구축한 정량 파이프라인 지표입니다.
 
