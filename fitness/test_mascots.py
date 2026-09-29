@@ -39,4 +39,4 @@ class ManualMascotTests(TestCase):
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.character_label, "토리")
         self.assertEqual(self.user.body_measurements.count(), 2)
-        self.assertContains(self.client.get(reverse("dashboard")), "style-soft")
+        self.assertContains(self.client.get(reverse("dashboard")), 'data-style="soft"')

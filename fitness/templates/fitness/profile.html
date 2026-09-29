@@ -1,5 +1,8 @@
 {% extends "fitness/base.html" %}
+{% load static %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'fitness/css/netfit-outfits.css' %}">
+<script src="{% static 'fitness/js/netfit-outfits.js' %}" defer></script>
 <section class="page-intro">
   <h1><i class="fa-solid fa-id-card" style="color: var(--neon-mint); margin-right: 8px;"></i>마이페이지</h1>
   <p>내 정보와 비만도, 캐릭터 설정을 관리하세요.</p>
@@ -43,17 +46,11 @@
   z-index: 2;
   pointer-events: none;
 }
-.preview-panel .mini-card .avatar-roster {
-  position: absolute;
-  inset: 0 0 20px;
-  --mascot-size: 155px;
-  display: grid;
-  place-items: center;
+.preview-panel .mini-card .netfit-fitting {
+  --fitting-size: 155px;
+  max-width: 85%;
+  margin: 0 0 20px;
   z-index: 3;
-}
-.preview-panel .mini-card .avatar-roster::before {
-  width: 155px;
-  max-width: 90%;
 }
 .preview-panel .mini-card .scene-caption {
   position: absolute;
@@ -90,12 +87,8 @@
     max-width: 100% !important;
     margin: 12px 0 !important;
   }
-  .preview-panel .mini-card .avatar-roster {
-    --mascot-size: 140px !important;
-  }
-  .preview-panel .mini-card .avatar-roster::before {
-    width: 140px !important;
-    max-width: 85% !important;
+  .preview-panel .mini-card .netfit-fitting {
+    --fitting-size: 140px;
   }
   .preview-panel .mini-card::after {
     width: 120px !important;
@@ -192,7 +185,10 @@
   <aside class="panel preview-panel">
     <h2><i class="fa-solid fa-eye" style="color: var(--trophy-gold); margin-right: 8px;"></i>내 캐릭터 미리보기</h2>
     <div class="mini-card background-sprite scene-walk">
-      <div id="profileAvatar" class="avatar-roster avatar-{{ profile.sprite_gender }} age-{{ profile.age_group }} style-{{ profile.body_style|lower }} outfit-{{ profile.equipped_outfit|lower }}"></div>
+      <div id="profileAvatar" class="netfit-fitting" data-netfit-fitting
+           data-style="{{ profile.body_style|lower }}"
+           data-equipped="{{ profile.equipped_outfits_list|join:',' }}"
+           data-asset-root="{% static 'fitness/img/' %}"></div>
       <span class="scene-caption">저장 전 미리보기</span>
     </div>
     <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; margin-top: 12px;">
@@ -281,9 +277,10 @@
   function updateMascot() {
     const names = {ACTIVE: "백호", MUSCULAR: "포동", SOFT: "토리", BALANCED: "아콩"};
     const value = Object.hasOwn(names, pref.value) ? pref.value : "ACTIVE";
-    avatar.className = "avatar-roster style-" + value.toLowerCase() + " outfit-{{ profile.equipped_outfit|lower }}";
-    avatar.setAttribute("role", "img");
-    avatar.setAttribute("aria-label", names[value]);
+    avatar.dataset.style = value.toLowerCase();
+    if (window.NetfitOutfits) {
+      window.NetfitOutfits.render(avatar, (avatar.dataset.equipped || "").split(","));
+    }
     label.textContent = document.getElementById("id_nickname").value || "내 캐릭터";
     const badge = document.getElementById("previewMascotBadge");
     if (badge) badge.textContent = names[value] + " 파이터";

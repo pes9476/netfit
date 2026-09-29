@@ -20,6 +20,15 @@
 .netfit-fitting[data-style="soft"] svg { animation-duration: 2.4s; }
 .netfit-fitting image { pointer-events: none; }
 .netfit-fitting[data-paused="true"] svg { animation: none; }
+.dashboard-character-stage .netfit-fitting {
+  --fitting-size: min(74%, 260px);
+  position: absolute;
+  top: calc(50% - 12px);
+  left: 50%;
+  margin: 0;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+}
 @keyframes fitting-breathe {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-3px); }
