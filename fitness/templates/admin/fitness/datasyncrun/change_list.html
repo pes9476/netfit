@@ -1,0 +1,57 @@
+{% extends "admin/change_list.html" %}
+{% load l10n %}
+{% block extrastyle %}
+{{ block.super }}
+<style>
+.monitor{margin-bottom:28px}.monitor h2{margin:0 0 14px}.monitor p{line-height:1.7}
+.monitor-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:18px 0}
+.monitor-card,.monitor-panel{padding:20px;border:1px solid var(--hairline-color);border-radius:12px;background:var(--body-bg)}
+.monitor-card strong{display:block;font-size:28px;margin-top:10px;color:var(--link-fg)}
+.monitor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
+.monitor meter{width:100%;height:24px}.monitor-row{margin:16px 0}.monitor-label{display:flex;justify-content:space-between;gap:12px}
+.monitor-note{color:var(--body-quiet-color);font-size:13px}.monitor-alert{border-left:4px solid #d97706;padding:10px 14px;background:var(--darkened-bg)}
+.monitor-history{overflow-x:auto;margin-top:18px}.monitor-history table{width:100%}.monitor-history td{white-space:nowrap}
+.monitor details{margin-top:12px}.monitor summary{cursor:pointer}.monitor-title{display:flex;justify-content:space-between;align-items:center;gap:12px}
+</style>
+{% endblock %}
+{% block content %}
+<section class="monitor" aria-label="공공시설 데이터 모니터링">
+ <div class="monitor-title"><h2>공공시설 데이터 모니터링</h2><button type="button" onclick="window.location.reload()">최신 기록 새로고침</button></div>
+ <p>현재 접속한 DB의 시설 현황과 동기화 실행 이력입니다. 새로고침하면 다시 조회합니다.</p>
+ <div class="monitor-cards">
+  <div class="monitor-card">전체 시설 레코드<strong>{{ facility_stats.total }}건</strong></div>
+  <div class="monitor-card">활성 시설<strong>{{ facility_stats.active }}건</strong></div>
+  <div class="monitor-card">비활성 시설<strong>{{ facility_stats.inactive }}건</strong></div>
+  <div class="monitor-card">좌표 보유 활성 시설<strong>{{ facility_stats.located }}건</strong></div>
+ </div>
+ {% if latest_run %}
+ <p class="monitor-alert">최근 실행: <b>{{ latest_run.get_status_display }}</b> · {{ latest_run.started_at|date:"Y-m-d H:i:s T" }} · {{ latest_run.source_name }}
+ {% if latest_run.status == 'FAILED' %}<br>작업이 실패했습니다. 아래 실행 기록에서 결과를 확인하세요. 생성·수정 카운터를 실제 반영량으로 해석하지 마세요.{% endif %}
+ {% if latest_run.status == 'SKIPPED_NO_CHANGE' %}<br>동일한 원본으로 판단되어 이번 적재를 생략했습니다. 아래 처리 비중은 이전 성공 실행 기준입니다.{% endif %}
+ {% if latest_run.failed_count %}<br>행 검증 실패 {{ latest_run.failed_count }}건이 있습니다. 실행 상태가 성공이어도 검토가 필요합니다.{% endif %}
+ </p>
+ {% else %}<p class="monitor-alert">아직 동기화 이력이 없습니다. 기존 시설이 있어도 과거 적재 결과를 추정해서 표시하지 않습니다.</p>{% endif %}
+ <div class="monitor-grid">
+  <div class="monitor-panel"><h2>최근 성공 실행의 처리 비중</h2>
+   {% if latest_success %}
+   <p>{{ latest_success.source_name }} · {{ latest_success.started_at|date:"Y-m-d H:i T" }}<br>원본 <b>{{ latest_success.source_count }}행</b></p>
+   {% for bar in sync_bars %}<div class="monitor-row"><div class="monitor-label"><span>{{ bar.label }}</span><b>{{ bar.count }}건</b></div><meter min="0" max="{{ bar.max|unlocalize }}" value="{{ bar.count|unlocalize }}" style="accent-color:{{ bar.color }}" aria-label="{{ bar.label }} {{ bar.count }}건">{{ bar.count }}</meter></div>{% endfor %}
+   {% else %}<p>성공한 동기화 기록이 없어 그래프를 표시하지 않습니다.</p>{% endif %}
+  </div>
+  <div class="monitor-panel"><h2>숫자를 읽는 방법</h2>
+   <p><b>원본 행 수</b>는 입력 파일 규모이며, DB 시설 수와 다릅니다.</p>
+   <p><b>신규 생성</b>은 DB에 새로 등록한 건수입니다. 실제 신규 개업 수가 아닙니다.</p>
+   <p><b>기존 레코드 반영</b>은 동일 식별자를 다시 처리한 횟수로, 중복 행과 값이 같은 행도 포함할 수 있습니다.</p>
+   <p><b>삭제 표시 제외</b>는 원본의 삭제 표시 행 수입니다. 실제 비활성화된 DB 시설 수와 다를 수 있습니다.</p>
+   <p class="monitor-note">실행별 건수를 합산해 고유 시설 수로 사용하지 마세요. 성공 상태에서도 개별 행 실패가 있을 수 있습니다. 이 화면은 자동 수집의 정상 작동이나 원본의 최신성을 보증하지 않습니다.</p>
+  </div>
+ </div>
+ <div class="monitor-panel monitor-history"><h2>최근 20회 실행 · 원본 규모 추이</h2>
+ <p class="monitor-note">오래된 실행부터 표시합니다. 실패·변경 없음의 0건은 원본이 비었다는 의미가 아니라 집계가 생략된 결과일 수 있습니다. 위 요약과 그래프는 전체 이력 기준이며, 아래 관리자 검색 필터와 독립적입니다.</p>
+ <table><thead><tr><th>시작 시각</th><th>출처 / 상태</th><th>원본 행 수</th><th>생성</th><th>기존 반영</th><th>제외</th><th>행 실패</th></tr></thead><tbody>
+ {% for run in recent_runs reversed %}<tr><td><a href="{% url 'admin:fitness_datasyncrun_change' run.pk %}">{{ run.started_at|date:"m-d H:i T" }}</a></td><td>{{ run.source_name }}<br>{{ run.get_status_display }}</td><td>{{ run.source_count }}<meter min="0" max="{{ chart_max|unlocalize }}" value="{{ run.source_count|unlocalize }}" aria-label="원본 {{ run.source_count }}행"></meter></td><td>{{ run.created_count }}</td><td>{{ run.updated_count }}</td><td>{{ run.skipped_count }}</td><td>{{ run.failed_count }}</td></tr>
+ {% empty %}<tr><td colspan="7">기록 없음</td></tr>{% endfor %}
+ </tbody></table></div>
+</section>
+{{ block.super }}
+{% endblock %}
